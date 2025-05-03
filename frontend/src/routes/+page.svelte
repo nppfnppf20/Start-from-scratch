@@ -1,5 +1,6 @@
 <script lang="ts">
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
+  import { get } from 'svelte/store';
   
   let disabledFields: Record<string, boolean> = {};
 
@@ -51,13 +52,23 @@
     };
   }
 
-  function handleSubmit(event: Event) {
+  async function handleSubmit(event: Event) {
     event.preventDefault();
-    
-    if ($selectedProject) {
-      // Extract form data and update the project
-      updateProject($selectedProject.id, $selectedProject);
-      alert("Project information saved successfully!");
+
+    const currentProject = get(selectedProject);
+
+    if (currentProject) {
+      console.log("Submitting updates for project:", currentProject.id, currentProject);
+      const success = await updateProject(currentProject.id, currentProject);
+
+      if (success) {
+          alert("Project information saved successfully!");
+      } else {
+          alert("Failed to save project information. Check console for errors.");
+      }
+    } else {
+        console.error("handleSubmit called but no project is selected.");
+        alert("Error: No project selected to save.");
     }
   }
 </script>
@@ -78,10 +89,10 @@
         <div class="form-grid">
           <div class="form-group">
             <div class="label-with-checkbox">
-              <label for="clientName">Client (or SPV) Name</label>
-              <input type="checkbox" bind:checked={disabledFields.clientName} title="Disable field">
+              <label for="clientOrSpvName">Client (or SPV) Name</label>
+              <input type="checkbox" bind:checked={disabledFields.clientOrSpvName} title="Disable field">
             </div>
-            <input type="text" id="clientName" name="clientName" bind:value={$selectedProject.clientName} disabled={disabledFields.clientName} />
+            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientOrSpvName} disabled={disabledFields.clientOrSpvName} />
           </div>
           
           <div class="form-group">
@@ -355,6 +366,8 @@
           </div>
         </div>
       </section>
+      
+      <button type="submit" class="save-button">Save Project Information</button>
     </form>
   {:else}
     <div class="no-project-selected">
@@ -528,5 +541,27 @@
   /* Firefox */
   input[type=number] {
     -moz-appearance: textfield;
+  }
+
+  .save-button {
+    display: block;
+    margin: 2rem auto 1rem; /* Center button with spacing */
+    padding: 0.8rem 1.5rem;
+    font-size: 1.1rem;
+    background-color: #28a745; /* Green */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .save-button:hover {
+    background-color: #218838;
+  }
+  .no-project-selected {
+    text-align: center;
+    margin-top: 2rem;
+    font-style: italic;
+    color: #666;
   }
 </style>
