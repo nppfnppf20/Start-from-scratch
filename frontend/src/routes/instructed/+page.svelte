@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     selectedProject, 
-    allQuotes, 
+    currentProjectQuotes, 
     allReviews, 
     addOrUpdateReview, // Use this to update dates
     updateWorkStatus, // Import the new function
@@ -28,12 +28,9 @@
   let currentQuoteForUpload: Quote | null = null;
 
   // Filter for instructed quotes based on selected project
-  $: instructedQuotes = $selectedProject 
-    ? $allQuotes.filter(quote => 
-        quote.projectId === $selectedProject.id && 
-        (quote.instructionStatus === 'instructed' || quote.instructionStatus === 'partially instructed')
-      ) 
-    : [];
+  $: instructedQuotes = $currentProjectQuotes.filter(quote => 
+      quote.instructionStatus === 'instructed' || quote.instructionStatus === 'partially instructed'
+  );
 
   // Helper to find review for a quote reactively
   function findReview(quoteId: string): SurveyorReview | undefined {
