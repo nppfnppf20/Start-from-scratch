@@ -121,7 +121,7 @@ export async function addProject(projectData: { name: string; client?: string; t
     // Add to the local store
     projects.update(existing => [...existing, newProject].sort((a, b) => a.name.localeCompare(b.name))); // Keep sorted? Or sort by date? Maybe sort in component
     selectedProject.set(newProject); // Automatically select the new project
-    return newProject;
+  return newProject;
 
   } catch (error) {
     console.error("Failed to add project:", error);
@@ -204,6 +204,10 @@ export async function selectProjectById(id: string | null) { // Allow null to cl
        projectDetails = { ...projectDetails, id: projectDetails._id }; // Map _id
        selectedProject.set(projectDetails);
        console.log('Full project details loaded and selected:', projectDetails);
+
+       // +++ Now, load the quotes for this newly selected project +++
+       await loadQuotesForProject(id);
+
        return true;
    } catch (error) {
        console.error(`Failed to fetch details for project ${id}:`, error);
@@ -284,105 +288,168 @@ export interface Quote {
   id: string;
   projectId: string;
   discipline: string;
-  surveyType?: string; // Made optional
+  surveyType?: string;
   organisation: string;
   contactName: string;
-  email?: string; // Made optional
-  lineItems: LineItem[]; // Store full line items
+  email?: string;
+  lineItems: LineItem[];
   total: number;
   instructionStatus: InstructionStatus;
-  partiallyInstructedTotal?: number; // New: Store total if partially instructed
-  additionalNotes?: string; // Added from modal
-  status?: string; // Internal status, maybe useful later
-  date?: string; // Optional date field
+  partiallyInstructedTotal?: number;
+  additionalNotes?: string;
+  status?: string;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-const initialQuotes: Quote[] = [
-  { 
-    id: 'q1', 
-    projectId: 'project-1', 
-    discipline: 'Ecology',
-    surveyType: 'Preliminary Ecological Appraisal',
-    organisation: 'EcoSurveys Ltd',
-    contactName: 'John Smith',
-    email: 'john.smith@ecosurveys.com',
-    lineItems: [{description: 'Desk Study', cost: 400}, {description: 'Site Visit', cost: 600}, {description: 'Report', cost: 200}],
-    total: 1200,
-    instructionStatus: 'will not be instructed', 
-    status: 'pending',
-    date: '2023-05-15' 
-  },
-  { 
-    id: 'q2', 
-    projectId: 'project-1', 
-    discipline: 'Landscape',
-    surveyType: 'Landscape and Visual Impact Assessment',
-    organisation: 'Vista Landscapes',
-    contactName: 'Jane Doe',
-    email: 'jane.doe@vistalandscapes.com',
-    lineItems: [{description: 'LVIA Report', cost: 700}, {description: 'Visualisations', cost: 280}],
-    total: 980,
-    instructionStatus: 'instructed',
-    status: 'accepted',
-    date: '2023-05-14' 
-  },
-  { 
-    id: 'q3', 
-    projectId: 'project-2', 
-    discipline: 'Noise',
-    surveyType: 'Noise Impact Assessment',
-    organisation: 'Acoustic Consultants',
-    contactName: 'Robert Johnson',
-    email: 'r.johnson@acousticconsultants.com',
-    lineItems: [{description: 'Baseline Survey', cost: 500}, {description: 'Modeling', cost: 600}, {description: 'Reporting', cost: 350}],
-    total: 1450,
-    instructionStatus: 'pending',
-    status: 'rejected',
-    date: '2023-05-13' 
+// --- Quote Store --- 
+// Store quotes only for the *currently selected* project
+export const currentProjectQuotes = writable<Quote[]>([]);
+
+// --- Quote Functions --- 
+
+// Function to load quotes for a specific project ID
+async function loadQuotesForProject(projectId: string | null) {
+  if (!browser || !projectId) {
+    currentProjectQuotes.set([]); // Clear quotes if no project selected or not in browser
+    return;
   }
-];
 
-export const allQuotes = writable<Quote[]>(initialQuotes);
+  try {
+    console.log(`Fetching quotes for project: ${projectId}`);
+    const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedQuotes: any[] = await response.json();
 
-export function addQuote(quoteData: Omit<Quote, 'id' | 'total'>) {
-  const total = quoteData.lineItems.reduce((sum, item) => sum + item.cost, 0);
-  const newQuote: Quote = {
-    ...quoteData,
-    id: `q${Date.now()}`,
-    total: total,
+    // Map _id to id
+    fetchedQuotes = fetchedQuotes.map(q => ({ ...q, id: q._id }));
+
+    console.log('Quotes fetched:', fetchedQuotes);
+    currentProjectQuotes.set(fetchedQuotes);
+
+  } catch (error) {
+    console.error(`Failed to load quotes for project ${projectId}:`, error);
+    currentProjectQuotes.set([]); // Reset on error
+  }
+}
+
+// Function to add a new quote via API
+export async function addQuote(quoteData: Omit<Quote, 'id' | 'total' | 'createdAt' | 'updatedAt'>) {
+  if (!browser) return null;
+
+  // Ensure projectId is present (should be enforced by calling component)
+  if (!quoteData.projectId) {
+      console.error('Cannot add quote without projectId');
+      alert('Error: Project ID is missing.');
+      return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/quotes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quoteData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+    }
+
+    let newQuote = await response.json();
+    newQuote = { ...newQuote, id: newQuote._id };
+
+    // Add to the local store for the current project
+    currentProjectQuotes.update(existing => [...existing, newQuote]);
+    console.log('Quote added:', newQuote);
+    return newQuote;
+
+  } catch (error) {
+    console.error("Failed to add quote:", error);
+    alert(`Error adding quote: ${error}`);
+    return null;
+  }
+}
+
+// Function to update an existing quote via API
+export async function updateQuote(quoteId: string, updateData: Partial<Omit<Quote, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>) {
+  if (!browser) return false;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+    }
+
+    let updatedQuote = await response.json();
+    updatedQuote = { ...updatedQuote, id: updatedQuote._id };
+
+    // Update in the local store
+    currentProjectQuotes.update(existing =>
+      existing.map(q => (q.id === quoteId ? updatedQuote : q))
+    );
+    console.log('Quote updated:', updatedQuote);
+    return true;
+
+  } catch (error) {
+    console.error("Failed to update quote:", error);
+    alert(`Error updating quote: ${error}`);
+    return false;
+  }
+}
+
+// Function to update only the instruction status (calls updateQuote)
+export async function updateQuoteInstructionStatus(quoteId: string, newStatus: InstructionStatus, partialTotal?: number) {
+  const updateData: Partial<Omit<Quote, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>> = {
+    instructionStatus: newStatus
   };
-  
-  allQuotes.update(quotes => [...quotes, newQuote]);
+  // Only include partialTotal if the status requires it
+  if (newStatus === 'partially instructed' && typeof partialTotal === 'number') {
+    updateData.partiallyInstructedTotal = partialTotal;
+  } else {
+    // Explicitly set to null or undefined if not partial? Backend pre-validate hook handles clearing it.
+    // updateData.partiallyInstructedTotal = null; // Or let backend handle it
+  }
+  return updateQuote(quoteId, updateData);
 }
 
-export function updateQuoteInstructionStatus(quoteId: string, newStatus: InstructionStatus, partialTotal?: number) {
-  allQuotes.update(quotes => 
-    quotes.map(quote => {
-      if (quote.id === quoteId) {
-        const updatedQuote = { 
-          ...quote, 
-          instructionStatus: newStatus,
-          // Set or clear the partial total based on the new status
-          partiallyInstructedTotal: newStatus === 'partially instructed' ? partialTotal : undefined
-        };
-        return updatedQuote;
-      } 
-      return quote;
-    })
-  );
-}
+// Function to delete a quote via API
+export async function deleteQuote(quoteId: string) {
+  if (!browser) return false;
 
-export function updateQuote(quoteId: string, updatedData: Partial<Quote>) {
-  allQuotes.update(quotes => 
-    quotes.map(quote => 
-      quote.id === quoteId ? { ...quote, ...updatedData } : quote
-    )
-  );
-}
+  if (!confirm('Are you sure you want to delete this quote?')) {
+    return false;
+  }
 
-export function deleteQuote(quoteId: string) {
-  allQuotes.update(quotes => quotes.filter(quote => quote.id !== quoteId));
-  // In a real app, you would also need to delete related reviews, etc.
+  try {
+    const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+    }
+
+    // Remove from the local store
+    currentProjectQuotes.update(existing => existing.filter(q => q.id !== quoteId));
+    console.log(`Quote ${quoteId} deleted.`);
+    return true;
+
+  } catch (error) {
+    console.error("Failed to delete quote:", error);
+    alert(`Error deleting quote: ${error}`);
+    return false;
+  }
 }
 
 // --- Review Interface and Store ---

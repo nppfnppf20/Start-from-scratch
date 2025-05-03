@@ -10,6 +10,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // +++ Import Routes +++
 const projectRoutes = require('./routes/projects');
+const quoteRoutes = require('./routes/quotes'); // Import quote routes
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -18,11 +19,11 @@ const PORT = process.env.PORT || 5000;
 // --- Database Connection ---
 const connectDB = async () => {
   try {
-    // +++ Ensure MONGO_URI is loaded correctly +++
     if (!process.env.MONGO_URI) {
       console.error('FATAL ERROR: MONGO_URI is not defined. Check your .env file.');
       process.exit(1);
     }
+
     await mongoose.connect(process.env.MONGO_URI, {
       // Mongoose 6+ no longer needs useNewUrlParser/useUnifiedTopology
     });
@@ -48,6 +49,8 @@ app.get('/api', (req, res) => {
 
 // +++ Use Project routes +++
 app.use('/api/projects', projectRoutes);
+// +++ Use Quote routes +++
+app.use('/api/quotes', quoteRoutes);
 
 // --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
