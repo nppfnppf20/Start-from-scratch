@@ -1,0 +1,173 @@
+/* frontend/src/app.css */
+
+:root {
+    --primary-color: #0d6efd; /* Example blue */
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    --text-color: #212529;
+    --border-color: #dee2e6;
+    --status-pending-bg: #fff3cd;
+    --status-pending-text: #664d03; /* Adjusted for better contrast */
+    --font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --border-radius: 0.375rem; /* Adjust as needed */
+}
+
+body {
+    font-family: var(--font-family-sans-serif);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text-color);
+    background-color: #fff; /* Or a light gray if preferred */
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+a:hover {
+    color: #0a58ca; /* Darker blue on hover */
+}
+
+/* Basic Button Styling (adjust selectors as needed) */
+button, .button {
+    display: inline-block;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text-color);
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    border-radius: var(--border-radius);
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+/* Primary Button Style (like '+ New Quote') */
+.button-primary {
+    color: #fff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.button-primary:hover {
+    color: #fff;
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+/* Basic Table Styling (adjust selectors as needed) */
+table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+    vertical-align: top;
+    border-color: var(--border-color);
+    border-collapse: collapse; /* Ensures borders look clean */
+}
+
+thead {
+    vertical-align: bottom;
+}
+
+tbody, td, tfoot, th, thead, tr {
+    border-color: inherit;
+    border-style: solid;
+    border-width: 0;
+}
+
+th {
+    text-align: inherit;
+    text-align: -webkit-match-parent;
+    font-weight: bold; /* Make headers bold */
+}
+
+tbody tr {
+     border-bottom: 1px solid var(--border-color); /* Add row separator */
+}
+
+
+td, th {
+    padding: 0.75rem; /* Add padding to cells */
+    vertical-align: middle; /* Align cell content vertically */
+}
+
+/* Example Status Badge (adjust selector as needed) */
+.status-pending {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: .75em;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--status-pending-text);
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: var(--border-radius);
+    background-color: var(--status-pending-bg);
+}
+
+/* Add styles for other elements like inputs, selects, tabs based on the image */
+input[type="text"],
+input[type="search"],
+select {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text-color);
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid var(--border-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: var(--border-radius);
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+input[type="search"] {
+     /* Add specific styles if needed, e.g., for the icon */
+}
+
+select {
+    /* Add dropdown arrow styling if needed */
+}
+
+/* Placeholder for Tab Navigation - requires specific component structure */
+/* .tab-nav { ... } */
+/* .tab-item { ... } */
+/* .tab-item.active { background-color: var(--primary-color); color: #fff; border-radius: var(--border-radius); } */
+
+/* Adjust layout styles from +layout.svelte if needed, or override here */
+/* For example, to match header/footer colors */
+/* header { background-color: #fff; border-bottom: 1px solid var(--border-color); } */
+/* footer { background-color: var(--light-gray); border-top: 1px solid var(--border-color); } */ 
