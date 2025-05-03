@@ -1,4 +1,8 @@
 import { writable } from 'svelte/store';
+import { browser } from '$app/environment'; // Import browser check
+
+// Define the base URL for your API
+const API_BASE_URL = 'http://localhost:5000/api'; // Adjust if your backend runs elsewhere
 
 // --- Project Interface and Store ---
 interface Project {
@@ -41,84 +45,231 @@ interface Project {
   atvUse?: 'yes' | 'no';
   additionalNotes?: string;
   invoicingDetails?: string;
+  createdAt?: string; // From timestamps
+  updatedAt?: string; // From timestamps
 }
 
-const initialProjects: Project[] = [
-  { id: 'project-1', name: 'Project Alpha' },
-  { id: 'project-2', name: 'Project Beta' },
-  { id: 'project-3', name: 'Project Gamma' }
-];
+// --- Project Store ---
+// Initialize stores with empty/null values initially
+export const projects = writable<Project[]>([]);
+export const selectedProject = writable<Project | null>(null);
 
-export const projects = writable<Project[]>(initialProjects);
-export const selectedProject = writable<Project | null>(
-  initialProjects.length > 0 ? initialProjects[0] : null
-);
+// Function to load projects from the API
+export async function loadProjects() {
+  // Only run fetch in the browser environment
+  if (!browser) return;
 
-export function addProject(name: string) {
-  const id = `project-${Date.now()}`; 
-  const newProject = { id, name };
-  
-  projects.update(existingProjects => {
-    return [...existingProjects, newProject];
-  });
-  
-  selectedProject.set(newProject);
-  return newProject;
+  try {
+    console.log('Fetching projects from API...');
+    const response = await fetch(`${API_BASE_URL}/projects`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedProjects: any[] = await response.json();
+
+    // Map _id to id for frontend consistency
+    fetchedProjects = fetchedProjects.map(p => ({ ...p, id: p._id }));
+
+    console.log('Projects fetched:', fetchedProjects);
+    projects.set(fetchedProjects);
+
+    // Optionally, automatically select the first project if the list isn't empty
+    // But only if no project is currently selected
+    const currentSelectedProject = get(selectedProject); // Need to get current value
+    if (fetchedProjects.length > 0 && !currentSelectedProject) {
+       // Fetch full details for the first project to ensure selectedProject has all data
+       await selectProjectById(fetchedProjects[0].id);
+    } else if (fetchedProjects.length === 0) {
+        selectedProject.set(null); // Clear selection if no projects exist
+    }
+
+  } catch (error) {
+    console.error("Failed to load projects:", error);
+    // Handle error appropriately in the UI if needed
+    projects.set([]); // Reset projects on error
+    selectedProject.set(null); // Clear selection on error
+  }
 }
 
-export function updateProject(projectId: string, updatedData: Partial<Project>) {
-  let updated = false;
-  
-  projects.update(existingProjects => {
-    return existingProjects.map(project => {
-      if (project.id === projectId) {
-        updated = true;
-        const updatedProject = { ...project, ...updatedData };
-        
-        selectedProject.update(currentSelection => {
-          if (currentSelection && currentSelection.id === projectId) {
-            return updatedProject;
-          }
-          return currentSelection;
-        });
-        
-        return updatedProject;
-      }
-      return project;
+// Helper to get current store value outside component (needed for loadProjects logic)
+import { get } from 'svelte/store';
+
+// --- Store Manipulation Functions ---
+
+// Function to add a new project via API
+export async function addProject(projectData: { name: string; client?: string; teamMembers?: string[] }) {
+  if (!browser) return null; // Don't run on server
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(projectData),
     });
-  });
-  
-  return updated;
-}
 
-export function selectProjectById(id: string) {
-  let found = false;
-  
-  projects.update(existingProjects => {
-    const project = existingProjects.find(p => p.id === id);
-    if (project) {
-      selectedProject.set(project);
-      found = true;
+    if (!response.ok) {
+      // Try to get error message from backend response body
+      const errorData = await response.json().catch(() => ({})); // Default if body isn't JSON
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
     }
-    return existingProjects;
-  });
-  
-  return found;
+
+    let newProject = await response.json();
+    newProject = { ...newProject, id: newProject._id }; // Map _id to id
+
+    // Add to the local store
+    projects.update(existing => [...existing, newProject].sort((a, b) => a.name.localeCompare(b.name))); // Keep sorted? Or sort by date? Maybe sort in component
+    selectedProject.set(newProject); // Automatically select the new project
+    return newProject;
+
+  } catch (error) {
+    console.error("Failed to add project:", error);
+    alert(`Error adding project: ${error}`); // Simple user feedback
+    return null;
+  }
 }
 
+// Function to update an existing project via API
+export async function updateProject(projectId: string, updatedData: Partial<Project>) {
+  if (!browser) return false; // Don't run on server
+
+  // Create a copy to avoid modifying the original object directly if needed
+  const dataToSend = { ...updatedData };
+  // Remove 'id' and MongoDB specific fields if they exist, backend uses :id from URL
+  delete dataToSend.id;
+  delete (dataToSend as any)._id; // Use any to bypass potential type error if _id isn't explicitly in Partial<Project>
+  delete dataToSend.createdAt;
+  delete dataToSend.updatedAt;
+
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dataToSend),
+    });
+
+    if (!response.ok) {
+       const errorData = await response.json().catch(() => ({}));
+       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+    }
+
+    let updatedProjectFromServer = await response.json();
+    updatedProjectFromServer = { ...updatedProjectFromServer, id: updatedProjectFromServer._id };
+
+    // Update the local stores
+    projects.update(existing =>
+      existing.map(p => (p.id === projectId ? updatedProjectFromServer : p))
+      // Consider re-sorting if needed after update
+    );
+    selectedProject.update(current =>
+      current && current.id === projectId ? updatedProjectFromServer : current
+    );
+    return true;
+
+  } catch (error) {
+    console.error("Failed to update project:", error);
+    alert(`Error updating project: ${error}`); // Simple user feedback
+    return false;
+  }
+}
+
+// Function to select a project - Fetches full details
+export async function selectProjectById(id: string | null) { // Allow null to clear selection
+   if (!browser) return false;
+   if (!id) { // Handle explicit clearing of selection
+        console.log('Clearing project selection.');
+        selectedProject.set(null);
+        return true;
+   }
+
+
+   console.log(`Selecting project by ID: ${id}`);
+   // Always fetch full details for the selected project to ensure consistency
+   try {
+       const response = await fetch(`${API_BASE_URL}/projects/${id}`);
+       if (!response.ok) {
+            const errorData = await response.json().catch(() => ({message: 'Failed to parse error response'}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || errorData.message || 'Failed to fetch project details'}`);
+       }
+       let projectDetails = await response.json();
+
+       if (!projectDetails) { // Handle case where API returns 200 OK but null/empty body for some reason
+           throw new Error('API returned empty response for project details');
+       }
+
+       projectDetails = { ...projectDetails, id: projectDetails._id }; // Map _id
+       selectedProject.set(projectDetails);
+       console.log('Full project details loaded and selected:', projectDetails);
+       return true;
+   } catch (error) {
+       console.error(`Failed to fetch details for project ${id}:`, error);
+       selectedProject.set(null); // Clear selection on error
+       alert(`Error loading project details: ${error}`);
+       return false;
+   }
+}
+
+// TODO: Implement selectProjectByName if needed (might require backend endpoint or filtering frontend list)
 export function selectProjectByName(name: string) {
+  console.warn("selectProjectByName not fully implemented with API yet");
+  // Find in the current local list (might be incomplete or stale)
   let found = false;
-  
-  projects.update(existingProjects => {
-    const project = existingProjects.find(p => p.name === name);
+  const currentProjects = get(projects); // Get current projects list
+  const project = currentProjects.find(p => p.name === name);
     if (project) {
-      selectedProject.set(project);
+      // For consistency, call selectProjectById to fetch full details
+      selectProjectById(project.id);
       found = true;
+    } else {
+       selectProjectById(null); // Clear selection if not found
     }
-    return existingProjects;
-  });
-  
   return found;
+}
+
+// Function to delete a project via API
+export async function deleteProject(projectId: string) {
+  if (!browser) return false;
+
+  if (!confirm('Are you sure you want to delete this project? This cannot be undone.')) {
+      return false;
+  }
+
+  try {
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          method: 'DELETE',
+      });
+
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      }
+
+      // Remove from local stores
+      projects.update(existing => existing.filter(p => p.id !== projectId));
+      // Check if the deleted project was the selected one
+      const currentSelected = get(selectedProject);
+      if (currentSelected && currentSelected.id === projectId) {
+          const remainingProjects = get(projects);
+          if (remainingProjects.length > 0) {
+             // Select the first remaining project
+             await selectProjectById(remainingProjects[0].id);
+          } else {
+             // No projects left, clear selection
+             selectProjectById(null);
+          }
+      }
+      console.log(`Project ${projectId} deleted.`);
+      return true;
+
+  } catch (error) {
+      console.error("Failed to delete project:", error);
+      alert(`Error deleting project: ${error}`);
+      return false;
+  }
 }
 
 // --- Quote Interface and Store ---
@@ -331,11 +482,9 @@ export function addOrUpdateReview(reviewData: Omit<SurveyorReview, 'id'> & { id?
 }
 
 export function getReviewForQuote(quoteId: string): SurveyorReview | undefined {
-    let review: SurveyorReview | undefined;
-    allReviews.subscribe(reviews => { // Need to subscribe to get current value outside component
-        review = reviews.find(r => r.quoteId === quoteId);
-    })(); // Immediately unsubscribe
-    return review;
+    // Use get() helper to read store value synchronously
+    const reviews = get(allReviews);
+    return reviews.find(r => r.quoteId === quoteId);
 }
 
 // Specific function to update only the work status

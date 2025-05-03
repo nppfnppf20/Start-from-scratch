@@ -1,21 +1,31 @@
 <script lang="ts">
-  import { projects, selectedProject, addProject as addProjectToStore } from '$lib/stores/projectStore';
-  import { writable } from 'svelte/store';
+  import { projects, selectedProject, addProject as addProjectToStore, selectProjectById } from '$lib/stores/projectStore';
+  import { writable, get } from 'svelte/store';
+  import { browser } from '$app/environment';
 
   let showAddProjectInput = writable(false);
   let newProjectName = '';
-  let selectedClient = ''; // Added state for client dropdown
-  let selectedTeam = ''; // Added state for team dropdown
-  let isCollectionsOpen = writable(false); // Track if collections menu is open
+  let selectedClient = '';
+  let selectedTeamMembers: string[] = [];
+  let isCollectionsOpen = writable(false);
+  let selectedProjectId = '';
 
-  // Mock data for dropdowns (replace with actual data fetching later)
+  $: if ($selectedProject) {
+    selectedProjectId = $selectedProject.id;
+  } else {
+    selectedProjectId = '';
+  }
+
   const clients = ['Client A', 'Client B', 'Client C'];
-  const teams = ['JR', 'RM', 'PE', 'AD', 'SS']; // Updated team names to initials
+  const teams = ['JR', 'RM', 'PE', 'AD', 'SS'];
 
   function toggleAddProjectForm() {
     showAddProjectInput.update(value => !value);
-    selectedClient = ''; // Reset dropdowns when toggling
-    selectedTeam = '';
+    if (get(showAddProjectInput)) {
+        newProjectName = '';
+        selectedClient = '';
+        selectedTeamMembers = [];
+    }
   }
 
   function toggleCollections() {
@@ -25,37 +35,50 @@
   function handleSelectionChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     const projectId = target.value;
-    const project = $projects.find(p => p.id === projectId);
-    if (project) {
-      selectedProject.set(project);
+    if (projectId && projectId !== 'collections') {
+        selectProjectById(projectId);
+    } else if (projectId === 'collections') {
+        toggleCollections();
+        selectedProjectId = $selectedProject?.id ?? '';
     }
   }
 
   function groupProjects(groupBy: string) {
-    // Just close the collections menu for now
-    // In a real app, this would filter/group projects
     isCollectionsOpen.set(false);
-    // Would also set some state to indicate the current grouping
     console.log(`Group projects by: ${groupBy}`);
   }
 
-  function addNewProject() {
-    if (newProjectName.trim()) {
-      // Add project to the store (currently only uses name)
-      // In a real app, you'd likely pass client and team info too
-      console.log(`Adding project: ${newProjectName}, Client: ${selectedClient || 'None'}, Team: ${selectedTeam || 'None'}`);
-      addProjectToStore(newProjectName.trim());
-      newProjectName = '';
-      selectedClient = '';
-      selectedTeam = '';
-      showAddProjectInput.set(false);
+  async function addNewProject() {
+    const name = newProjectName.trim();
+    if (name) {
+      const projectData = {
+        name: name,
+        client: selectedClient || undefined,
+        teamMembers: selectedTeamMembers.length > 0 ? selectedTeamMembers : undefined
+      };
+
+      console.log('Attempting to add project with data:', projectData);
+
+      const addedProject = await addProjectToStore(projectData);
+
+      if (addedProject) {
+        newProjectName = '';
+        selectedClient = '';
+        selectedTeamMembers = [];
+        showAddProjectInput.set(false);
+        console.log('Project added successfully via store:', addedProject);
+      } else {
+        console.error('Failed to add project (error likely shown in alert from store).');
+      }
+    } else {
+        alert('Please enter a project name.');
     }
   }
 
   function cancelAddProject() {
     newProjectName = '';
     selectedClient = '';
-    selectedTeam = '';
+    selectedTeamMembers = [];
     showAddProjectInput.set(false);
   }
 </script>
@@ -66,20 +89,14 @@
       <div class="dropdown-container">
         <select
           aria-label="Select Project"
+          bind:value={selectedProjectId}
           on:change={handleSelectionChange}
-          value={$selectedProject?.id ?? ''}
         >
-          <optgroup label="Collections">
-            <option value="collections" on:click|preventDefault={toggleCollections}>
-              Group By...
-            </option>
-          </optgroup>
-          
-          <optgroup label="Projects">
-            {#each $projects as project}
-              <option value={project.id}>{project.name}</option>
-            {/each}
-          </optgroup>
+          <option value="collections" disabled={$isCollectionsOpen}>Group By...</option>
+          {#if $projects.length === 0 && browser}<option value="" disabled>Loading...</option>{:else if $projects.length === 0}<option value="" disabled>No projects</option>{/if}
+          {#each $projects as project (project.id)}
+            <option value={project.id}>{project.name}</option>
+          {/each}
         </select>
         
         {#if $isCollectionsOpen}
@@ -99,6 +116,7 @@
         type="text"
         bind:value={newProjectName}
         placeholder="Enter new project name"
+        required
         aria-label="New project name"
       />
       <select bind:value={selectedClient} aria-label="Select Client">
@@ -107,14 +125,13 @@
           <option value={client}>{client}</option>
         {/each}
       </select>
-      <!-- Replace select multiple with checkbox group -->
       <div class="checkbox-group-container" aria-label="Select Team Members">
-          <div class="checkbox-group-header">Select Team Members</div>
+          <div class="checkbox-group-header">Team</div>
           <div class="checkbox-list">
             {#each teams as team (team)}
               <div class="checkbox-item">
-                <input type="checkbox" id="team-{team}" bind:group={selectedTeam} value={team} />
-                <label for="team-{team}">{team}</label>
+                <input type="checkbox" id="team-{team}" bind:group={selectedTeamMembers} value={team} />
+                <label for="team-{team}" title={team}>{team}</label>
               </div>
             {/each}
           </div>
@@ -126,6 +143,12 @@
 
   {#if $selectedProject}
     <p class="current-project">Current Project: {$selectedProject.name}</p>
+  {:else if !browser}
+    <p class="current-project">Initializing...</p>
+  {:else if $projects === null}
+    <p class="current-project">Initializing...</p>
+  {:else if $projects.length > 0}
+    <p class="current-project">Select a project</p>
   {/if}
 </div>
 
@@ -158,15 +181,14 @@
     min-width: 200px;
   }
 
-  /* Add dropdown arrow styles */
   select {
-    appearance: none; /* Hide default arrow */
-    -webkit-appearance: none; /* Safari and Chrome */
-    -moz-appearance: none; /* Firefox */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
     background-repeat: no-repeat;
     background-position: right 0.5rem center;
-    padding-right: 2rem; /* Make space for the arrow */
+    padding-right: 2rem;
   }
 
   .collections-menu {
@@ -216,9 +238,8 @@
     margin-left: 0.5rem;
   }
 
-  /* Adjust add button styling */
   .add-button {
-    padding: 0; /* Remove default padding */
+    padding: 0;
     font-size: 1.2rem;
     font-weight: bold;
     border-radius: 50%;
@@ -226,10 +247,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2rem; /* Set fixed width */
-    height: 2rem; /* Set fixed height */
-    line-height: 1; /* Adjust line-height for better centering */
-    flex-shrink: 0; /* Prevent shrinking */
+    width: 2rem;
+    height: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
   }
 
   button:last-of-type {
@@ -243,15 +264,15 @@
   .add-project-form {
     display: flex;
     align-items: center;
-    gap: 0.5rem; /* Add gap between elements */
+    gap: 0.5rem;
   }
 
   .add-project-form input[type="text"] {
-     flex-grow: 1; /* Allow input to take available space */
+     flex-grow: 1;
   }
 
   .add-project-form select {
-      min-width: 150px; /* Adjust width as needed */
+      min-width: 150px;
   }
 
   .current-project {
@@ -259,12 +280,11 @@
       margin-left: auto;
   }
 
-  /* Styling for the checkbox group */
   .checkbox-group-container {
     border: 1px solid #ccc;
     border-radius: 4px;
     background-color: white;
-    min-width: 150px; /* Match dropdown width */
+    min-width: 150px;
     display: flex;
     flex-direction: column;
   }
@@ -278,7 +298,7 @@
   }
 
   .checkbox-list {
-    max-height: 100px; /* Make list scrollable */
+    max-height: 100px;
     overflow-y: auto;
     padding: 0.5rem;
   }
@@ -297,4 +317,15 @@
   .checkbox-item input[type="checkbox"] {
     cursor: pointer;
   }
+
+  .checkbox-group-container { display: flex; flex-direction: column; border: 1px solid #ccc; border-radius: 4px; padding: 0.5rem; background-color: #fff; margin-left: 0.5rem; }
+  .checkbox-group-header { font-size: 0.8em; font-weight: bold; margin-bottom: 0.3rem; color: #555; text-align: center; }
+  .checkbox-list { display: flex; gap: 0.5rem; flex-wrap: nowrap; }
+  .checkbox-item { display: flex; align-items: center; gap: 0.2rem; }
+  .checkbox-item input[type="checkbox"] { margin: 0; min-width: auto; }
+  .checkbox-item label { font-size: 0.9em; white-space: nowrap; cursor: pointer; }
+  .add-project-form button { margin-left: 0.5rem; }
+  .current-project { margin-left: auto; font-style: italic; color: #555; }
+  select:disabled { background-color: #eee; cursor: not-allowed; }
+  option[disabled] { color: #999; }
 </style> 
