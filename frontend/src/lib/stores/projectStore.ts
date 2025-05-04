@@ -4,6 +4,47 @@ import { browser } from '$app/environment'; // Import browser check
 // Define the base URL for your API
 const API_BASE_URL = 'http://localhost:5000/api'; // Adjust if your backend runs elsewhere
 
+// --- Helper Function to map _id to id recursively ---
+function mapMongoId<T>(item: any): T {
+  if (!item || typeof item !== 'object') return item;
+
+  // Handle arrays
+  if (Array.isArray(item)) {
+    // Ensure we return an array of the correct mapped type
+    return item.map(mapMongoId) as unknown as T;
+  }
+
+  // Handle single objects
+  const newItem: any = {};
+  let idFieldSet = false;
+  for (const key in item) {
+      if (Object.prototype.hasOwnProperty.call(item, key)) { // Safer iteration
+          if (key === '_id' && item._id != null) { // Check for null/undefined _id
+              newItem['id'] = item._id.toString(); // Ensure it's a string if ObjectId
+              idFieldSet = true;
+          } else if (typeof item[key] === 'object' && item[key] !== null) {
+              // Recursively map nested objects/arrays
+              newItem[key] = mapMongoId(item[key]);
+          } else {
+              // Copy primitive values directly
+              newItem[key] = item[key];
+          }
+      }
+  }
+   // If the original object had _id but the 'id' key wasn't explicitly set above
+   // (e.g., if 'id' was already a property), ensure 'id' from '_id' takes precedence if needed,
+   // or simply ensure it's added if '_id' exists and 'id' wasn't processed.
+   if (item._id != null && !idFieldSet) {
+       newItem.id = item._id.toString();
+   } else if (item._id != null && newItem.id == null) {
+       // If _id existed and id is somehow null/undefined after loop, set it.
+       newItem.id = item._id.toString();
+   }
+
+
+  return newItem as T;
+}
+
 // --- Project Interface and Store ---
 interface Project {
   id: string;
@@ -207,6 +248,8 @@ export async function selectProjectById(id: string | null) { // Allow null to cl
 
        // +++ Now, load the quotes for this newly selected project +++
        await loadQuotesForProject(id);
+       // +++ Load Instruction Logs for this newly selected project +++
+       await loadInstructionLogsForProject(id);
 
        return true;
    } catch (error) {
@@ -727,4 +770,103 @@ export function deleteCustomDateFromReview(quoteId: string, customDateId: string
         }
         return reviews; // Return modified array
     });
-} 
+}
+
+// +++ Add store for Instruction Logs +++
+export const currentInstructionLogs = writable<InstructionLog[]>([]);
+
+// --- Instruction Log Interface (Matches backend) ---
+export interface InstructionLog {
+  id: string; // Corresponds to _id from backend
+  projectId: string;
+  quoteId: string;
+  workStatus?: 'not started' | 'in progress' | 'completed';
+  siteVisitDate?: string; // ISO date string
+  reportDraftDate?: string; // ISO date string
+  operationalNotes?: string;
+  uploadedWorks?: UploadedWork[]; // Uses existing UploadedWork interface
+  customDates?: CustomDate[];   // Uses existing CustomDate interface
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// --- Instruction Log API Functions ---
+
+// Function to load Instruction Logs for a specific project
+async function loadInstructionLogsForProject(projectId: string | null) {
+  if (!browser || !projectId) {
+    currentInstructionLogs.set([]); // Clear if no project or SSR
+    return;
+  }
+
+  console.log(`Fetching instruction logs for project ID: ${projectId}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/instruction-logs?projectId=${projectId}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch instruction logs'}`);
+    }
+    let logs: any[] = await response.json(); // Fetch as any[] initially
+
+    // Map _id to id deeply
+    const mappedLogs = logs.map(log => mapMongoId<InstructionLog>(log)); // USE HELPER HERE
+
+    currentInstructionLogs.set(mappedLogs); // Set the mapped logs
+    console.log('Instruction logs loaded:', mappedLogs);
+  } catch (error) {
+    console.error(`Failed to load instruction logs for project ${projectId}:`, error);
+    currentInstructionLogs.set([]); // Clear store on error
+    // Potentially show an error to the user
+  }
+}
+
+// Function to upsert (create or update) an Instruction Log
+export async function upsertInstructionLog(quoteId: string, logData: Partial<Omit<InstructionLog, 'id' | 'quoteId' | 'projectId' | 'createdAt' | 'updatedAt'>>) {
+    if (!browser) return null;
+
+    console.log(`Upserting instruction log for quote ID: ${quoteId}`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/instruction-logs/${quoteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(logData), // Send only the updatable fields
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to upsert instruction log'}`);
+        }
+
+        let upsertedLog: any = await response.json(); // Fetch as any
+        // Map _id to id deeply for the returned log and its subdocuments
+        const mappedUpsertedLog = mapMongoId<InstructionLog>(upsertedLog); // USE HELPER HERE
+
+        // Update the local store
+        currentInstructionLogs.update(logs => {
+            const index = logs.findIndex(log => log.quoteId === quoteId);
+            if (index !== -1) {
+                // Update existing log
+                logs[index] = mappedUpsertedLog; // Use the mapped log
+            } else {
+                // Add new log
+                logs.push(mappedUpsertedLog); // Use the mapped log
+            }
+            // Ensure reactivity by returning a new array reference if needed,
+            // though direct modification and returning logs often works in Svelte stores.
+            return [...logs]; // Safer for reactivity
+        });
+
+        console.log('Instruction log upserted:', mappedUpsertedLog);
+        return mappedUpsertedLog; // Return the mapped log
+
+    } catch (error) {
+        console.error(`Failed to upsert instruction log for quote ${quoteId}:`, error);
+        alert(`Error saving instruction details: ${error}`); // Basic user feedback
+        return null;
+    }
+}
+
+// --- Surveyor Review Interface and Store (Remains for the /reviews page) ---
+// ... rest of the file ...

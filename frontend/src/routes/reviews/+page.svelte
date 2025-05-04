@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     selectedProject, 
-    allQuotes, 
+    currentProjectQuotes, 
     allReviews, 
     addOrUpdateReview,
     type Quote, 
@@ -11,12 +11,9 @@
   import { getContext, setContext } from 'svelte';
   import { writable, type Writable } from 'svelte/store';
   
-  // Filter for instructed quotes based on selected project
-  $: instructedQuotes = $selectedProject 
-    ? $allQuotes.filter(quote => 
-        quote.projectId === $selectedProject.id && 
-        (quote.instructionStatus === 'instructed' || quote.instructionStatus === 'partially instructed')
-      ) 
+  // Filter for project quotes - now uses currentProjectQuotes
+  $: projectQuotes = $selectedProject
+    ? $currentProjectQuotes
     : [];
 
   // Modal state for Notes
@@ -103,7 +100,7 @@
       <h2>Reviews for Instructed Surveyors on {$selectedProject.name}</h2>
     </div>
     
-    {#if instructedQuotes.length > 0}
+    {#if projectQuotes.length > 0}
       <div class="reviews-table-container">
         <table class="reviews-table">
           <thead>
@@ -119,7 +116,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each instructedQuotes as quote (quote.id)}
+            {#each projectQuotes as quote (quote.id)}
               {@const review = findReview(quote.id)}
               <tr>
                 <td>{quote.contactName}</td>

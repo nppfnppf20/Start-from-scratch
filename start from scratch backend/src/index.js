@@ -11,6 +11,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 // +++ Import Routes +++
 const projectRoutes = require('./routes/projects');
 const quoteRoutes = require('./routes/quotes'); // Import quote routes
+const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -51,6 +52,8 @@ app.get('/api', (req, res) => {
 app.use('/api/projects', projectRoutes);
 // +++ Use Quote routes +++
 app.use('/api/quotes', quoteRoutes);
+// +++ Use InstructionLog routes +++
+app.use('/api/instruction-logs', instructionLogRoutes);
 
 // --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,15 +1,18 @@
 <script lang="ts">
   import {
     selectedProject, 
+    currentProjectQuotes,
+    currentInstructionLogs,
     allProgrammeEvents, 
     addProgrammeEvent,
     updateProgrammeEvent,
     deleteProgrammeEvent,
     type ProgrammeEvent,
-    allQuotes,
     type Quote,
+    type InstructionLog,
     getReviewForQuote,
-    type SurveyorReview
+    type SurveyorReview,
+    type CustomDate
   } from "$lib/stores/projectStore";
   import { onMount } from 'svelte';
   // import { Calendar } from '@fullcalendar/core'; // Removed
@@ -17,7 +20,7 @@
   // import interactionPlugin from '@fullcalendar/interaction'; // Removed
   // import KeyDateModal from '$lib/components/KeyDateModal.svelte'; // Removed
   import { derived } from 'svelte/store';
-  import { startOfWeek, addMonths, addWeeks, format, isBefore, min, parseISO, isWithinInterval, endOfWeek } from 'date-fns';
+  import { startOfWeek, addMonths, addWeeks, format, isBefore, min, parseISO, isWithinInterval, endOfWeek, compareAsc } from 'date-fns';
   import TimelineKeyDateModal from '$lib/components/TimelineKeyDateModal.svelte'; // Import the modal
   
   // CSS imports removed from here
@@ -29,25 +32,34 @@
   // let showKeyDateModal = false; 
   // let selectedDateStr: string | null = null; 
 
+  // --- Define a common interface for all timeline items ---
+  interface TimelineItem {
+    id: string; // Unique ID for the item (e.g., event ID, log-sv-id, log-cd-id)
+    date: string; // ISO Date string
+    title: string;
+    color: string;
+    type: 'manual' | 'log' | 'log-custom'; // Type to distinguish source
+    projectId: string; // Ensure projectId is present
+    quoteId?: string; // Optional: Link back to quote if from log
+    customDateId?: string; // Optional: Link back to custom date if applicable
+  }
+
   // Filter programme events for the current project
-  // Simplified - no longer mapping to FullCalendar format
-  const currentProjectEvents = derived(
+  const currentProjectManualEvents = derived(
     [allProgrammeEvents, selectedProject],
-    ([$allProgrammeEvents, $selectedProject]) => {
+    ([$allProgrammeEvents, $selectedProject]): ProgrammeEvent[] => {
       if (!$selectedProject) return [];
-      // Ensure events are sorted by date for consistent display
       return $allProgrammeEvents
         .filter(event => event.projectId === $selectedProject.id)
-        .sort((a, b) => a.date.localeCompare(b.date)); 
     }
   );
 
   // Filter instructed/partially instructed surveyors (quotes) for the current project
   const instructedSurveyors = derived(
-    [allQuotes, selectedProject],
-    ([$allQuotes, $selectedProject]): Quote[] => {
+    [currentProjectQuotes, selectedProject],
+    ([$currentProjectQuotes, $selectedProject]): Quote[] => {
       if (!$selectedProject) return [];
-      return $allQuotes.filter(quote => 
+      return $currentProjectQuotes.filter(quote => 
         quote.projectId === $selectedProject.id &&
         (quote.instructionStatus === 'instructed' || quote.instructionStatus === 'partially instructed')
       );
@@ -92,6 +104,79 @@
       // ... logic ...
   }
   */
+
+  // *** Create the new derived store for ALL timeline items ***
+  const timelineItems = derived(
+    [currentProjectManualEvents, currentInstructionLogs, currentProjectQuotes, selectedProject],
+    ([$manualEvents, $logs, $quotes, $project]): TimelineItem[] => {
+      if (!$project) return [];
+
+      const items: TimelineItem[] = [];
+      const projectId = $project.id;
+
+      // 1. Add Manual Programme Events
+      $manualEvents.forEach(event => {
+        items.push({ ...event, type: 'manual' });
+      });
+
+      // 2. Add Instruction Log Dates
+      $logs.forEach(log => {
+        // Find the corresponding quote for context (e.g., organisation name)
+        const quote = $quotes.find(q => q.id === log.quoteId);
+        const orgName = quote?.organisation || 'Unknown Org';
+
+        // Site Visit Date
+        if (log.siteVisitDate) {
+          items.push({
+            id: `log-${log.id}-sv`,
+            date: log.siteVisitDate,
+            title: `Site Visit - ${orgName}`,
+            color: '#ED7D31', // Example color (Orange)
+            type: 'log',
+            projectId,
+            quoteId: log.quoteId
+          });
+        }
+
+        // Report Draft Date
+        if (log.reportDraftDate) {
+          items.push({
+            id: `log-${log.id}-rd`,
+            date: log.reportDraftDate,
+            title: `Report Draft - ${orgName}`,
+            color: '#4472C4', // Example color (Blue)
+            type: 'log',
+            projectId,
+            quoteId: log.quoteId
+          });
+        }
+
+        // Custom Dates from Log
+        if (log.customDates) {
+          log.customDates.forEach(cd => {
+            // Basic check for valid date string before adding
+            if (cd.date && typeof cd.date === 'string') { 
+              items.push({
+                id: `log-${log.id}-cd-${cd.id}`,
+                date: cd.date,
+                title: `${cd.title} - ${orgName}`,
+                color: '#7030A0', // Example color (Purple)
+                type: 'log-custom',
+                projectId,
+                quoteId: log.quoteId,
+                customDateId: cd.id
+              });
+            }
+          });
+        }
+      });
+
+      // 3. Sort all items by date
+      items.sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date)));
+
+      return items;
+    }
+  );
 
   // --- Timeline Calculation ---
   let timelineStartDate: Date = new Date(); // Default to today
@@ -220,6 +305,14 @@
     eventBeingEdited = null;
   }
 
+  // Reactive calculation for quotes belonging to the selected project
+  $: projectQuotes = $selectedProject && $currentProjectQuotes
+      ? $currentProjectQuotes.filter(quote => quote.projectId === $selectedProject?.id)
+      : [];
+
+  // Combine standard dates from project/quotes with custom programme events
+  // ... existing code ...
+
 </script>
 
 <div class="programme-container">
@@ -231,7 +324,7 @@
     </div>
     
     <div class="programme-content timeline-view">
-      {#if $instructedSurveyors.length > 0 || $currentProjectEvents.length > 0}
+      {#if $instructedSurveyors.length > 0 || $currentProjectManualEvents.length > 0}
         <table class="timeline-table">
           <thead>
              <!-- Week Header Row -->
@@ -251,7 +344,7 @@
                     <th class="header-cell key-date-cell">
                        <!-- Display existing key dates for this week -->
                        <div class="key-dates-container">
-                           {#each $currentProjectEvents as event (event.id)}
+                           {#each $currentProjectManualEvents as event (event.id)}
                                {#if isDateInWeek(event.date, weekDate)}
                                    <div 
                                        class="timeline-key-event"
@@ -282,8 +375,16 @@
           </thead>
           <tbody>
             {#each $instructedSurveyors as quote (quote.id)}
-               {@const review = getReviewForQuote(quote.id)} 
-               <tr class="surveyor-row" class:row-completed={review?.workStatus === 'completed'}>
+               <!-- Determine row completion status (using InstructionLog now if available) -->
+               {@const log = $currentInstructionLogs.find(l => l.quoteId === quote.id)}
+               {@const isCompleted = log?.workStatus === 'completed'}
+               
+               <!-- Calculate relevant items for *this specific quote* just before use -->
+               {@const relevantLogItems = $timelineItems.filter(item => 
+                   (item.type === 'log' || item.type === 'log-custom') && item.quoteId === quote.id
+               )}
+
+               <tr class="surveyor-row" class:row-completed={isCompleted}>
                 <td class="sticky-col data-cell surveyor-name">
                     <div>{quote.organisation}</div>
                     <div class="discipline">{quote.discipline} - {quote.surveyType || 'N/A'}</div>
@@ -291,26 +392,18 @@
                 {#each weeks as weekDate (format(weekDate, 'yyyy-MM-dd'))}
                   <td class="data-cell week-col">
                       <div class="cell-content">
-                        {#if review}
-                            {#if isDateInWeek(review.siteVisitDate, weekDate)}
-                                <div class="timeline-item site-visit" title="Site Visit: {review.siteVisitDate}">
-                                    Site Visit
+                        <!-- Iterate through items relevant to this quote -->
+                        {#each relevantLogItems as item (item.id)}
+                            {#if isDateInWeek(item.date, weekDate)}
+                                <div 
+                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}" 
+                                    style="background-color: {item.color}1A; border-left: 3px solid {item.color}; color: {item.color};" 
+                                    title="{item.title} ({format(parseISO(item.date), 'd MMM')})"
+                                >
+                                    {item.title}
                                 </div>
                             {/if}
-                            {#if isDateInWeek(review.reportDraftDate, weekDate)}
-                                <div class="timeline-item report-draft" title="Draft Report Due: {review.reportDraftDate}">
-                                    Draft Report
-                                </div>
-                            {/if}
-                            <!-- Loop through custom dates -->
-                            {#each review.customDates || [] as customDate (customDate.id)}
-                                {#if isDateInWeek(customDate.date, weekDate)}
-                                    <div class="timeline-item custom-date" title="{customDate.title}: {customDate.date}">
-                                        {customDate.title || 'Untitled Date'}
-                                    </div>
-                                {/if}
-                            {/each}
-                        {/if}
+                        {/each}
                       </div>
                   </td>
                 {/each}
@@ -576,8 +669,7 @@
       /* Optionally add a border or other distinction */
       /* border-left: 3px solid #28a745; */
   }
-  
-  tbody tr.row-completed:hover td {
+   tbody tr.row-completed:hover td {
       background-color: #d4edda; /* Slightly darker green on hover */
   }
   tbody tr.row-completed:hover td.sticky-col {
