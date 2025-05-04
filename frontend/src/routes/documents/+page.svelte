@@ -1,125 +1,112 @@
 <script lang="ts">
-  import { selectedProject } from "$lib/stores/projectStore";
+  import { selectedProject, projectUploads, type Upload } from '$lib/stores/projectStore';
   import UploadDocumentModal from '$lib/components/UploadDocumentModal.svelte';
+  import Icon from '@iconify/svelte';
   
-  // Document categories
-  const categories = ['All', 'Drawing', 'Surveyor Report', 'Other'];
-  let selectedCategory = 'All';
-
-  // State for modal visibility
   let showUploadModal = false;
 
-  // Document data - starts empty
-  let documents: any[] = [];
-
-  // Filtering function
-  $: filteredDocuments = selectedCategory === 'All' 
-    ? documents 
-    : documents.filter(doc => doc.category === selectedCategory);
-
-  // Function to handle the uploaded document from the modal
-  function handleDocumentUpload(event: CustomEvent) {
-    const newDocument = event.detail;
-    documents = [...documents, newDocument]; // Add the new document to the main list
-    // Optionally, you might want to switch the category filter to show the new item
-    // selectedCategory = newDocument.category;
+  function handleDocumentUpload(event: CustomEvent<Upload>) {
+    const newUpload = event.detail;
+    console.log('Document uploaded event received:', newUpload);
+    projectUploads.update(currentUploads => {
+      if (!currentUploads.some(upload => upload.id === newUpload.id)) {
+        return [newUpload, ...currentUploads];
+      }
+      return currentUploads;
+    });
+    showUploadModal = false;
   }
 
-  // Function to get icon based on file type
-  function getFileIcon(type: string) {
-    switch(type.toLowerCase()) {
-      case 'pdf':
-        return '📄';
-      case 'docx':
-        return '📝';
-      case 'xlsx':
-        return '📊';
-      case 'pptx':
-        return '📑';
-      case 'jpg':
-      case 'png':
-        return '🖼️';
-      default:
-        return '📁';
+  function formatDate(dateString: string | undefined): string {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      return 'Invalid Date';
     }
   }
+
+  function formatSize(bytes: number | undefined): string {
+    if (bytes === undefined || bytes === null || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  $: currentProjectId = $selectedProject?.id ?? null;
 </script>
 
-<div class="documents-container">
-  <h1>Relevant Documents</h1>
-  
+<div class="container mx-auto p-4 md:p-6 lg:p-8">
   {#if $selectedProject}
-    <div class="documents-header">
-      <h2>Documents for {$selectedProject.name}</h2>
-      <button class="upload-btn" on:click={() => showUploadModal = true}>+ Upload New Document</button>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl md:text-3xl font-semibold text-gray-800">
+        Relevant Documents for {$selectedProject.name}
+      </h1>
+      <button
+        on:click={() => showUploadModal = true}
+        class="btn btn-primary"
+        disabled={!currentProjectId} 
+      >
+        <Icon icon="mdi:upload" class="mr-2" />
+        Upload New Document
+      </button>
     </div>
-    
-    <div class="filter-bar">
-      <div class="category-filter">
-        <span class="filter-label">Filter by category:</span>
-        <div class="category-buttons">
-          {#each categories as category}
-            <button 
-              class="category-btn" 
-              class:active={selectedCategory === category}
-              on:click={() => selectedCategory = category}
-            >
-              {category}
-            </button>
-          {/each}
-        </div>
-      </div>
-      
-      <div class="search-box">
-        <input type="text" placeholder="Search documents..." />
-      </div>
-    </div>
-    
-    <div class="documents-table-container">
-      <table class="documents-table">
-        <thead>
+
+    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
           <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Size</th>
-            <th>Upload Date</th>
-            <th>Category</th>
-            <th>Actions</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title / Filename</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Uploaded</th>
+            <th scope="col" class="relative px-6 py-3">
+              <span class="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
-        <tbody>
-          {#each filteredDocuments as document (document.id)}
+        <tbody class="bg-white divide-y divide-gray-200">
+          {#if $projectUploads.length === 0}
             <tr>
-              <td class="file-name">
-                <span class="file-icon">{getFileIcon(document.type)}</span>
-                {document.name}
+              <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                No documents uploaded for this project yet.
               </td>
-              <td>{document.type}</td>
-              <td>{document.size}</td>
-              <td>{new Date(document.uploadDate).toLocaleDateString()}</td>
-              <td>
-                <span class="category-badge">{document.category}</span>
+            </tr>
+          {/if}
+          {#each $projectUploads as doc (doc.id)}
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">{doc.title || 'Untitled'}</div>
+                <div class="text-xs text-gray-500">{doc.originalName}</div>
               </td>
-              <td class="action-cell">
-                <button class="action-btn view-btn">View</button>
-                <button class="action-btn download-btn">Download</button>
-                <button class="action-btn delete-btn">Delete</button>
+              <td class="px-6 py-4 whitespace-normal text-sm text-gray-500 max-w-xs break-words">{doc.description || '-'}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatSize(doc.size)}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(doc.createdAt)}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="text-indigo-600 hover:text-indigo-900 mr-3 disabled:text-gray-400" title="Download (Not implemented)" disabled>
+                  <Icon icon="mdi:download" />
+                </button>
+                <button class="text-red-600 hover:text-red-900 disabled:text-gray-400" title="Delete (Not implemented)" disabled>
+                  <Icon icon="mdi:delete" />
+                </button>
               </td>
             </tr>
           {/each}
         </tbody>
       </table>
     </div>
-    
+
   {:else}
-    <p>Please select a project to view documents.</p>
+    <p class="text-center text-gray-500 mt-10">Please select a project to view its documents.</p>
   {/if}
 </div>
 
-{#if showUploadModal}
-  <UploadDocumentModal 
-    on:close={() => showUploadModal = false} 
-    on:uploaddocument={handleDocumentUpload}
+{#if showUploadModal && currentProjectId}
+  <UploadDocumentModal
+    projectId={currentProjectId} 
+    on:close={() => showUploadModal = false}
+    on:uploaddocument={handleDocumentUpload} 
   />
 {/if}
 

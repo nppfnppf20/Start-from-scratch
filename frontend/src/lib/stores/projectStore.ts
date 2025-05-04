@@ -1,11 +1,12 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment'; // Import browser check
+import { get } from 'svelte/store';
 
 // Define the base URL for your API
-const API_BASE_URL = 'http://localhost:5000/api'; // Adjust if your backend runs elsewhere
+export const API_BASE_URL = 'http://localhost:5000/api'; // Adjust if your backend runs elsewhere
 
 // --- Helper Function to map _id to id recursively ---
-function mapMongoId<T>(item: any): T {
+export function mapMongoId<T>(item: any): T {
   if (!item || typeof item !== 'object') return item;
 
   // Handle arrays
@@ -90,10 +91,30 @@ interface Project {
   updatedAt?: string; // From timestamps
 }
 
+// *** ADD Upload Interface Definition ***
+export interface Upload {
+  id: string; // Mapped from _id
+  projectId: string;
+  filename: string;      // Server filename
+  originalName: string;  // Original filename
+  mimeType: string;
+  path: string;          // Relative path on server (e.g., uploads/file-123.pdf)
+  size: number;          // Size in bytes
+  title?: string;         // User-provided title
+  description?: string;   // User-provided description
+  createdAt?: string;     // Added by timestamps
+  updatedAt?: string;     // Added by timestamps
+}
+
 // --- Project Store ---
 // Initialize stores with empty/null values initially
 export const projects = writable<Project[]>([]);
 export const selectedProject = writable<Project | null>(null);
+export const currentProjectQuotes = writable<Quote[]>([]);
+export const currentInstructionLogs = writable<InstructionLog[]>([]);
+export const surveyorFeedbacks = writable<SurveyorFeedback[]>([]);
+export const allProgrammeEvents = writable<ProgrammeEvent[]>([]);
+export const projectUploads = writable<Upload[]>([]);
 
 // Function to load projects from the API
 export async function loadProjects() {
@@ -133,7 +154,6 @@ export async function loadProjects() {
 }
 
 // Helper to get current store value outside component (needed for loadProjects logic)
-import { get } from 'svelte/store';
 
 // --- Store Manipulation Functions ---
 
@@ -227,7 +247,9 @@ export async function selectProjectById(id: string | null) {
         // Clear related data when project is deselected
         currentProjectQuotes.set([]);
         currentInstructionLogs.set([]);
-        surveyorFeedbacks.set([]); // Clear feedback too
+        surveyorFeedbacks.set([]);
+        allProgrammeEvents.set([]); // Clear programme events
+        projectUploads.set([]);
         return true;
    }
 
@@ -251,7 +273,9 @@ export async function selectProjectById(id: string | null) {
        // Load related data
        await loadQuotesForProject(id);
        await loadInstructionLogsForProject(id);
-       await loadSurveyorFeedback(id); // *** ADDED CALL ***
+       await loadSurveyorFeedback(id);
+       await loadProgrammeEventsForProject(id);
+       await loadUploads(id); // *** ADD CALL to load uploads ***
 
        return true;
    } catch (error) {
@@ -261,6 +285,8 @@ export async function selectProjectById(id: string | null) {
        currentProjectQuotes.set([]);
        currentInstructionLogs.set([]);
        surveyorFeedbacks.set([]); // *** CLEAR FEEDBACK STORE ***
+       allProgrammeEvents.set([]);
+       projectUploads.set([]); // *** Clear Uploads store on error ***
        alert(`Error loading project details: ${error}`);
        return false;
    }
@@ -993,4 +1019,59 @@ export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<Surveyor
 export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
+}
+
+// --- Upload API Functions ---
+
+// Function to load uploads for a specific project
+async function loadUploads(projectId: string | null) {
+  if (!browser || !projectId) {
+    projectUploads.set([]); // Clear if no project ID or not in browser
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/uploads?projectId=${projectId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedUploads = await response.json();
+
+    // Map _id to id using the Upload type
+    const mappedUploads = mapMongoId<Upload[]>(fetchedUploads); // SPECIFY <Upload[]> type for mapping array
+
+    projectUploads.set(mappedUploads);
+  } catch (error) {
+    console.error("Failed to load uploads:", error);
+    projectUploads.set([]); // Reset on error
+  }
+}
+
+// --- Programme Event API Functions ---
+
+// *** ADD Function to load programme events for a project ***
+async function loadProgrammeEventsForProject(projectId: string | null) {
+    if (!browser || !projectId) {
+        allProgrammeEvents.set([]); // Clear if no project ID or not in browser
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/programme-events?projectId=${projectId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error fetching programme events! status: ${response.status}`);
+        }
+        let fetchedEvents = await response.json();
+        const mappedEvents = mapMongoId<ProgrammeEvent[]>(fetchedEvents);
+        allProgrammeEvents.set(mappedEvents);
+        console.log('Programme events loaded:', mappedEvents);
+    } catch (error) {
+        console.error("Failed to load programme events:", error);
+        allProgrammeEvents.set([]); // Reset on error
+    }
+}
+
+// Initial data load when the store is first imported in the browser
+if (browser) {
+  loadProjects();
 }

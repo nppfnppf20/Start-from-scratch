@@ -13,6 +13,8 @@ const projectRoutes = require('./routes/projects');
 const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
 const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
+const programmeEventRoutes = require('./routes/programmeEvents');
+const uploadRoutes = require('./routes/uploads'); // *** ADD IMPORT ***
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -44,6 +46,12 @@ app.use(cors());
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+// *** ADD STATIC FILE SERVING for uploads directory ***
+// Serve uploaded files statically from the 'uploads' directory at the backend root
+const uploadsDir = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsDir));
+console.log(`Serving static files from: ${uploadsDir}`); // Optional: Confirm path
+
 // +++ Change base API route to /api +++
 app.get('/api', (req, res) => {
   res.send('API is running...');
@@ -57,6 +65,8 @@ app.use('/api/quotes', quoteRoutes);
 app.use('/api/instruction-logs', instructionLogRoutes);
 // +++ Use SurveyorFeedback routes +++
 app.use('/api/surveyor-feedback', surveyorFeedbackRoutes); // *** ADD THIS LINE ***
+app.use('/api/programme-events', programmeEventRoutes);
+app.use('/api/uploads', uploadRoutes); // *** ADD USAGE ***
 
 // --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

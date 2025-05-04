@@ -3,48 +3,102 @@
 
   const dispatch = createEventDispatcher();
 
+  // --- Props --- 
+  export let projectId: string; // *** ADDED: Need projectId to link upload ***
+
+  // --- State --- 
   let selectedFile: File | null = null;
-  let documentName = '';
-  let selectedCategory = 'Drawing'; // Default category
-  const categories = ['Drawing', 'Surveyor Report', 'Other']; // Match categories from main page (excluding 'All')
+  let documentName = ''; // User-provided title/name
+  let documentDescription = ''; // *** ADDED: For optional description ***
+  // Category removed
+  let isUploading = false; // For loading state
+  let errorMessage = ''; // For displaying errors
+  let fileInputRef: HTMLInputElement; // To reset file input
 
   function handleFileSelect(event: Event) {
+    errorMessage = ''; // Clear error on new selection
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       selectedFile = input.files[0];
-      documentName = selectedFile.name; // Pre-fill name
+      // Pre-fill name, but allow user override if field is empty
+      if (!documentName) {
+          documentName = selectedFile.name;
+      }
     } else {
       selectedFile = null;
-      documentName = '';
+      // Don't clear documentName automatically if user typed something
     }
   }
 
-  function handleSubmit() {
-    if (!selectedFile || !documentName || !selectedCategory) {
-      alert('Please select a file, enter a name, and choose a category.');
+  // *** REFACTORED handleSubmit for real upload ***
+  async function handleSubmit() {
+    if (!selectedFile || !documentName || !projectId) {
+      errorMessage = 'Please select a file, enter a title, and ensure a project context exists.';
       return;
     }
+    if (isUploading) return; // Prevent double submission
 
-    // Simulate upload - create a document object
-    const newDocument = {
-      id: `temp-${Date.now()}`, // Temporary unique ID
-      name: documentName,
-      type: selectedFile.name.split('.').pop()?.toUpperCase() || 'UNKNOWN',
-      size: formatBytes(selectedFile.size),
-      uploadDate: new Date().toISOString().split('T')[0], // Today's date
-      category: selectedCategory,
-      file: selectedFile // Keep the actual file object if needed later
-    };
+    isUploading = true;
+    errorMessage = '';
 
-    dispatch('uploaddocument', newDocument);
-    closeModal();
+    // Create FormData
+    const formData = new FormData();
+    formData.append('file', selectedFile); // Key must match upload.single('file')
+    formData.append('projectId', projectId);
+    formData.append('title', documentName); // Map documentName to title
+    formData.append('description', documentDescription); // Send description
+
+    console.log('Uploading file with data:', { 
+        fileName: selectedFile.name,
+        projectId,
+        title: documentName,
+        description: documentDescription
+     });
+
+    try {
+        // Use API_BASE_URL which should be imported below
+        const response = await fetch(`${API_BASE_URL}/api/uploads`, { 
+            method: 'POST',
+            body: formData,
+            // ** IMPORTANT: Do NOT set Content-Type header for FormData **
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+             // Use error message from backend if available
+            const errorMsg = responseData.msg || `Upload failed with status: ${response.status}`;
+            const validationErrors = responseData.errors ? ` (${responseData.errors.join(', ')})` : '';
+            throw new Error(errorMsg + validationErrors);
+        }
+
+        console.log('Upload successful, response:', responseData);
+
+        // Dispatch event with the actual saved metadata from the backend
+        // Use mapMongoId which should be imported below
+        dispatch('uploaddocument', mapMongoId(responseData)); 
+        closeModalAndReset(); // Close and reset state on success
+
+    } catch (error) {
+        console.error('Upload error:', error);
+        errorMessage = error instanceof Error ? error.message : 'An unknown upload error occurred.';
+    } finally {
+        isUploading = false; // Ensure loading state is turned off
+    }
   }
 
-  function closeModal() {
+  // Renamed for clarity
+  function closeModalAndReset() {
     // Reset state
     selectedFile = null;
     documentName = '';
-    selectedCategory = 'Drawing';
+    documentDescription = '';
+    errorMessage = '';
+    isUploading = false;
+    // Reset the actual file input element
+    if (fileInputRef) {
+        fileInputRef.value = '';
+    }
     dispatch('close');
   }
 
@@ -56,17 +110,26 @@
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
+  
+  // Import required utilities from store
+  // NOTE: Make sure projectStore EXPORTS these!
+  import { API_BASE_URL, mapMongoId } from "$lib/stores/projectStore"; 
 
 </script>
 
-<div class="modal-backdrop" on:click|self={closeModal}>
+<div class="modal-backdrop" on:click|self={closeModalAndReset}>
   <div class="modal-content">
     <h2>Upload New Document</h2>
 
     <form on:submit|preventDefault={handleSubmit}>
+      {#if errorMessage}
+        <p class="error-message">Error: {errorMessage}</p>
+      {/if}
+      
       <div class="form-group">
         <label for="file-upload">Select File:</label>
-        <input type="file" id="file-upload" on:change={handleFileSelect} required />
+        <!-- Add bind:this to get input element reference -->
+        <input type="file" id="file-upload" on:change={handleFileSelect} required bind:this={fileInputRef} disabled={isUploading}/>
       </div>
 
       {#if selectedFile}
@@ -76,22 +139,23 @@
       {/if}
 
       <div class="form-group">
-        <label for="document-name">Document Name:</label>
-        <input type="text" id="document-name" bind:value={documentName} required />
+        <label for="document-name">Document Title:</label> <!-- Changed label -->
+        <input type="text" id="document-name" bind:value={documentName} required disabled={isUploading}/>
       </div>
 
-      <div class="form-group">
-        <label for="document-category">Category:</label>
-        <select id="document-category" bind:value={selectedCategory} required>
-          {#each categories as category}
-            <option value={category}>{category}</option>
-          {/each}
-        </select>
+       <!-- Added Description Field -->
+       <div class="form-group">
+        <label for="document-description">Description (Optional):</label>
+        <textarea id="document-description" rows="3" bind:value={documentDescription} disabled={isUploading}></textarea>
       </div>
+
+      <!-- Removed Category Section -->
 
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" on:click={closeModal}>Cancel</button>
-        <button type="submit" class="btn btn-primary">Upload</button>
+        <button type="button" class="btn btn-secondary" on:click={closeModalAndReset} disabled={isUploading}>Cancel</button>
+        <button type="submit" class="btn btn-primary" disabled={!selectedFile || isUploading}>
+            {#if isUploading}Uploading...{:else}Upload{/if}
+        </button>
       </div>
     </form>
 
@@ -205,4 +269,24 @@
     background-color: #5a6268;
   }
 
+  .error-message {
+      color: #dc3545; /* Red */
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.9em;
+  }
+
+    textarea {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box; 
+      font-family: inherit;
+      resize: vertical;
+      min-height: 60px;
+  }
 </style> 
