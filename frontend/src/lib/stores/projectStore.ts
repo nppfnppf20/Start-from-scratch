@@ -228,6 +228,7 @@ export async function selectProjectById(id: string | null) {
         currentProjectQuotes.set([]);
         currentInstructionLogs.set([]);
         surveyorFeedbacks.set([]); // Clear feedback too
+        allProgrammeEvents.set([]); // *** CLEAR Programme Events store ***
         return true;
    }
 
@@ -251,7 +252,8 @@ export async function selectProjectById(id: string | null) {
        // Load related data
        await loadQuotesForProject(id);
        await loadInstructionLogsForProject(id);
-       await loadSurveyorFeedback(id); // *** ADDED CALL ***
+       await loadSurveyorFeedback(id);
+       await loadProgrammeEvents(id); // *** ADD CALL ***
 
        return true;
    } catch (error) {
@@ -260,7 +262,8 @@ export async function selectProjectById(id: string | null) {
        // Clear related data on error
        currentProjectQuotes.set([]);
        currentInstructionLogs.set([]);
-       surveyorFeedbacks.set([]); // *** CLEAR FEEDBACK STORE ***
+       surveyorFeedbacks.set([]); 
+       allProgrammeEvents.set([]); // *** CLEAR Programme Events store ***
        alert(`Error loading project details: ${error}`);
        return false;
    }
@@ -658,11 +661,13 @@ export function addUploadedWork(quoteId: string, projectId: string, workDetails:
 
 // --- Programme Event Interface and Store ---
 export interface ProgrammeEvent {
-  id: string; // Unique event ID (e.g., `evt-${Date.now()}`)
-  projectId: string; // Link to project
-  title: string; // Description of the key date
-  date: string; // ISO date string (YYYY-MM-DD)
-  color: string; // Hex color code (e.g., #ff0000)
+  id: string; // Mapped from _id
+  projectId: string;
+  title: string;
+  date: string; // Storing as YYYY-MM-DD string for UI consistency
+  color: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Store for all programme events
@@ -994,3 +999,27 @@ export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefin
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
 }
+
+// --- NEW Programme Event Store and Functions (Connect to Backend) should remain ---
+export interface ProgrammeEvent { // NEW Definition (ensure only one definition exists)
+  id: string; 
+// ... rest of new interface ...
+}
+
+export const allProgrammeEvents = writable<ProgrammeEvent[]>([]); // NEW Store (ensure only one exists)
+
+async function loadProgrammeEvents(projectId: string | null) { // NEW Load function
+// ... function body ...
+}
+
+export async function addProgrammeEvent(eventData: Omit<ProgrammeEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProgrammeEvent | null> { // NEW Add function
+// ... function body ...
+}
+
+export async function updateProgrammeEvent(eventData: Partial<Omit<ProgrammeEvent, 'projectId' | 'createdAt' | 'updatedAt'>> & { id: string }): Promise<ProgrammeEvent | null> { // NEW Update function
+// ... function body ...
+}
+
+export async function deleteProgrammeEvent(eventId: string): Promise<boolean> { // NEW Delete function
+// ... function body ...
+} 

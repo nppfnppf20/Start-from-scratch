@@ -1,16 +1,16 @@
 <script lang="ts">
   import {
-    selectedProject,
+    selectedProject, 
     currentProjectQuotes,
     surveyorFeedbacks,      // Use new store
     upsertSurveyorFeedback, // Use new upsert function
-    type Quote,
+    type Quote, 
     type SurveyorFeedback   // Use new interface
   } from "$lib/stores/projectStore";
   import StarRating from "$lib/components/StarRating.svelte";
   import { format, parseISO } from 'date-fns';
   // Removed getContext, setContext, writable as they are not directly used here now
-
+  
   // Filter for project quotes
   $: projectQuotes = $selectedProject
     ? $currentProjectQuotes // Assumes quotes are loaded when project is selected
@@ -96,7 +96,7 @@
           // Create a new object for reactivity
           editableFeedback = { ...editableFeedback, [field]: value };
           console.log('Updated editable feedback:', editableFeedback);
-      }
+  }
   }
 
   // Notes are handled via direct binding to editableFeedback.notes when editing
@@ -105,13 +105,13 @@
 
 <div class="reviews-container">
   <h1>Surveyor Reviews</h1>
-
+  
   {#if $selectedProject}
     <div class="reviews-header">
       <h2>Reviews for Instructed Surveyors on {$selectedProject.name}</h2>
       <p>Click 'Edit' to rate surveyors and add notes.</p>
     </div>
-
+    
     {#if projectQuotes.length > 0}
       <div class="reviews-table-container">
         <table class="reviews-table">
@@ -144,11 +144,11 @@
                 <!-- Quality -->
                 <td class="rating-cell">
                     {#if isEditing}
-                        <StarRating
+                    <StarRating 
                             value={editableFeedback?.quality}
                             readonly={!isEditing}
                             on:update={(e) => handleEditableRatingUpdate('quality', e.detail)}
-                        />
+                    />
                     {:else}
                         <StarRating value={feedback?.quality} readonly={true} />
                     {/if}
@@ -157,11 +157,11 @@
                 <!-- Responsiveness -->
                 <td class="rating-cell">
                      {#if isEditing}
-                        <StarRating
+                    <StarRating 
                             value={editableFeedback?.responsiveness}
                              readonly={!isEditing}
                             on:update={(e) => handleEditableRatingUpdate('responsiveness', e.detail)}
-                        />
+                    />
                     {:else}
                         <StarRating value={feedback?.responsiveness} readonly={true} />
                     {/if}
@@ -170,11 +170,11 @@
                  <!-- Delivered on Time -->
                  <td class="rating-cell">
                      {#if isEditing}
-                        <StarRating
+                    <StarRating 
                             value={editableFeedback?.deliveredOnTime}
                              readonly={!isEditing}
                             on:update={(e) => handleEditableRatingUpdate('deliveredOnTime', e.detail)}
-                        />
+                    />
                     {:else}
                         <StarRating value={feedback?.deliveredOnTime} readonly={true} />
                     {/if}
@@ -183,11 +183,11 @@
                 <!-- Overall Review -->
                 <td class="rating-cell">
                      {#if isEditing}
-                        <StarRating
+                    <StarRating 
                             value={editableFeedback?.overallReview}
                             readonly={!isEditing}
                             on:update={(e) => handleEditableRatingUpdate('overallReview', e.detail)}
-                        />
+                    />
                     {:else}
                         <StarRating value={feedback?.overallReview} readonly={true} />
                     {/if}
@@ -208,7 +208,7 @@
                              {#if feedback?.notes}
                                 <!-- Basic preview, could truncate -->
                                 <span>{feedback.notes.length > 100 ? feedback.notes.substring(0, 97) + '...' : feedback.notes}</span>
-                             {:else}
+                  {:else}
                                 <span class="placeholder">No notes added.</span>
                              {/if}
                         </div>
@@ -226,8 +226,8 @@
                          {#if feedback?.updatedAt}
                             <div class="last-saved" title="Last saved">Saved: {format(parseISO(feedback.updatedAt), 'd MMM yyyy HH:mm')}</div>
                          {/if}
-                    {/if}
-                 </td>
+                  {/if}
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -236,7 +236,7 @@
     {:else}
       <p class="no-data-message">No quotes found for this project yet.</p>
     {/if}
-
+    
   {:else}
     <p>Please select a project to view reviews.</p>
   {/if}
@@ -250,9 +250,9 @@
     max-width: 1400px;
     margin: 0 auto;
   }
-
+  
   h1, h2 {
-      color: #333;
+    color: #333;
   }
   .reviews-header {
       margin-bottom: 20px;
@@ -271,13 +271,13 @@
     overflow-x: auto;
     border: 1px solid #ddd;
   }
-
+  
   .reviews-table {
     width: 100%;
     border-collapse: collapse;
     min-width: 900px;
   }
-
+  
   .reviews-table th,
   .reviews-table td {
     padding: 10px 12px;
@@ -286,7 +286,7 @@
     font-size: 0.9rem;
     vertical-align: middle;
   }
-
+  
   .reviews-table th {
     background-color: #f8f9fa;
     font-weight: 600;
@@ -301,13 +301,13 @@
       font-weight: bold;
       margin-left: 2px;
   }
-
+  
   .reviews-table tr:last-child td {
-      border-bottom: none;
+    border-bottom: none;
   }
-
+  
   .reviews-table tr:hover {
-      background-color: #f8f9fa;
+    background-color: #f8f9fa;
   }
   .reviews-table tr.is-editing {
       background-color: #fffcee; /* Light yellow background for editing row */
@@ -319,12 +319,12 @@
       padding-top: 15px; /* Extra padding for stars */
       padding-bottom: 15px;
   }
-
+  
   .notes-cell {
       min-width: 250px;
       max-width: 400px; /* Prevent excessive width */
       vertical-align: top;
-      white-space: normal;
+    white-space: normal;
   }
   .notes-display {
       max-height: 80px; /* Limit display height */
@@ -353,17 +353,17 @@
   }
 
   .actions-cell {
-      text-align: center;
+    text-align: center;
       white-space: nowrap;
       vertical-align: middle;
       min-width: 150px; /* Ensure buttons fit */
   }
-
+  
   .actions-cell button {
       margin: 0 4px;
       padding: 6px 12px;
       border-radius: 4px;
-      cursor: pointer;
+    cursor: pointer;
       font-size: 0.85em;
       border: 1px solid;
       transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -378,7 +378,7 @@
        background-color: #e0a800;
        border-color: #c69500;
   }
-
+  
   .save-btn {
       background-color: #198754; /* Updated green */
       border-color: #146c43;
@@ -392,7 +392,7 @@
   .cancel-btn {
       background-color: #6c757d;
       border-color: #5c636a;
-      color: white;
+    color: white;
   }
   .cancel-btn:hover {
       background-color: #5c636a;
@@ -407,8 +407,8 @@
   }
 
   .placeholder {
-     color: #6c757d;
-     font-style: italic;
+    color: #6c757d;
+    font-style: italic;
   }
 
   .no-data-message, p { /* General message styling */
@@ -418,4 +418,4 @@
       font-style: italic;
   }
 
-</style>
+</style> 
