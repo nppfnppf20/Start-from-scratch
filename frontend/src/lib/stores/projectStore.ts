@@ -219,17 +219,19 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
 }
 
 // Function to select a project - Fetches full details
-export async function selectProjectById(id: string | null) { // Allow null to clear selection
+export async function selectProjectById(id: string | null) {
    if (!browser) return false;
    if (!id) { // Handle explicit clearing of selection
         console.log('Clearing project selection.');
         selectedProject.set(null);
+        // Clear related data when project is deselected
+        currentProjectQuotes.set([]);
+        currentInstructionLogs.set([]);
+        surveyorFeedbacks.set([]); // Clear feedback too
         return true;
    }
 
-
    console.log(`Selecting project by ID: ${id}`);
-   // Always fetch full details for the selected project to ensure consistency
    try {
        const response = await fetch(`${API_BASE_URL}/projects/${id}`);
        if (!response.ok) {
@@ -237,24 +239,28 @@ export async function selectProjectById(id: string | null) { // Allow null to cl
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || errorData.message || 'Failed to fetch project details'}`);
        }
        let projectDetails = await response.json();
+       projectDetails = mapMongoId<Project>(projectDetails); // Use helper here too for consistency
 
-       if (!projectDetails) { // Handle case where API returns 200 OK but null/empty body for some reason
+       if (!projectDetails) {
            throw new Error('API returned empty response for project details');
        }
 
-       projectDetails = { ...projectDetails, id: projectDetails._id }; // Map _id
        selectedProject.set(projectDetails);
        console.log('Full project details loaded and selected:', projectDetails);
 
-       // +++ Now, load the quotes for this newly selected project +++
+       // Load related data
        await loadQuotesForProject(id);
-       // +++ Load Instruction Logs for this newly selected project +++
        await loadInstructionLogsForProject(id);
+       await loadSurveyorFeedback(id); // *** ADDED CALL ***
 
        return true;
    } catch (error) {
        console.error(`Failed to fetch details for project ${id}:`, error);
        selectedProject.set(null); // Clear selection on error
+       // Clear related data on error
+       currentProjectQuotes.set([]);
+       currentInstructionLogs.set([]);
+       surveyorFeedbacks.set([]); // *** CLEAR FEEDBACK STORE ***
        alert(`Error loading project details: ${error}`);
        return false;
    }
@@ -770,7 +776,7 @@ export function deleteCustomDateFromReview(quoteId: string, customDateId: string
         }
         return reviews; // Return modified array
     });
-}
+} 
 
 // +++ Add store for Instruction Logs +++
 export const currentInstructionLogs = writable<InstructionLog[]>([]);
@@ -868,5 +874,123 @@ export async function upsertInstructionLog(quoteId: string, logData: Partial<Omi
     }
 }
 
-// --- Surveyor Review Interface and Store (Remains for the /reviews page) ---
-// ... rest of the file ...
+// --- Surveyor Feedback Interface and Store (Replaces SurveyorReview) ---
+export interface SurveyorFeedback {
+  id: string; // Mapped from _id
+  projectId: string;
+  quoteId: string;
+  // Rating fields
+  quality?: number; // 1-5
+  responsiveness?: number; // 1-5
+  deliveredOnTime?: number; // 0-5 
+  overallReview?: number; // 1-5 
+  // Comment field
+  notes?: string; // Review comments
+  // Metadata
+  reviewDate?: string; // ISO date string (set by backend)
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Renamed store for clarity
+export const surveyorFeedbacks = writable<SurveyorFeedback[]>([]); // *** ENSURE THIS LINE EXISTS AND IS CORRECT ***
+
+// --- Surveyor Feedback API Functions ---
+
+// Function to load Surveyor Feedback for a specific project
+async function loadSurveyorFeedback(projectId: string | null) {
+  if (!browser || !projectId) {
+    surveyorFeedbacks.set([]); // Clear if no project or SSR
+    return;
+  }
+
+  console.log(`Fetching surveyor feedback for project ID: ${projectId}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/surveyor-feedback?projectId=${projectId}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch surveyor feedback'}`);
+    }
+    let feedbackList: any[] = await response.json();
+
+    // Map _id to id deeply
+    const mappedFeedbackList = feedbackList.map(fb => mapMongoId<SurveyorFeedback>(fb));
+
+    surveyorFeedbacks.set(mappedFeedbackList);
+    console.log('Surveyor feedback loaded:', mappedFeedbackList);
+  } catch (error) {
+    console.error(`Failed to load surveyor feedback for project ${projectId}:`, error);
+    surveyorFeedbacks.set([]); // Clear store on error
+  }
+}
+
+// Function to upsert (create or update) Surveyor Feedback
+// Replaces addOrUpdateReview logic
+export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<SurveyorFeedback, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>> & { quoteId: string }): Promise<SurveyorFeedback | null> {
+    if (!browser) return null;
+
+    const { quoteId, ...dataToUpdate } = feedbackData; // Separate quoteId from data
+
+    if (!quoteId) {
+        console.error('Upsert requires a quoteId');
+        alert('Error: Cannot save feedback without a valid quote reference.');
+        return null;
+    }
+
+    // Remove fields that shouldn't be sent directly if they somehow slipped in
+    delete (dataToUpdate as any).id;
+    delete (dataToUpdate as any).projectId;
+    delete (dataToUpdate as any).createdAt;
+    delete (dataToUpdate as any).updatedAt;
+    delete (dataToUpdate as any).reviewDate; // Let backend handle reviewDate default/update
+
+    console.log(`Upserting surveyor feedback for quote ID: ${quoteId}`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/surveyor-feedback/${quoteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dataToUpdate),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessages = errorData.errors ? errorData.errors.join(', ') : (errorData.msg || 'Failed to save feedback');
+            throw new Error(`HTTP error! status: ${response.status} - ${errorMessages}`);
+        }
+
+        let upsertedFeedback: any = await response.json();
+        const mappedFeedback = mapMongoId<SurveyorFeedback>(upsertedFeedback);
+
+        console.log('[Store] Feedback received from API (mapped):', mappedFeedback);
+
+        // Update the local store
+        surveyorFeedbacks.update(feedbacks => {
+            const index = feedbacks.findIndex(fb => fb.quoteId === quoteId);
+            console.log(`[Store] Updating store. Found index for ${quoteId}: ${index}`);
+            if (index !== -1) {
+                feedbacks[index] = mappedFeedback;
+            } else {
+                feedbacks.push(mappedFeedback);
+            }
+             // Log the state right before returning it
+            console.log('[Store] Store state AFTER update:', feedbacks); 
+            return [...feedbacks]; // Return new array for reactivity
+        });
+
+        console.log('Surveyor feedback upserted:', mappedFeedback);
+        return mappedFeedback;
+
+    } catch (error) {
+        console.error(`Failed to save surveyor feedback for quote ${quoteId}:`, error);
+        alert(`Error saving feedback: ${error}`); // User feedback
+        return null;
+    }
+}
+
+// Function to get feedback for a specific quote (replaces getReviewForQuote)
+export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
+    const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
+    return currentFeedback.find(fb => fb.quoteId === quoteId);
+}

@@ -401,9 +401,9 @@
                                     title="{item.title} ({format(parseISO(item.date), 'd MMM')})"
                                 >
                                     {item.title}
-                                </div>
-                            {/if}
-                        {/each}
+                                    </div>
+                                {/if}
+                            {/each}
                       </div>
                   </td>
                 {/each}
@@ -669,7 +669,7 @@
       /* Optionally add a border or other distinction */
       /* border-left: 3px solid #28a745; */
   }
-   tbody tr.row-completed:hover td {
+  tbody tr.row-completed:hover td {
       background-color: #d4edda; /* Slightly darker green on hover */
   }
   tbody tr.row-completed:hover td.sticky-col {

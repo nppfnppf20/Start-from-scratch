@@ -1,10 +1,10 @@
 <script lang="ts">
   import {
-    selectedProject,
+    selectedProject, 
     currentProjectQuotes,
     currentInstructionLogs, // Use the new store
     upsertInstructionLog, // Use the new upsert function
-    type Quote,
+    type Quote, 
     type InstructionLog, // Import the new interface
     type WorkStatus,
     type UploadedWork,
@@ -13,7 +13,7 @@
   import NotesModal from "$lib/components/NotesModal.svelte";
   import InstructedDocumentUploadModal from "$lib/components/InstructedDocumentUploadModal.svelte";
   import { browser } from '$app/environment'; // Ensure browser check is available
-
+  
   // Modal state for Notes
   let showNotesModal = false;
   let currentQuoteForNotes: Quote | null = null;
@@ -49,14 +49,14 @@
     await upsertInstructionLog(quoteId, updateData);
     // Store update will trigger reactivity automatically
   }
-
+  
   // Function to handle work status change from dropdown
   async function handleWorkStatusChange(quoteId: string, newStatus: WorkStatus) {
       if (!$selectedProject || !browser) return;
       console.log(`Updating work status for quote ${quoteId} to ${newStatus}`);
       await upsertInstructionLog(quoteId, { workStatus: newStatus });
   }
-
+  
   // Work status options for dropdown
   const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed'];
 
@@ -76,7 +76,7 @@
 
   async function handleSaveNotes(event: CustomEvent<{ notes: string }>) {
     if (!$selectedProject || !currentQuoteForNotes || !browser) return;
-
+    
     const newNotes = event.detail.notes;
     console.log(`Saving notes for quote ${currentQuoteForNotes.id}`);
     await upsertInstructionLog(currentQuoteForNotes.id, { operationalNotes: newNotes });
@@ -202,13 +202,13 @@
 
 <div class="instructed-container">
   <h1>Instructed Surveyors</h1>
-
+  
   {#if $selectedProject}
     <div class="instructed-header">
       <h2>Surveyors for {$selectedProject.name}</h2>
       <p>Tracking operational progress for instructed quotes.</p>
     </div>
-
+    
     {#if instructedQuotes.length > 0}
       <div class="table-container">
         <table>
@@ -276,7 +276,7 @@
                         title="Set site visit date"
                     />
                   </div>
-                   <div class="date-cell-group">
+                  <div class="date-cell-group">
                     <label for="report-draft-{quote.id}" class="date-label standard-date-label">Report Draft</label>
                     <input
                         id="report-draft-{quote.id}"
@@ -340,16 +340,16 @@
                            </button>
                          </div>
                        {/each}
-                     {/if}
-                     <button
+                    {/if}
+                    <button 
                         class="add-custom-date-button"
                         on:click={() => handleAddCustomDate(quote.id)}
                         title="Add a new custom date entry"
                      >
                        + Add Date
-                     </button>
-                   </div>
-                 </td>
+                    </button>
+                  </div>
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -366,7 +366,7 @@
 
 <!-- Modals -->
 {#if showNotesModal && currentQuoteForNotes}
-  <NotesModal
+  <NotesModal 
     initialNotes={currentOperationalNotes}
     on:save={handleSaveNotes}
     on:close={closeNotesModal}
@@ -376,10 +376,10 @@
 {#if showDocumentUploadModal && currentQuoteForUpload}
   {@const logForModal = findLog(currentQuoteForUpload.id)}
   <InstructedDocumentUploadModal
-     quoteId={currentQuoteForUpload.id}
+    quoteId={currentQuoteForUpload.id}
      documentType='instruction'
-     on:uploadComplete={handleDocumentUploadComplete}
-     on:close={closeDocumentUploadModal}
+    on:uploadComplete={handleDocumentUploadComplete}
+    on:close={closeDocumentUploadModal}
      on:deleteFile={(event: CustomEvent<any>) => { /* TODO: Implement delete file logic */ console.warn('Delete file event received, implementation needed', event.detail); }}
   />
 {/if}
@@ -388,14 +388,14 @@
 <style>
 /* Styles are important for layout and usability */
 
-.instructed-container {
+  .instructed-container {
   padding: 25px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   max-width: 1600px; /* Limit max width */
   margin: 0 auto; /* Center */
-}
-
-.instructed-header {
+  }
+  
+  .instructed-header {
   margin-bottom: 25px;
   border-bottom: 1px solid #eee;
   padding-bottom: 15px;
@@ -406,32 +406,32 @@
 .instructed-header p {
     color: #555;
     font-size: 0.95em;
-}
+  }
+  
 
-
-.table-container {
+  .table-container {
   overflow-x: auto; /* Allow horizontal scrolling on small screens */
   border: 1px solid #ddd;
   border-radius: 5px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
+  }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+  table {
+    width: 100%;
+    border-collapse: collapse;
   font-size: 0.9em;
-}
+  }
 
-th, td {
+  th, td {
   border: 1px solid #e0e0e0;
   padding: 12px 15px; /* Slightly more padding */
-  text-align: left;
+    text-align: left;
   vertical-align: top; /* Align content to top */
   white-space: nowrap; /* Prevent headers/simple cells from wrapping */
-}
+  }
 
-th {
-  background-color: #f8f9fa;
+  th {
+    background-color: #f8f9fa;
   font-weight: 600; /* Slightly bolder */
   color: #333;
   position: sticky; /* Make headers sticky if table scrolls vertically */
@@ -460,12 +460,12 @@ tr:hover {
 
 a {
   color: #0056b3;
-  text-decoration: none;
-}
+    text-decoration: none;
+  }
 
 a:hover {
-  text-decoration: underline;
-}
+    text-decoration: underline;
+  }
 a[href^="mailto:"] {
     word-break: break-all; /* Break long emails */
     white-space: normal;
@@ -526,7 +526,7 @@ button {
     border-color: #dc3545;
     padding: 3px 8px;
     font-size: 1em;
-    line-height: 1;
+      line-height: 1;
     margin-left: 5px;
     width: auto;
 }
@@ -536,7 +536,7 @@ button {
 select, input[type="date"], input[type="text"] {
     padding: 6px 10px;
     border-radius: 4px;
-    border: 1px solid #ced4da;
+      border: 1px solid #ced4da;
     font-size: 0.9em;
     font-family: inherit;
     box-sizing: border-box; /* Include padding */
@@ -550,27 +550,27 @@ select:focus, input:focus {
 }
 
 
-.status-dropdown-container {
+  .status-dropdown-container {
     min-width: 130px;
-}
+  }
 
-.work-status-select {
+  .work-status-select {
     width: 100%; /* Make select fill container */
     font-weight: bold;
 }
 
 /* Style dropdown based on status */
-.work-status-select.not-started {
+  .work-status-select.not-started {
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;
-}
-.work-status-select.in-progress {
+  }
+  .work-status-select.in-progress {
     background-color: #fff3cd;
     border-color: #ffeeba;
     color: #856404;
-}
-.work-status-select.completed {
+  }
+  .work-status-select.completed {
     background-color: #d4edda;
     border-color: #c3e6cb;
     color: #155724;
@@ -668,4 +668,4 @@ td:nth-child(10) { /* Custom Dates */
 }
 
 
-</style>
+</style> 

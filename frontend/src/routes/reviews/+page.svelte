@@ -1,459 +1,421 @@
 <script lang="ts">
   import {
-    selectedProject, 
-    currentProjectQuotes, 
-    allReviews, 
-    addOrUpdateReview,
-    type Quote, 
-    type SurveyorReview 
+    selectedProject,
+    currentProjectQuotes,
+    surveyorFeedbacks,      // Use new store
+    upsertSurveyorFeedback, // Use new upsert function
+    type Quote,
+    type SurveyorFeedback   // Use new interface
   } from "$lib/stores/projectStore";
   import StarRating from "$lib/components/StarRating.svelte";
-  import { getContext, setContext } from 'svelte';
-  import { writable, type Writable } from 'svelte/store';
-  
-  // Filter for project quotes - now uses currentProjectQuotes
+  import { format, parseISO } from 'date-fns';
+  // Removed getContext, setContext, writable as they are not directly used here now
+
+  // Filter for project quotes
   $: projectQuotes = $selectedProject
-    ? $currentProjectQuotes
+    ? $currentProjectQuotes // Assumes quotes are loaded when project is selected
     : [];
 
-  // Modal state for Notes
-  let showNotesModal = false;
-  let currentQuoteForNotes: Quote | null = null;
-  let currentNotes: string | undefined = '';
-  let currentReviewId: string | undefined = undefined;
+  // --- State for Edit Mode ---
+  let editingQuoteId: string | null = null;
+  // Temporary storage for feedback being edited
+  let editableFeedback: Partial<SurveyorFeedback> = {};
 
-  // Function to handle star rating updates directly from the table
-  function handleRatingUpdate(quoteId: string, field: keyof SurveyorReview, value: number) {
-    if (!$selectedProject) return;
+  // --- Edit/Save/Cancel Functions ---
+  function startEditing(quote: Quote) {
+    const quoteId = quote.id;
+    const currentFeedback = $surveyorFeedbacks.find(fb => fb.quoteId === quoteId);
+    // Initialize editableFeedback with current values or defaults
+    editableFeedback = {
+        // Do NOT set id, projectId, createdAt, updatedAt, reviewDate - backend handles these
+        quoteId: quoteId, // Essential reference
+        quality: currentFeedback?.quality,
+        responsiveness: currentFeedback?.responsiveness,
+        deliveredOnTime: currentFeedback?.deliveredOnTime,
+        overallReview: currentFeedback?.overallReview, // Required field - handle default/validation later if needed
+        notes: currentFeedback?.notes || '', // Default notes to empty string
+    };
+    editingQuoteId = quoteId;
+    console.log('Started editing quote:', quoteId, 'Initial editable data:', editableFeedback);
+  }
 
-    const existingReview = $allReviews.find(r => r.quoteId === quoteId);
+  function cancelEditing() {
+    editingQuoteId = null;
+    editableFeedback = {}; // Clear temporary data
+    console.log('Cancelled editing');
+  }
 
-    const reviewData: Omit<SurveyorReview, 'id'> & { id?: string } = {
-      projectId: $selectedProject.id,
-      quoteId: quoteId,
-      // Include existing values or defaults
-      quality: existingReview?.quality,
-      responsiveness: existingReview?.responsiveness,
-      deliveredOnTime: existingReview?.deliveredOnTime,
-      overallReview: existingReview?.overallReview || 1, // Default to 1 if no review exists yet
-      notes: existingReview?.notes,
-      reviewDate: existingReview?.reviewDate || new Date().toISOString().split('T')[0],
-      // Add existing ID if updating
-      ...(existingReview?.id ? { id: existingReview.id } : {}),
-      // Update the specific field that was changed
-      [field]: value 
+  async function saveChanges() {
+    // Use the quoteId stored in editingQuoteId
+    if (!editingQuoteId || !editableFeedback) {
+        console.error("Cannot save, no quote ID in edit mode or no editable data.");
+        return;
+    }
+    const quoteIdToSave = editingQuoteId;
+
+    console.log('Saving feedback for quote:', quoteIdToSave, editableFeedback);
+
+    // Client-side validation: Ensure overallReview has a value (as schema requires it)
+    if (editableFeedback.overallReview === undefined || editableFeedback.overallReview === null) {
+        alert('Overall Review rating is required before saving.');
+        // TODO: Add visual feedback to highlight the missing field
+        return;
+    }
+
+    // Prepare data for upsert: only send fields relevant to feedback
+    const dataToSend: Partial<Omit<SurveyorFeedback, 'id' | 'projectId' | 'createdAt' | 'updatedAt' | 'reviewDate'>> & { quoteId: string } = {
+        quoteId: quoteIdToSave,
+        quality: editableFeedback.quality,
+        responsiveness: editableFeedback.responsiveness,
+        deliveredOnTime: editableFeedback.deliveredOnTime,
+        overallReview: editableFeedback.overallReview, // Already validated above
+        notes: editableFeedback.notes
     };
 
-    addOrUpdateReview(reviewData);
+
+    const result = await upsertSurveyorFeedback(dataToSend);
+
+    if (result) {
+        console.log('Save successful for', quoteIdToSave);
+        cancelEditing(); // Exit edit mode on successful save
+    } else {
+        // Error alert is handled within upsertSurveyorFeedback
+        console.error("Save failed for", quoteIdToSave, ", staying in edit mode.");
+        // Optionally, provide more specific UI feedback here based on error type if available
+    }
   }
 
-  // Functions for Notes Modal
-  function openNotesModal(quote: Quote) {
-    currentQuoteForNotes = quote;
-    const existingReview = $allReviews.find(r => r.quoteId === quote.id);
-    currentNotes = existingReview?.notes || '';
-    currentReviewId = existingReview?.id;
-    showNotesModal = true;
+  // --- Update Handlers (Modify local editable state during edit) ---
+  function handleEditableRatingUpdate(field: keyof SurveyorFeedback, value: number | undefined) {
+      // Only update if we are in edit mode for this specific row
+      if (!editingQuoteId || editableFeedback.quoteId !== editingQuoteId) return;
+
+      // Check if the field is a valid rating field before updating
+      const ratingFields: (keyof SurveyorFeedback)[] = ['quality', 'responsiveness', 'deliveredOnTime', 'overallReview'];
+      if (ratingFields.includes(field)) {
+          // Create a new object for reactivity
+          editableFeedback = { ...editableFeedback, [field]: value };
+          console.log('Updated editable feedback:', editableFeedback);
+      }
   }
 
-  function closeNotesModal() {
-    showNotesModal = false;
-    currentQuoteForNotes = null;
-    currentNotes = '';
-    currentReviewId = undefined;
-  }
+  // Notes are handled via direct binding to editableFeedback.notes when editing
 
-  function submitNotes() {
-    if (!currentQuoteForNotes || !$selectedProject) return;
-
-    // Use the same addOrUpdateReview, ensuring we have necessary fields
-    const existingReview = $allReviews.find(r => r.quoteId === currentQuoteForNotes!.id);
-    
-    const reviewData: Omit<SurveyorReview, 'id'> & { id?: string } = {
-      projectId: $selectedProject.id,
-      quoteId: currentQuoteForNotes.id,
-      // Keep existing ratings or provide defaults if creating new
-      quality: existingReview?.quality,
-      responsiveness: existingReview?.responsiveness,
-      deliveredOnTime: existingReview?.deliveredOnTime,
-      overallReview: existingReview?.overallReview || 1, // Need a default overall if creating via notes
-      notes: currentNotes, // Update notes
-      reviewDate: existingReview?.reviewDate || new Date().toISOString().split('T')[0],
-      ...(currentReviewId ? { id: currentReviewId } : {})
-    };
-
-    addOrUpdateReview(reviewData);
-    closeNotesModal();
-  }
-  
-  // Helper to find review for a quote reactively
-  function findReview(quoteId: string): SurveyorReview | undefined {
-      return $allReviews.find(r => r.quoteId === quoteId);
-  }
 </script>
 
 <div class="reviews-container">
   <h1>Surveyor Reviews</h1>
-  
+
   {#if $selectedProject}
     <div class="reviews-header">
       <h2>Reviews for Instructed Surveyors on {$selectedProject.name}</h2>
+      <p>Click 'Edit' to rate surveyors and add notes.</p>
     </div>
-    
+
     {#if projectQuotes.length > 0}
       <div class="reviews-table-container">
         <table class="reviews-table">
           <thead>
             <tr>
               <th>Contact Name</th>
-              <th>Email</th>
+              <!-- <th>Email</th> -->
               <th>Organisation</th>
               <th>Quality</th>
               <th>Responsiveness</th>
               <th>Delivered on Time</th>
-              <th>Overall Review</th>
+              <th>Overall Review <span class="required-indicator">*</span></th>
               <th>Notes</th>
+              <th>Actions</th> <!-- New Column for Buttons -->
             </tr>
           </thead>
           <tbody>
             {#each projectQuotes as quote (quote.id)}
-              {@const review = findReview(quote.id)}
-              <tr>
-                <td>{quote.contactName}</td>
-                <td>{quote.email || 'N/A'}</td>
+              <!-- Directly access the store and find the feedback reactively -->
+              {@const feedback = $surveyorFeedbacks.find(fb => fb.quoteId === quote.id)}
+              {@const isEditing = editingQuoteId === quote.id}
+              <tr class:is-editing={isEditing}>
+                <td>
+                    <!-- {console.log(`[Component] Rendering row for ${quote.id}. IsEditing: ${isEditing}. Feedback:`, feedback)} --> <!-- Keep log commented/removed for now -->
+                    {quote.contactName}
+                </td>
+                <!-- <td>{quote.email || 'N/A'}</td> -->
                 <td>{quote.organisation}</td>
+
+                <!-- Quality -->
                 <td class="rating-cell">
-                    <StarRating 
-                        value={review?.quality} 
-                        on:update={(e) => handleRatingUpdate(quote.id, 'quality', e.detail)} 
-                    />
+                    {#if isEditing}
+                        <StarRating
+                            value={editableFeedback?.quality}
+                            readonly={!isEditing}
+                            on:update={(e) => handleEditableRatingUpdate('quality', e.detail)}
+                        />
+                    {:else}
+                        <StarRating value={feedback?.quality} readonly={true} />
+                    {/if}
                 </td>
+
+                <!-- Responsiveness -->
                 <td class="rating-cell">
-                    <StarRating 
-                        value={review?.responsiveness} 
-                        on:update={(e) => handleRatingUpdate(quote.id, 'responsiveness', e.detail)} 
-                    />
+                     {#if isEditing}
+                        <StarRating
+                            value={editableFeedback?.responsiveness}
+                             readonly={!isEditing}
+                            on:update={(e) => handleEditableRatingUpdate('responsiveness', e.detail)}
+                        />
+                    {:else}
+                        <StarRating value={feedback?.responsiveness} readonly={true} />
+                    {/if}
                 </td>
+
+                 <!-- Delivered on Time -->
                  <td class="rating-cell">
-                    <StarRating 
-                        value={review?.deliveredOnTime} 
-                        on:update={(e) => handleRatingUpdate(quote.id, 'deliveredOnTime', e.detail)} 
-                    />
+                     {#if isEditing}
+                        <StarRating
+                            value={editableFeedback?.deliveredOnTime}
+                             readonly={!isEditing}
+                            on:update={(e) => handleEditableRatingUpdate('deliveredOnTime', e.detail)}
+                        />
+                    {:else}
+                        <StarRating value={feedback?.deliveredOnTime} readonly={true} />
+                    {/if}
                 </td>
+
+                <!-- Overall Review -->
                 <td class="rating-cell">
-                    <StarRating 
-                        value={review?.overallReview} 
-                        on:update={(e) => handleRatingUpdate(quote.id, 'overallReview', e.detail)} 
-                    />
+                     {#if isEditing}
+                        <StarRating
+                            value={editableFeedback?.overallReview}
+                            readonly={!isEditing}
+                            on:update={(e) => handleEditableRatingUpdate('overallReview', e.detail)}
+                        />
+                    {:else}
+                        <StarRating value={feedback?.overallReview} readonly={true} />
+                    {/if}
                 </td>
-                <td 
-                  class="notes-cell clickable-notes {review?.notes ? 'has-notes' : 'no-notes'}" 
-                  on:click={() => openNotesModal(quote)} 
-                  title={review?.notes ? "Click to edit notes" : "Click to add notes"}
-                  role="button"
-                  tabindex="0"
-                  on:keypress={(e) => { if (e.key === 'Enter' || e.key === ' ') openNotesModal(quote); }}
-                >
-                  {#if review?.notes}
-                    <span>{review.notes}</span>
-                  {:else}
-                    <span class="placeholder">Add notes...</span>
-                  {/if}
+
+                <!-- Notes -->
+                <td class="notes-cell">
+                    {#if isEditing}
+                        <textarea
+                            class="notes-textarea"
+                            rows="3"
+                            bind:value={editableFeedback.notes}
+                            placeholder="Enter review notes..."
+                            aria-label="Review notes for {quote.organisation}"
+                        ></textarea>
+                    {:else}
+                        <div class="notes-display" title={feedback?.notes || 'No notes added.'}>
+                             {#if feedback?.notes}
+                                <!-- Basic preview, could truncate -->
+                                <span>{feedback.notes.length > 100 ? feedback.notes.substring(0, 97) + '...' : feedback.notes}</span>
+                             {:else}
+                                <span class="placeholder">No notes added.</span>
+                             {/if}
+                        </div>
+                    {/if}
                 </td>
+
+                <!-- Actions -->
+                 <td class="actions-cell">
+                    {#if isEditing}
+                        <button class="save-btn" on:click={saveChanges} title="Save changes">Save</button>
+                        <button class="cancel-btn" on:click={cancelEditing} title="Discard changes">Cancel</button>
+                    {:else}
+                        <button class="edit-btn" on:click={() => startEditing(quote)} title="Edit review">Edit</button>
+                        <!-- Display saved date? -->
+                         {#if feedback?.updatedAt}
+                            <div class="last-saved" title="Last saved">Saved: {format(parseISO(feedback.updatedAt), 'd MMM yyyy HH:mm')}</div>
+                         {/if}
+                    {/if}
+                 </td>
               </tr>
             {/each}
           </tbody>
         </table>
       </div>
     {:else}
-      <p class="no-data-message">No surveyors have been marked as instructed for this project yet.</p>
+      <p class="no-data-message">No quotes found for this project yet.</p>
     {/if}
-    
+
   {:else}
     <p>Please select a project to view reviews.</p>
   {/if}
 
-  <!-- Notes Modal -->
-  {#if showNotesModal && currentQuoteForNotes}
-    <div class="modal-overlay" on:click|self={closeNotesModal}> 
-      <div class="modal-content notes-modal-content">
-        <div class="modal-header">
-          <h2>Notes for {currentQuoteForNotes.organisation}</h2>
-          <button class="close-btn" on:click={closeNotesModal}>×</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group notes-group">
-            <label for="notes">Notes</label>
-            <textarea id="notes" rows="6" bind:value={currentNotes} placeholder="Enter review notes here..."></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="cancel-btn" on:click={closeNotesModal}>Cancel</button>
-          <button class="submit-btn" on:click={submitNotes}>Save Notes</button>
-        </div>
-      </div>
-    </div>
-  {/if}
 </div>
 
 <style>
   .reviews-container {
-    padding: 1rem 0;
+    padding: 25px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1400px;
+    margin: 0 auto;
   }
-  
-  h1 {
-    margin-bottom: 1.5rem;
-    color: #333;
+
+  h1, h2 {
+      color: #333;
   }
-  
   .reviews-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
   }
-  
-  h2 {
-    font-size: 1.5rem;
-    color: #555;
-    margin: 0;
+   .reviews-header p {
+      font-size: 0.9em;
+      color: #666;
   }
 
   .reviews-table-container {
     background-color: #fff;
     border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     overflow-x: auto;
+    border: 1px solid #ddd;
   }
-  
+
   .reviews-table {
     width: 100%;
     border-collapse: collapse;
     min-width: 900px;
   }
-  
+
   .reviews-table th,
   .reviews-table td {
-    padding: 0.8rem 1rem;
+    padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid #eee;
     font-size: 0.9rem;
     vertical-align: middle;
   }
-  
+
   .reviews-table th {
     background-color: #f8f9fa;
     font-weight: 600;
     color: #495057;
     white-space: nowrap;
-  }
-  
-  .reviews-table tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .reviews-table tr:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .reviews-table td.rating-cell {
-      padding-top: 0.7rem;
-      padding-bottom: 0.7rem;
-  }
-  
-  .star-rating {
-    color: #ffc107;
-    letter-spacing: 0.1rem;
-    font-size: 1.1rem;
-  }
-  
-  .comment-cell {
-    max-width: 300px; 
-    white-space: normal;
-  }
-  
-  .notes-cell {
-    max-width: 300px; 
-    white-space: normal;
-  }
-  
-  .action-cell {
-    
-  }
-  
-  .action-btn {
-    
-  }
-  
-  .notes-btn {
-    
-  }
-  
-  .notes-btn:hover {
-    
-  }
-
-  .no-data-message {
-    text-align: center;
-    padding: 2rem;
-    color: #6c757d;
-    background-color: #f8f9fa;
-    border: 1px dashed #ced4da;
-    border-radius: 5px;
-    margin-top: 1rem;
-  }
-
-  /* Modal Styles */
-  .modal-overlay {
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+    z-index: 1;
   }
-  
-  .modal-content {
-    background-color: white;
-    border-radius: 5px;
-    width: 90%;
-    max-width: 600px; 
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  }
-  
-  /* Specific smaller width for notes modal */
-  .notes-modal-content {
-      max-width: 500px; 
-  }
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-  }
-  
-  .modal-header h2 {
-    font-size: 1.3rem; 
-    margin: 0;
-  }
-  
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #6c757d;
-  }
-  
-  .modal-body {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem; 
-  }
-  
-  .modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e9ecef;
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
+  .reviews-table th .required-indicator {
+      color: #dc3545;
+      font-weight: bold;
+      margin-left: 2px;
   }
 
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  .reviews-table tr:last-child td {
+      border-bottom: none;
   }
-  
-  label {
-    font-weight: 500;
-    color: #555;
+
+  .reviews-table tr:hover {
+      background-color: #f8f9fa;
   }
-  
-  textarea {
-    padding: 0.5rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 1rem;
-    width: 100%; 
+  .reviews-table tr.is-editing {
+      background-color: #fffcee; /* Light yellow background for editing row */
   }
-  
-  textarea:focus {
-     outline: none;
-     border-color: #80bdff;
-     box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
+
+  .rating-cell {
+      min-width: 110px;
+      text-align: center;
+      padding-top: 15px; /* Extra padding for stars */
+      padding-bottom: 15px;
   }
-  
-  textarea {
-    resize: vertical;
+
+  .notes-cell {
+      min-width: 250px;
+      max-width: 400px; /* Prevent excessive width */
+      vertical-align: top;
+      white-space: normal;
+  }
+  .notes-display {
+      max-height: 80px; /* Limit display height */
+      overflow-y: auto;
+      padding: 6px;
+      border: 1px solid transparent; /* Match textarea border for alignment */
+      line-height: 1.4;
+      cursor: default; /* Indicate non-editable */
+  }
+  .notes-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: inherit;
+      resize: vertical;
+      min-height: 60px;
+      transition: border-color 0.2s ease;
+  }
+  .notes-textarea:focus {
+      border-color: #80bdff;
+      outline: 0;
+      box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+  }
+
+  .actions-cell {
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: middle;
+      min-width: 150px; /* Ensure buttons fit */
+  }
+
+  .actions-cell button {
+      margin: 0 4px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      border: 1px solid;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .edit-btn {
+      background-color: #ffc107;
+      border-color: #e0a800;
+      color: #212529;
+  }
+  .edit-btn:hover {
+       background-color: #e0a800;
+       border-color: #c69500;
+  }
+
+  .save-btn {
+      background-color: #198754; /* Updated green */
+      border-color: #146c43;
+      color: white;
+  }
+  .save-btn:hover {
+      background-color: #146c43;
+      border-color: #105635;
   }
 
   .cancel-btn {
-    padding: 0.6rem 1.5rem;
-    border: 1px solid #ced4da;
-    background-color: white;
-    border-radius: 4px;
-    color: #495057;
-    cursor: pointer;
-    font-size: 1rem;
+      background-color: #6c757d;
+      border-color: #5c636a;
+      color: white;
   }
-  
-  .submit-btn {
-    padding: 0.6rem 1.5rem;
-    border: none;
-    background-color: #007bff;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-  }
-  
   .cancel-btn:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .submit-btn:hover {
-    background-color: #0069d9;
+      background-color: #5c636a;
+      border-color: #51585e;
   }
 
-  .notes-cell span {
-    display: block;
-    max-width: 250px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0.2rem 0;
-    min-height: 1.4em;
+  .last-saved {
+      font-size: 0.75em;
+      color: #6c757d;
+      margin-top: 5px;
+      text-align: center;
   }
 
-  .notes-cell span.placeholder {
-    color: #6c757d;
-    font-style: italic;
+  .placeholder {
+     color: #6c757d;
+     font-style: italic;
   }
 
-  /* Styling for the clickable notes cell */
-  .clickable-notes {
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
+  .no-data-message, p { /* General message styling */
+      padding: 20px;
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
   }
 
-  .clickable-notes:hover {
-    background-color: #f0f0f0;
-  }
-
-  .clickable-notes:focus {
-      outline: 2px solid #007bff;
-      outline-offset: -1px;
-      background-color: #e7f3ff;
-  }
-</style> 
+</style>
