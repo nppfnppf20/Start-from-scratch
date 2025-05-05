@@ -306,12 +306,23 @@
                     <!-- Display uploaded works preview (optional but helpful) -->
                     {#if log?.uploadedWorks && log.uploadedWorks.length > 0}
                       <ul class="uploaded-works-preview">
-                        {#each log.uploadedWorks as work (work.fileName + work.dateUploaded)} <!-- Use unique combo as key -->
-                          <li title="{work.fileName} - {work.description || 'No description'}">
-                            {work.title || work.fileName} - v{work.version}
-                            {#if work.url}
-                                <a href={work.url} target="_blank" rel="noopener noreferrer" title="Open file">🔗</a>
+                        {#each log.uploadedWorks as work (work.fileName + work.dateUploaded + work.version)} <!-- Adjusted key -->
+                          <li>
+                            <span class="work-title">{work.title || work.fileName}</span> 
+                            <span class="work-version">(v{work.version || 'N/A'})</span>
+                            {#if work.description}
+                              <span class="work-description"> - {work.description}</span>
                             {/if}
+                            {#if work.url}
+                                <a href={work.url} target="_blank" rel="noopener noreferrer" title="Open file" class="work-link">🔗</a>
+                            {/if}
+                            <button 
+                              class="delete-work-btn" 
+                              title="Delete this upload"
+                              on:click={() => { /* TODO: Implement delete logic */ console.warn('Delete button clicked for:', work); }}
+                            >
+                              🗑️
+                            </button>
                           </li>
                         {/each}
                       </ul>
@@ -666,25 +677,69 @@ select:focus, input:focus {
 }
 
 .uploaded-works-preview {
-    list-style: none;
-    padding-left: 0;
-    margin-top: 8px;
-    font-size: 0.85em;
-    color: #555;
-    white-space: normal; /* Allow wrapping for previews */
+  list-style: none;
+  padding-left: 0;
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: #333;
 }
+
 .uploaded-works-preview li {
-    margin-bottom: 4px;
-    /* white-space: nowrap; */ /* Remove nowrap */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    /* max-width: 180px; Removed max-width */
-    display: flex; /* Use flex for icon alignment */
-    align-items: center;
+  margin-bottom: 5px;
+  padding: 4px;
+  background-color: #f9f9f9;
+  border-radius: 3px;
+  display: flex; /* Use flexbox for alignment */
+  align-items: center; /* Vertically align items */
+  gap: 8px; /* Space between items */
+  overflow: hidden; /* Hide overflow for the whole list item */
 }
-.uploaded-works-preview a {
-    margin-left: 5px;
-    font-size: 0.9em;
+
+.work-title {
+  font-weight: 500;
+  white-space: nowrap; /* Prevent title wrapping */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Show ellipsis (...) */
+  flex-shrink: 1; /* Allow shrinking but less likely */
+  min-width: 80px;
+}
+
+.work-version {
+  color: #555;
+  font-size: 0.9em;
+  flex-shrink: 0; /* Prevent version from shrinking */
+  white-space: nowrap; /* Keep version on one line */
+}
+
+.work-description {
+  color: #777;
+  font-style: italic;
+  white-space: nowrap; /* Prevent description wrapping */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Show ellipsis (...) */
+  flex-grow: 1; /* Allow description to take available space */
+  min-width: 50px;
+}
+
+.work-link {
+  margin-left: auto; /* Push link and button to the right */
+  text-decoration: none;
+  flex-shrink: 0; /* Prevent link from shrinking */
+}
+
+.delete-work-btn {
+  background: none;
+  border: none;
+  color: #dc3545; /* Red color for delete */
+  cursor: pointer;
+  font-size: 1em;
+  padding: 0 4px;
+  line-height: 1; /* Adjust line height */
+  flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.delete-work-btn:hover {
+  color: #a71d2a;
 }
 
 td:nth-child(1), /* Org */
@@ -699,5 +754,18 @@ td:nth-child(10) { /* Custom Dates */
     white-space: normal; /* Allow wrapping in complex cells */
 }
 
+/* Style for the main table */
+.instructed-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    table-layout: auto; /* Allow columns to adjust */
+}
+
+/* Target the last column's data cells */
+.instructed-table tbody td:last-child {
+  min-width: 450px; /* Adjust this value as needed */
+  vertical-align: top;
+}
 
 </style> 
