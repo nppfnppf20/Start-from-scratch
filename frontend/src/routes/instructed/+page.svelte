@@ -366,10 +366,11 @@
 
 <!-- Modals -->
 {#if showNotesModal && currentQuoteForNotes}
-  <NotesModal 
+  <NotesModal
     initialNotes={currentOperationalNotes}
+    organisationName={currentQuoteForNotes.organisation}
     on:save={handleSaveNotes}
-    on:close={closeNotesModal}
+    on:cancel={closeNotesModal}
   />
 {/if}
 
@@ -493,16 +494,17 @@ button {
 }
 
 .notes-button {
-    background-color: #6c757d; /* Grey */
+    background-color: white;
     border-color: #6c757d;
-    display: block;
-    white-space: normal; /* Allow text wrapping */
+color: black;
+    display: block; /* Keep as block or change if layout needs */
+    white-space: nowrap; /* Prevent text from wrapping */
     text-align: left;
-    min-height: 34px; /* Match input height */
-    overflow: hidden;
-    /* text-overflow: ellipsis; */
-    /* max-width: 200px; Removed max-width, let table cell dictate */
-    width: 100%; /* Fill cell */
+    min-height: 40px; /* Match input height */
+    overflow: hidden; /* Required for text-overflow */
+    text-overflow: ellipsis; /* Show ... for overflow */
+    max-width: 100px; /* Updated maximum width */
+    /* width: 100%; */ /* Removed width: 100% */
     box-sizing: border-box; /* Include padding in width */
 }
 
@@ -557,23 +559,44 @@ select:focus, input:focus {
   .work-status-select {
     width: 100%; /* Make select fill container */
     font-weight: bold;
+    
+    /* Remove default browser appearance */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    /* Add padding to the right for the arrow */
+    padding-right: 30px; /* Increased padding for arrow */
+    
+    /* Add background arrow (SVG URL encoded) */
+    /* Default arrow color (e.g., for base state or if no status class matches) */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236c757d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center; /* Position arrow */
+    background-size: 10px 10px; /* Size of the arrow */
 }
 
-/* Style dropdown based on status */
+/* Style dropdown based on status, ensuring arrow is visible */
   .work-status-select.not-started {
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;
+    /* Arrow color matches text */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23721c24%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
   }
   .work-status-select.in-progress {
     background-color: #fff3cd;
     border-color: #ffeeba;
     color: #856404;
+    /* Arrow color matches text */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23856404%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
   }
   .work-status-select.completed {
     background-color: #d4edda;
     border-color: #c3e6cb;
     color: #155724;
+    /* Arrow color matches text */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23155724%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
 }
 
 .date-cell-group {
