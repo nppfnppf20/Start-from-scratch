@@ -53,57 +53,69 @@
     errorMessage = '';
     const file = files[0];
 
-    // Simulate upload process
+    // Create FormData to send file and metadata
+    const formData = new FormData();
+    formData.append('file', file); // The actual file, key must match multer setup ('file')
+    // Add other metadata - backend /api/uploads currently ignores these, but good practice
+    formData.append('quoteId', quoteId); 
+    formData.append('documentType', documentType);
+    formData.append('title', documentTitle);
+    formData.append('version', version);
+    formData.append('dateUploaded', dateUploaded);
+    formData.append('description', description);
+
     console.log(`Uploading ${documentType} document for quote ${quoteId}:`, 
       `File: ${file.name}`, 
       `Title: ${documentTitle}`, 
       `Version: ${version}`, 
       `Date Uploaded: ${dateUploaded}`, 
       `Description: ${description}`
-    );
+    ); // Keep this log
+
     try {
-      // --- Placeholder for actual upload logic ---
-      // Example: You would typically use fetch() here to send the file
-      // to your backend endpoint.
-      // const formData = new FormData();
-      // formData.append('file', file);
-      // formData.append('quoteId', quoteId);
-      // formData.append('documentType', documentType);
-      // formData.append('title', documentTitle);
-      // formData.append('version', version);
-      // formData.append('dateUploaded', dateUploaded);
-      // formData.append('description', description); // Add description to form data
-      // const response = await fetch('/api/upload', { method: 'POST', body: formData });
-      // if (!response.ok) throw new Error('Upload failed');
-      // --- End Placeholder ---
-
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-
-      console.log('Upload successful');
-
-      // Reset isUploading *before* dispatching
-      isUploading = false; 
-
-      // Add new fields to the dispatched event
-      dispatch('uploadComplete', { 
-        quoteId, 
-        documentType, 
-        fileName: file.name, 
-        title: documentTitle, 
-        version, 
-        dateUploaded, 
-        description, 
-        url: `/uploads/${file.name}` // Placeholder URL using filename
+      // --- Actual Upload Logic ---
+      const response = await fetch('/api/uploads', { // Target the backend endpoint
+        method: 'POST',
+        body: formData // Pass the FormData object
+        // No 'Content-Type' header needed; browser sets it for FormData
       });
+
+      if (!response.ok) {
+        // Try to get error details from response body
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+            const errBody = await response.json();
+            errorMsg = errBody.msg || errBody.message || errorMsg;
+        } catch (e) { /* Ignore if response body isn't valid JSON */ }
+        throw new Error(errorMsg);
+      }
+
+      // Get the response data (includes the generated URL)
+      const result = await response.json(); 
+      console.log('Upload successful, backend response:', result);
+
+      // Dispatch 'uploadComplete' with data including the backend URL
+      // Ensure this matches the UploadedWork interface
+      dispatch('uploadComplete', { 
+        quoteId, // Pass through
+        documentType, // Pass through
+        fileName: result.originalName, // Use original name for display consistency? Or result.fileName? Using original for now.
+        title: documentTitle || result.originalName, // Use entered title or fallback
+        version, // Use entered version
+        dateUploaded, // Use entered date
+        description, // Use entered description
+        url: result.url // Use the URL returned by the backend!
+      });
+
+      // Reset isUploading *before* closing (which triggers state reset)
+      isUploading = false; 
+      close(); // Close modal automatically on success
 
     } catch (error) {
       console.error('Upload error:', error);
       errorMessage = `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       // Ensure isUploading is reset even on error
       isUploading = false;
-    } finally {
-       // isUploading is now handled within try/catch blocks for better timing control
-       // finally block might still be useful for other cleanup if needed later
     }
   }
 </script>

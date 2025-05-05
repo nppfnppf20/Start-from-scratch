@@ -13,6 +13,7 @@ const projectRoutes = require('./routes/projects');
 const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
 const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
+const uploadRoutes = require('./routes/uploads'); 
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -44,6 +45,9 @@ app.use(cors());
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+        // +++ Statically serve the uploads directory +++
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // +++ Change base API route to /api +++
 app.get('/api', (req, res) => {
   res.send('API is running...');
@@ -57,6 +61,7 @@ app.use('/api/quotes', quoteRoutes);
 app.use('/api/instruction-logs', instructionLogRoutes);
 // +++ Use SurveyorFeedback routes +++
 app.use('/api/surveyor-feedback', surveyorFeedbackRoutes); // *** ADD THIS LINE ***
+app.use('/api/uploads', uploadRoutes);
 
 // --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
