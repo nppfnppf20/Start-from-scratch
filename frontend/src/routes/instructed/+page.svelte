@@ -85,8 +85,11 @@
 
   // --- Document Upload Modal Functions ---
   function openDocumentUploadModal(quote: Quote) {
+    console.log("openDocumentUploadModal called for quote:", quote.id);
     currentQuoteForUpload = quote;
     showDocumentUploadModal = true;
+    console.log("currentQuoteForUpload set:", currentQuoteForUpload);
+    console.log("showDocumentUploadModal set to:", showDocumentUploadModal);
   }
 
   function closeDocumentUploadModal() {
@@ -197,6 +200,9 @@
           return ''; // Return empty string on error
       }
   }
+
+  // Reactive logging (add this within the <script> tag but outside any function)
+  $: console.log("Checking modal condition:", { show: showDocumentUploadModal, quote: !!currentQuoteForUpload });
 
 </script>
 
@@ -374,9 +380,12 @@
   />
 {/if}
 
+<!-- Add log before the check -->
+{console.log("Rendering check for Document Upload Modal:", showDocumentUploadModal, currentQuoteForUpload)} 
 {#if showDocumentUploadModal && currentQuoteForUpload}
   {@const logForModal = findLog(currentQuoteForUpload.id)}
   <InstructedDocumentUploadModal
+    bind:showModal={showDocumentUploadModal}
     quoteId={currentQuoteForUpload.id}
      documentType='instruction'
     on:uploadComplete={handleDocumentUploadComplete}
