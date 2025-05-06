@@ -1,7 +1,8 @@
 <script lang="ts">
   import { selectedProject } from "$lib/stores/projectStore";
   import UploadDocumentModal from '$lib/components/UploadDocumentModal.svelte';
-  
+  import { formatBytes } from '$lib/utils/formatters';
+
   // Document categories
   const categories = ['All', 'Drawing', 'Surveyor Report', 'Other'];
   let selectedCategory = 'All';
@@ -9,39 +10,119 @@
   // State for modal visibility
   let showUploadModal = false;
 
-  // Document data - starts empty
-  let documents: any[] = [];
+  // --- Define interface for document data ---
+  interface DocumentData {
+      _id: string; 
+      name: string;
+      mimetype: string;
+      size: number; 
+      uploadDate: string; 
+      category: string;
+      url: string;
+  }
+  // --- Use interface for documents array ---
+  let documents: DocumentData[] = []; 
+  let isLoading = false; // Add loading state
 
   // Filtering function
   $: filteredDocuments = selectedCategory === 'All' 
     ? documents 
     : documents.filter(doc => doc.category === selectedCategory);
 
-  // Function to handle the uploaded document from the modal
-  function handleDocumentUpload(event: CustomEvent) {
-    const newDocument = event.detail;
-    documents = [...documents, newDocument]; // Add the new document to the main list
-    // Optionally, you might want to switch the category filter to show the new item
-    // selectedCategory = newDocument.category;
+  // --- Add function to fetch documents (placeholder) ---
+  async function fetchDocuments(projectId: string | undefined) {
+      if (!projectId) {
+          documents = []; 
+          return;
+      }
+      isLoading = true;
+      console.log(`Fetching documents for project: ${projectId}`);
+            try {
+          // --- Actual Fetch Call ---
+          const response = await fetch(`/api/documents?projectId=${projectId}`); 
+          
+          if (!response.ok) {
+             // Handle non-2xx responses
+             let errorMsg = `HTTP error! status: ${response.status}`;
+             try {
+                 const errBody = await response.json();
+                 errorMsg = errBody.msg || errBody.message || errorMsg;
+             } catch(e) { /* Ignore if body isn't JSON */ }
+             throw new Error(errorMsg);
+          }
+          
+          // Parse the JSON response (which should be an array of documents)
+          const fetchedDocs: DocumentData[] = await response.json(); 
+          
+          // Update the local documents state
+          documents = fetchedDocs; 
+          console.log('Fetched documents:', documents);
+          // --- End Fetch Call ---
+
+      } catch (error) {
+          console.error("Failed to fetch documents:", error);
+          documents = []; 
+      } finally {
+          isLoading = false;
+      }
   }
 
+  // --- Fetch documents when the selected project changes ---
+  $: fetchDocuments($selectedProject?.id);
+
+  // Function to handle the uploaded document from the modal
+  function handleDocumentUpload(event: CustomEvent) {
+    const newDocument: DocumentData = event.detail;
+    console.log("Received new document from modal:", newDocument);
+    documents = [...documents, newDocument];
+  }
+
+        // --- NEW: handleDeleteDocument function ---
+      async function handleDeleteDocument(docId: string, docName: string) {
+        if (!confirm(`Are you sure you want to delete the document "${docName}"? This action cannot be undone.`)) {
+          return; // User cancelled
+        }
+
+        console.log(`Attempting to delete document with ID: ${docId}`);
+        // Optional: Add a specific loading state for this item or a general 'isDeleting' flag
+
+        try {
+          const response = await fetch(`/api/documents/${docId}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            let errorMsg = `Failed to delete document. Status: ${response.status}`;
+            try {
+                const errBody = await response.json();
+                errorMsg = errBody.msg || errBody.message || errorMsg;
+            } catch (e) { /* Ignore if body isn't JSON */ }
+            throw new Error(errorMsg);
+          }
+
+          // Deletion successful, remove from local list
+          documents = documents.filter(doc => doc._id !== docId);
+          console.log(`Document ${docId} deleted successfully from frontend list.`);
+          // Optional: Show a success notification
+
+        } catch (error) {
+          console.error("Error deleting document:", error);
+          alert(`Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+          // Optional: Show a more user-friendly error message in the UI
+        }
+      }
+      // ---
+
   // Function to get icon based on file type
-  function getFileIcon(type: string) {
-    switch(type.toLowerCase()) {
-      case 'pdf':
-        return '📄';
-      case 'docx':
-        return '📝';
-      case 'xlsx':
-        return '📊';
-      case 'pptx':
-        return '📑';
-      case 'jpg':
-      case 'png':
-        return '🖼️';
-      default:
-        return '📁';
-    }
+  function getFileIcon(mimetype: string | undefined): string {
+    if (!mimetype) return '📁';
+    const type = mimetype.toLowerCase();
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('word') || type.includes('vnd.openxmlformats-officedocument.wordprocessingml.document')) return '📝';
+    if (type.includes('excel') || type.includes('vnd.openxmlformats-officedocument.spreadsheetml.sheet')) return '📊';
+    if (type.includes('powerpoint') || type.includes('vnd.openxmlformats-officedocument.presentationml.presentation')) return '📑';
+    if (type.includes('image')) return '🖼️';
+    return '📁'; // Default
   }
 </script>
 
@@ -51,7 +132,7 @@
   {#if $selectedProject}
     <div class="documents-header">
       <h2>Documents for {$selectedProject.name}</h2>
-      <button class="upload-btn" on:click={() => showUploadModal = true}>+ Upload New Document</button>
+      <button class="upload-btn" on:click={() => showUploadModal = true} disabled={isLoading}>+ Upload New Document</button>
     </div>
     
     <div class="filter-bar">
@@ -75,53 +156,68 @@
       </div>
     </div>
     
-    <div class="documents-table-container">
-      <table class="documents-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Size</th>
-            <th>Upload Date</th>
-            <th>Category</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each filteredDocuments as document (document.id)}
+    {#if isLoading}
+      <p>Loading documents...</p> 
+    {:else}
+      <div class="documents-table-container">
+        <table class="documents-table">
+          <thead>
             <tr>
-              <td class="file-name">
-                <span class="file-icon">{getFileIcon(document.type)}</span>
-                {document.name}
-              </td>
-              <td>{document.type}</td>
-              <td>{document.size}</td>
-              <td>{new Date(document.uploadDate).toLocaleDateString()}</td>
-              <td>
-                <span class="category-badge">{document.category}</span>
-              </td>
-              <td class="action-cell">
-                <button class="action-btn view-btn">View</button>
-                <button class="action-btn download-btn">Download</button>
-                <button class="action-btn delete-btn">Delete</button>
-              </td>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Size</th>
+              <th>Upload Date</th>
+              <th>Category</th>
+              <th>Actions</th>
             </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {#each filteredDocuments as doc (doc._id)}
+              <tr>
+                <td class="file-name">
+                  <span class="file-icon">{getFileIcon(doc.mimetype)}</span>
+                  {doc.name}
+                </td>
+                <td>{doc.mimetype || 'N/A'}</td>
+                <td>{formatBytes(doc.size || 0)}</td>
+                <td>{new Date(doc.uploadDate).toLocaleDateString()}</td>
+                <td>
+                  <span class="category-badge">{doc.category}</span>
+                </td>
+                <td class="action-cell">
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" class="action-btn view-btn" title="View/Open file">View</a>
+                  <a href={doc.url} download={doc.name} class="action-btn download-btn" title="Download file">Download</a>
+                                    <button 
+                    class="action-btn delete-btn" 
+                    on:click={() => handleDeleteDocument(doc._id, doc.name)}
+                    title="Delete this document"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            {:else}
+               <tr>
+                   <td colspan="6" style="text-align: center; padding: 2rem;">No documents found for this category or project.</td>
+               </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
     
   {:else}
-    <p>Please select a project to view documents.</p>
+    <p class="no-project-selected">Please select a project to view documents.</p> 
   {/if}
 </div>
 
-{#if showUploadModal}
-  <UploadDocumentModal 
-    on:close={() => showUploadModal = false} 
-    on:uploaddocument={handleDocumentUpload}
-  />
-{/if}
+    {#if showUploadModal && $selectedProject}
+      <UploadDocumentModal
+        projectId={$selectedProject.id}
+        on:close={() => showUploadModal = false}
+        on:uploaddocument={handleDocumentUpload}
+      />
+    {/if}
 
 <style>
   .documents-container {
@@ -293,5 +389,20 @@
   
   .action-btn:hover {
     opacity: 0.9;
+  }
+  
+  .no-project-selected {
+    text-align: center;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
+  }
+  
+  .action-btn {
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
   }
 </style> 

@@ -14,6 +14,7 @@ const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
 const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
 const uploadRoutes = require('./routes/uploads'); 
+const documentRoutes = require('./routes/documents');
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -62,6 +63,7 @@ app.use('/api/instruction-logs', instructionLogRoutes);
 // +++ Use SurveyorFeedback routes +++
 app.use('/api/surveyor-feedback', surveyorFeedbackRoutes); // *** ADD THIS LINE ***
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/documents', documentRoutes);
 
 // --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

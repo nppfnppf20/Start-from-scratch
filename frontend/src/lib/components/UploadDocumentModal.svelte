@@ -3,6 +3,8 @@
 
   const dispatch = createEventDispatcher();
 
+  export let projectId: string;
+
   let selectedFile: File | null = null;
   let documentName = '';
   let selectedCategory = 'Drawing'; // Default category
@@ -29,7 +31,7 @@
 
   // --- Modified handleSubmit ---
   async function handleSubmit() { 
-    if (!selectedFile || !documentName || !selectedCategory) {
+    if (!selectedFile || !documentName || !selectedCategory || !projectId) {
       errorMessage = 'Please select a file, enter a name, and choose a category.';
       alert(errorMessage); // Use alert or display errorMessage in the modal
       return;
@@ -44,6 +46,7 @@
     // Add other relevant data - backend ignores now, but good practice
     formData.append('name', documentName); 
     formData.append('category', selectedCategory);
+    formData.append('projectId', projectId);
 
     console.log('Uploading document:', { name: documentName, category: selectedCategory, file: selectedFile.name });
 
