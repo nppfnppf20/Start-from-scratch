@@ -102,4 +102,30 @@ router.put('/:quoteId', async (req, res) => {
   }
 });
 
-module.exports = router; 
+// DELETE /api/surveyor-feedback/:quoteId
+// Deletes feedback for a specific quote
+router.delete('/:quoteId', async (req, res) => {
+  console.log(`--- surveyorFeedback DELETE /:quoteId route hit for quoteId: ${req.params.quoteId} ---`);
+  const { quoteId } = req.params;
+
+  // Validate quoteId format
+  if (!mongoose.Types.ObjectId.isValid(quoteId)) {
+    return res.status(400).json({ msg: 'Invalid Quote ID format' });
+  }
+
+  try {
+    const feedback = await SurveyorFeedback.findOneAndDelete({ quoteId: quoteId });
+
+    if (!feedback) {
+      return res.status(404).json({ msg: 'Surveyor feedback not found for the given Quote ID' });
+    }
+
+    res.json({ msg: 'Surveyor feedback deleted successfully', deletedFeedback: feedback });
+
+  } catch (err) {
+    console.error('Error deleting surveyor feedback:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+module.exports = router;

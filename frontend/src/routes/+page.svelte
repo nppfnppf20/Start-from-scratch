@@ -1,8 +1,125 @@
 <script lang="ts">
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
   import { get } from 'svelte/store';
+  import { onMount, onDestroy } from 'svelte';
+  import { beforeNavigate } from '$app/navigation';
   
   let disabledFields: Record<string, boolean> = {};
+  let initialProjectData: typeof $selectedProject = null;
+  let hasUnsavedChanges = false;
+  let currentInitialDataProjectId: string | null = null;
+
+  function deepEqual(obj1: any, obj2: any) {
+    if (obj1 === null || obj2 === null) {
+      return obj1 === obj2;
+    }
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') {
+      return obj1 === obj2;
+    }
+
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+
+    if (keys1.length !== keys2.length) {
+      return false;
+    }
+
+    for (const key of keys1) {
+      if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  selectedProject.subscribe(currentProject => {
+    console.log('selectedProject changed (Log 1):', currentProject);
+    if (currentProject) {
+      if (currentProject.id !== currentInitialDataProjectId) {
+        console.log('New project selected or first load. Current ID:', currentProject.id, 'Previous Initial ID:', currentInitialDataProjectId);
+        initialProjectData = JSON.parse(JSON.stringify(currentProject));
+        currentInitialDataProjectId = currentProject.id;
+        hasUnsavedChanges = false; 
+        console.log('Initial project data set (Log 2):', initialProjectData);
+        console.log('hasUnsavedChanges after new project load/change (Log 3):', hasUnsavedChanges);
+      } else {
+        console.log('Project data changed but ID is the same. Not resetting initialProjectData. Current ID:', currentProject.id);
+      }
+    } else {
+      console.log('No project selected. Resetting initial data trackers.');
+      initialProjectData = null;
+      currentInitialDataProjectId = null;
+      hasUnsavedChanges = false;
+      console.log('hasUnsavedChanges after project deselection (Log 3 variant):', hasUnsavedChanges);
+    }
+  });
+
+  $: console.log('Reactive block evaluating (LOG R0). $selectedProject?.detailedDescription:', $selectedProject?.detailedDescription, 'hasUnsavedChanges current value:', hasUnsavedChanges);
+
+  $: {
+    if ($selectedProject && initialProjectData) {
+      console.log('Reactive block: In condition (LOG R1). $selectedProject ID:', $selectedProject.id);
+      const changed = !deepEqual($selectedProject, initialProjectData);
+      console.log('Reactive block: deepEqual result (changed) (LOG R2):', changed);
+      if (hasUnsavedChanges !== changed) {
+        console.log('Comparing $selectedProject with initialProjectData (Log 4):');
+        console.log('Current (Log 5):', JSON.parse(JSON.stringify($selectedProject)));
+        console.log('Initial (Log 6):', JSON.parse(JSON.stringify(initialProjectData)));
+        hasUnsavedChanges = changed;
+        console.log('hasUnsavedChanges is now (Log 7):', hasUnsavedChanges);
+      } else {
+        console.log('Reactive block: hasUnsavedChanges ('+hasUnsavedChanges+') === changed ('+changed+'), no update to hasUnsavedChanges (LOG R3).');
+      }
+    } else if (hasUnsavedChanges) { 
+        hasUnsavedChanges = false;
+        console.log('No project selected or no initial data, hasUnsavedChanges reset to false (Log 8).');
+    } else {
+        console.log('Reactive block: No $selectedProject or no initialProjectData, and hasUnsavedChanges is false (LOG R4).');
+    }
+  }
+
+  onMount(() => {
+    console.log('Component mounted, adding beforeunload listener (Log 9).');
+    window.addEventListener('beforeunload', handleBeforeUnload);
+  });
+
+  onDestroy(() => {
+    console.log('Component destroying, removing beforeunload listener (Log 10).');
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  });
+
+  beforeNavigate(({ cancel }) => {
+    console.log('beforeNavigate triggered (Log 11). hasUnsavedChanges:', hasUnsavedChanges);
+    if (hasUnsavedChanges) {
+      if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        console.log('User cancelled navigation (Log 12).');
+        cancel();
+      } else {
+        // User confirmed they want to leave with unsaved changes.
+        // Reset $selectedProject to initialProjectData to discard unsaved changes.
+        console.log('User confirmed leaving with unsaved changes. Reverting selectedProject to initialProjectData. (Log 12a)');
+        if (initialProjectData) {
+          selectedProject.set(JSON.parse(JSON.stringify(initialProjectData)));
+          // The reactive block will automatically set hasUnsavedChanges to false
+          // because $selectedProject will now be deepEqual to initialProjectData.
+        } else {
+          // Fallback if initialProjectData is null for some reason
+          selectedProject.set(null);
+        }
+        // Navigation proceeds
+      }
+    }
+  });
+
+  function handleBeforeUnload(event: BeforeUnloadEvent) {
+    console.log('handleBeforeUnload triggered (Log 13). hasUnsavedChanges:', hasUnsavedChanges);
+    if (hasUnsavedChanges) {
+      console.log('Preventing unload due to unsaved changes (Log 14).');
+      event.preventDefault();
+      event.returnValue = ''; 
+      return '';
+    }
+  }
 
   // Svelte action to restrict input to numbers and allowed control keys
   function numbersOnly(node: HTMLInputElement) {
@@ -63,6 +180,10 @@
 
       if (success) {
           alert("Project information saved successfully!");
+          initialProjectData = JSON.parse(JSON.stringify(currentProject));
+          currentInitialDataProjectId = currentProject.id;
+          hasUnsavedChanges = false; 
+          console.log('Project saved, initialProjectData updated, hasUnsavedChanges reset to false (Log 15).');
       } else {
           alert("Failed to save project information. Check console for errors.");
       }
@@ -90,9 +211,9 @@
           <div class="form-group">
             <div class="label-with-checkbox">
               <label for="clientOrSpvName">Client (or SPV) Name</label>
-              <input type="checkbox" bind:checked={disabledFields.clientOrSpvName} title="Disable field">
+              <input type="checkbox" bind:checked={disabledFields.clientName} title="Disable field">
             </div>
-            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientOrSpvName} disabled={disabledFields.clientOrSpvName} />
+            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientName} disabled={disabledFields.clientName} />
           </div>
           
           <div class="form-group">

@@ -989,6 +989,41 @@ export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<Surveyor
     }
 }
 
+// Function to delete Surveyor Feedback
+export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> {
+    if (!browser || !quoteId) {
+        console.error('Delete operation requires a quoteId and browser environment.');
+        return false;
+    }
+
+    console.log(`Deleting surveyor feedback for quote ID: ${quoteId}`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/surveyor-feedback/${quoteId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to delete feedback'}`);
+        }
+
+        // Successfully deleted on the server, now update the local store
+        surveyorFeedbacks.update(feedbacks => {
+            const updatedFeedbacks = feedbacks.filter(fb => fb.quoteId !== quoteId);
+            console.log(`[Store] Feedback for ${quoteId} removed. New count: ${updatedFeedbacks.length}`);
+            return updatedFeedbacks;
+        });
+
+        console.log('Surveyor feedback deleted successfully for quote ID:', quoteId);
+        return true;
+
+    } catch (error) {
+        console.error(`Failed to delete surveyor feedback for quote ${quoteId}:`, error);
+        alert(`Error deleting feedback: ${error}`); // User feedback
+        return false;
+    }
+}
+
 // Function to get feedback for a specific quote (replaces getReviewForQuote)
 export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store

@@ -4,6 +4,7 @@
     currentProjectQuotes,
     surveyorFeedbacks,      // Use new store
     upsertSurveyorFeedback, // Use new upsert function
+    deleteSurveyorFeedback, // Import the delete function
     type Quote,
     type SurveyorFeedback   // Use new interface
   } from "$lib/stores/projectStore";
@@ -82,6 +83,33 @@
         // Error alert is handled within upsertSurveyorFeedback
         console.error("Save failed for", quoteIdToSave, ", staying in edit mode.");
         // Optionally, provide more specific UI feedback here based on error type if available
+    }
+  }
+
+  // --- Delete Review Function ---
+  async function handleDeleteReview(quoteId: string, quoteOrg: string) {
+    if (!quoteId) {
+      console.error("Cannot delete, no quote ID provided.");
+      alert("Error: Quote ID is missing, cannot delete review.");
+      return;
+    }
+
+    const confirmation = confirm(`Are you sure you want to delete the review for ${quoteOrg}? This action cannot be undone.`);
+    if (confirmation) {
+      console.log('Attempting to delete review for quote ID:', quoteId);
+      const success = await deleteSurveyorFeedback(quoteId);
+      if (success) {
+        alert(`Review for ${quoteOrg} deleted successfully.`);
+        // Optionally, clear editing state if the deleted review was being edited, though not typical flow
+        if (editingQuoteId === quoteId) {
+          cancelEditing();
+        }
+      } else {
+        // Error is typically alerted from within deleteSurveyorFeedback
+        console.error('Failed to delete review for quote ID:', quoteId);
+      }
+    } else {
+      console.log('Review deletion cancelled by user for quote ID:', quoteId);
     }
   }
 
@@ -222,6 +250,7 @@
                         <button class="cancel-btn" on:click={cancelEditing} title="Discard changes">Cancel</button>
                     {:else}
                         <button class="edit-btn" on:click={() => startEditing(quote)} title="Edit review">Edit</button>
+                        <button class="delete-btn" on:click={() => handleDeleteReview(quote.id, quote.organisation)} title="Delete review">Delete</button>
                         <!-- Display saved date? -->
                          {#if feedback?.updatedAt}
                             <div class="last-saved" title="Last saved">Saved: {format(parseISO(feedback.updatedAt), 'd MMM yyyy HH:mm')}</div>
@@ -360,23 +389,29 @@
   }
 
   .actions-cell button {
-      margin: 0 4px;
-      padding: 6px 12px;
+      margin-right: 8px;
+      padding: 8px 12px;
+      border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.85em;
-      border: 1px solid;
-      transition: background-color 0.2s ease, border-color 0.2s ease;
+      font-size: 0.9em;
+      transition: background-color 0.2s ease;
   }
 
   .edit-btn {
-      background-color: #ffc107;
-      border-color: #e0a800;
-      color: #212529;
+      background-color: #007bff;
+      color: white;
   }
   .edit-btn:hover {
-       background-color: #e0a800;
-       border-color: #c69500;
+      background-color: #0056b3;
+  }
+
+  .delete-btn {
+      background-color: #dc3545; /* Red for delete */
+      color: white;
+  }
+  .delete-btn:hover {
+      background-color: #c82333; /* Darker red on hover */
   }
 
   .save-btn {
