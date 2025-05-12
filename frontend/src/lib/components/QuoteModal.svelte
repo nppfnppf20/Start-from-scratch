@@ -50,13 +50,13 @@
       instructionStatus: 'pending' as InstructionStatus, // Default to pending for new
       status: 'pending' as string,
       date: new Date().toISOString().split('T')[0],
-      // quoteFile: null as File | null // Removed file handling for simplicity now
+      quotePdfFile: null as File | null // Added for PDF attachment
     };
   }
 
   // Form state
   let quoteForm = createInitialFormState();
-  // let quoteFileInput: HTMLInputElement; // Removed
+  let quoteFileInput: HTMLInputElement; // Added for PDF input element binding
 
   // Reactive statement to update form when props change (modal opens/quoteToEdit changes)
   $: if (isOpen) {
@@ -79,8 +79,8 @@
               additionalNotes: quoteToEdit.additionalNotes || '',
               instructionStatus: quoteToEdit.instructionStatus,
               status: quoteToEdit.status || 'pending',
-              date: quoteToEdit.date ? quoteToEdit.date.split('T')[0] : new Date().toISOString().split('T')[0] // Format date correctly if exists
-              // quoteFile: null // Reset file input if needed
+              date: quoteToEdit.date ? quoteToEdit.date.split('T')[0] : new Date().toISOString().split('T')[0], // Format date correctly if exists
+              quotePdfFile: null // Reset file input for edits for now
           };
       } else {
           console.log("Initializing modal form for new quote");
@@ -88,8 +88,8 @@
           quoteToEditId = null;
           quoteForm = createInitialFormState(); // Reset to blank for new quote
       }
-      // Reset file input visually if it existed
-      // if (quoteFileInput) quoteFileInput.value = '';
+      // Reset file input visually
+      if (quoteFileInput) quoteFileInput.value = '';
   }
 
 
@@ -97,15 +97,13 @@
   function closeModal() {
     isOpen = false; // Update prop locally (binding handles parent)
     dispatch('close');
-    // Reset internal state *after* dispatching close, just in case
-    // setTimeout(resetForm, 0); // Delay reset slightly? Or handled by initializeForm on reopen
   }
 
   function resetForm() {
       quoteForm = createInitialFormState();
       isEditing = false;
       quoteToEditId = null;
-      // if (quoteFileInput) quoteFileInput.value = '';
+      if (quoteFileInput) quoteFileInput.value = '';
   }
 
 
@@ -157,6 +155,16 @@
       return;
     }
 
+    // Log the file if present (placeholder for actual upload)
+    if (quoteForm.quotePdfFile) {
+        console.log('Selected PDF file:', quoteForm.quotePdfFile.name, quoteForm.quotePdfFile);
+        // Actual upload logic would go here, likely involving:
+        // 1. Creating FormData
+        // 2. Appending the file and other quote data
+        // 3. Making a fetch request to a backend endpoint
+        // For now, we are just logging it.
+    }
+
     // Prepare data for the store/API call
     const quoteDataForStore: Partial<Omit<Quote, 'id' | 'total'>> = {
       discipline: quoteForm.discipline,
@@ -177,7 +185,6 @@
         let success = false;
         if (isEditing && quoteToEditId) {
           console.log('Attempting to update quote via modal:', quoteToEditId, quoteDataForStore);
-          // Pass only changed fields? No, API expects full update state usually via $set
           success = await updateQuote(quoteToEditId, quoteDataForStore);
         } else if (!isEditing && projectId) {
           console.log('Attempting to add quote via modal:', quoteDataForStore);
@@ -189,9 +196,7 @@
 
         if (success) {
             closeModal(); // Close modal on success
-            // Parent page reactivity should update the table via store subscription
         } else {
-            // Error alert is likely shown by the store function itself
             alert(`Failed to ${isEditing ? 'update' : 'add'} quote. See console for details.`);
         }
     } catch (error) {
@@ -267,13 +272,11 @@
              <button type="button" on:click={openAddNotesModal}>Add/Edit Notes</button>
           </div>
 
-          <!-- Optional File Upload Placeholder -->
-          <!--
-          <div class="form-row">
+          <!-- Optional File Upload -->
+          <div class="form-row pdf-upload-row">
             <label for="quoteFile">Upload Quote PDF</label>
-            <input type="file" id="quoteFile" accept=".pdf" bind:this={quoteFileInput} on:change={(e) => quoteForm.quoteFile = e.currentTarget.files ? e.currentTarget.files[0] : null}>
+            <input type="file" id="quoteFile" accept=".pdf" bind:this={quoteFileInput} on:change={(e) => quoteForm.quotePdfFile = e.currentTarget.files ? e.currentTarget.files[0] : null}>
           </div>
-          -->
 
           <!-- Modal Actions -->
           <div class="modal-actions">
@@ -324,6 +327,7 @@
   .modal form input[type="email"],
   .modal form input[type="date"],
   .modal form input[type="number"],
+  .modal form input[type="file"],
   .modal form select,
   .modal form textarea {
     width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
@@ -354,6 +358,11 @@
   .notes-row textarea { margin-bottom: 5px; background-color: #f8f9fa; min-height: 60px; }
   .notes-row button { align-self: flex-start; background-color: #6c757d; }
 
+  .pdf-upload-row {
+    margin-top: 15px;
+    margin-bottom: 15px;
+  }
+
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; }
   .modal-actions button { padding: 10px 18px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; }
   .submit-btn { background-color: #28a745; color: white; }
@@ -361,4 +370,4 @@
   .submit-btn:hover { background-color: #218838; }
   .cancel-btn:hover { background-color: #5a6268; }
 
-</style> 
+</style>
