@@ -666,49 +666,208 @@ export interface ProgrammeEvent {
 }
 
 // Store for all programme events
-const initialProgrammeEvents: ProgrammeEvent[] = [
-    // Add initial dummy events if needed, linking to projectIds
-    {
-        id: 'evt1',
-        projectId: 'project-1',
-        title: 'Initial Site Assessment Due',
-        date: '2023-11-15', // Example date - adjust if needed
-        color: '#007bff' // Blue
-    },
-    {
-        id: 'evt2',
-        projectId: 'project-1',
-        title: 'Planning Submission Target',
-        date: '2023-11-30',
-        color: '#ffc107' // Yellow
-    },
-     {
-        id: 'evt3',
-        projectId: 'project-2',
-        title: 'Grid Connection Offer Deadline',
-        date: '2023-12-10',
-        color: '#dc3545' // Red
+// const initialProgrammeEvents: ProgrammeEvent[] = [
+//     // Add initial dummy events if needed, linking to projectIds
+//     {
+//         id: 'evt1',
+//         projectId: 'project-1',
+//         title: 'Initial Site Assessment Due',
+//         date: '2023-11-15', // Example date - adjust if needed
+//         color: '#007bff' // Blue
+//     },
+//     {
+//         id: 'evt2',
+//         projectId: 'project-1',
+//         title: 'Planning Submission Target',
+//         date: '2023-11-30',
+//         color: '#ffc107' // Yellow
+//     },
+//      {
+//         id: 'evt3',
+//         projectId: 'project-2',
+//         title: 'Grid Connection Offer Deadline',
+//         date: '2023-12-10',
+//         color: '#dc3545' // Red
+//     }
+// ];
+
+// Store for programme events for the *currently selected* project
+// Initialize as empty, will be loaded from API
+export const allProgrammeEvents = writable<ProgrammeEvent[]>([]);
+
+// --- Programme Event API Functions ---
+
+// Function to load Programme Events for a specific project
+async function loadProgrammeEvents(projectId: string | null) {
+  if (!browser || !projectId) {
+    allProgrammeEvents.set([]); // Clear events if no project selected or not in browser
+    return;
+  }
+
+  try {
+    console.log(`Fetching programme events for project: ${projectId}`);
+    // Use the backend route we defined: GET /api/programme-events/project/:projectId
+    const response = await fetch(`${API_BASE_URL}/programme-events/project/${projectId}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to fetch programme events'}`);
     }
-];
+    let fetchedEvents: any[] = await response.json();
 
-export const allProgrammeEvents = writable<ProgrammeEvent[]>(initialProgrammeEvents);
+    // Map _id to id using the existing helper function
+    const mappedEvents = fetchedEvents.map(event => mapMongoId<ProgrammeEvent>(event));
 
-export function addProgrammeEvent(event: Omit<ProgrammeEvent, 'id'>) {
-  // Use a simple timestamp-based ID for now
-  const newEvent = { ...event, id: `evt-${Date.now()}` }; 
-  allProgrammeEvents.update(events => [...events, newEvent]);
+    console.log('Programme events fetched and mapped:', mappedEvents);
+    allProgrammeEvents.set(mappedEvents);
+
+  } catch (error) {
+    console.error(`Failed to load programme events for project ${projectId}:`, error);
+    allProgrammeEvents.set([]); // Reset on error
+    // Consider showing an error message to the user
+  }
 }
 
-// Function to update an existing programme event
-export function updateProgrammeEvent(updatedEvent: ProgrammeEvent) {
-  allProgrammeEvents.update(events => 
-    events.map(event => (event.id === updatedEvent.id ? updatedEvent : event))
-  );
+// Function to add a new programme event via API
+export async function addProgrammeEvent(eventData: Omit<ProgrammeEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProgrammeEvent | null> {
+  console.log('addProgrammeEvent CALLED in store. Data:', eventData);
+  if (!browser) {
+    console.log('addProgrammeEvent: Not in browser, returning.');
+    return null;
+  }
+
+
+  if (!eventData.projectId) {
+      console.error('addProgrammeEvent: Cannot add programme event without projectId. Data:', eventData);
+      alert('Error: Project ID is missing.');
+      return null;
+  }
+
+  try {
+    console.log('Attempting to POST /api/programme-events with:', eventData);
+    // Use the backend route: POST /api/programme-events
+    const response = await fetch(`${API_BASE_URL}/programme-events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to add programme event'}`);
+    }
+
+    let newEvent = await response.json();
+    const mappedEvent = mapMongoId<ProgrammeEvent>(newEvent); // Map the response
+
+    // Add to the local store
+    allProgrammeEvents.update(existing => {
+        const updatedEvents = [...existing, mappedEvent];
+        // Optional: Sort events after adding
+        updatedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return updatedEvents;
+    });
+
+    console.log('Programme event added:', mappedEvent);
+    return mappedEvent; // Return the newly created event
+
+  } catch (error) {
+    console.error("Failed to add programme event:", error);
+    alert(`Error adding key date: ${error}`);
+    return null;
+  }
 }
 
-// Function to delete a programme event by ID
-export function deleteProgrammeEvent(eventId: string) {
-  allProgrammeEvents.update(events => events.filter(event => event.id !== eventId));
+// Function to update an existing programme event via API
+export async function updateProgrammeEvent(eventToUpdate: ProgrammeEvent): Promise<boolean> {
+  console.log('updateProgrammeEvent CALLED in store. Data:', eventToUpdate);
+  if (!browser || !eventToUpdate || !eventToUpdate.id) {
+      console.error('updateProgrammeEvent: Invalid data or not in browser. Data:', eventToUpdate);
+      return false;
+  };
+
+  const eventId = eventToUpdate.id;
+  // Prepare data payload - only send fields that should be updatable
+  const updateData = {
+      title: eventToUpdate.title,
+      date: eventToUpdate.date, // Ensure this is in a format the backend expects (e.g., ISO string)
+      color: eventToUpdate.color,
+      // Do NOT send id, projectId, createdAt, updatedAt in the body for a PUT by ID
+  };
+
+
+  try {
+    console.log(`Updating programme event ${eventId}:`, updateData);
+    // Use the backend route: PUT /api/programme-events/:eventId
+    const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to update programme event'}`);
+    }
+
+    let updatedEventFromServer = await response.json();
+    const mappedEvent = mapMongoId<ProgrammeEvent>(updatedEventFromServer); // Map the response
+
+    // Update in the local store
+    allProgrammeEvents.update(existing => {
+        const updatedEvents = existing.map(event =>
+            event.id === eventId ? mappedEvent : event
+        );
+        // Optional: Re-sort if date could have changed
+        updatedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return updatedEvents;
+    });
+
+    console.log('Programme event updated:', mappedEvent);
+    return true;
+
+  } catch (error) {
+    console.error(`Failed to update programme event ${eventId}:`, error);
+    alert(`Error updating key date: ${error}`);
+    return false;
+  }
+}
+
+// Function to delete a programme event by ID via API
+export async function deleteProgrammeEvent(eventId: string): Promise<boolean> {
+  if (!browser || !eventId) {
+      console.error('Delete requires an event ID and browser environment.');
+      return false;
+  }
+
+  if (!confirm('Are you sure you want to delete this programme event? This cannot be undone.')) {
+      return false;
+  }
+
+  try {
+      const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
+          method: 'DELETE',
+      });
+
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      }
+
+      // Successfully deleted on the server, now update the local store
+      allProgrammeEvents.update(events => {
+          const updatedEvents = events.filter(event => event.id !== eventId);
+          console.log(`[Store] Programme event for ${eventId} removed. New count: ${updatedEvents.length}`);
+          return updatedEvents;
+      });
+
+      console.log('Programme event deleted successfully for ID:', eventId);
+      return true;
+
+  } catch (error) {
+      console.error(`Failed to delete programme event ${eventId}:`, error);
+      alert(`Error deleting programme event: ${error}`);
+      return false;
+  }
 }
 
 // --- Helper function to generate unique IDs ---

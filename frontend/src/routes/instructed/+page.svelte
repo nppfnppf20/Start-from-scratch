@@ -14,6 +14,23 @@
   import InstructedDocumentUploadModal from "$lib/components/InstructedDocumentUploadModal.svelte";
   import { browser } from '$app/environment'; // Ensure browser check is available
   
+  // --- New: Reference to the scrollable table container ---
+  let tableContainerElement: HTMLDivElement; // UNCOMMENTED
+
+  // --- New: Scroll functions ---
+  function scrollLeft() { // UNCOMMENTED
+    if (tableContainerElement) {
+      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' });
+    }
+  }
+
+  function scrollRight() { // UNCOMMENTED
+    if (tableContainerElement) {
+      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' });
+    }
+  }
+  // ---------
+
   // Modal state for Notes
   let showNotesModal = false;
   let currentQuoteForNotes: Quote | null = null;
@@ -216,7 +233,9 @@
     </div>
     
     {#if instructedQuotes.length > 0}
-      <div class="table-container">
+      <div class="table-scroll-wrapper">
+          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
+          <div class="table-container" bind:this={tableContainerElement}>
         <table>
           <thead>
             <tr>
@@ -296,17 +315,16 @@
                 </td>
                 <td>
                    <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit operational notes">
-                        {getNotesPreview(log?.operationalNotes)} <!-- Use log -->
+                        {getNotesPreview(log?.operationalNotes)}
                    </button>
                 </td>
                 <td>
                     <button class="upload-button" on:click={() => openDocumentUploadModal(quote)} title="Manage uploaded documents">
                         Manage Uploads ({log?.uploadedWorks?.length || 0})
                     </button>
-                    <!-- Display uploaded works preview (optional but helpful) -->
                     {#if log?.uploadedWorks && log.uploadedWorks.length > 0}
                       <ul class="uploaded-works-preview">
-                        {#each log.uploadedWorks as work (work.fileName + work.dateUploaded + work.version)} <!-- Adjusted key -->
+                        {#each log.uploadedWorks as work (work.fileName + work.dateUploaded + work.version)}
                           <li>
                             <span class="work-title">{work.title || work.fileName}</span> 
                             <span class="work-version">(v{work.version || 'N/A'})</span>
@@ -331,7 +349,7 @@
                  <td>
                    <div class="custom-dates-cell">
                      {#if log?.customDates && log.customDates.length > 0}
-                       {#each log.customDates as customDate (customDate.id)} <!-- Keyed by ID -->
+                       {#each log.customDates as customDate (customDate.id)}
                          <div class="custom-date-entry">
                            <input
                              type="text"
@@ -353,7 +371,7 @@
                              title="Delete custom date"
                              on:click={() => handleDeleteCustomDate(quote.id, customDate.id)}
                            >
-                             &times; <!-- Multiplication sign as delete icon -->
+                             &times;
                            </button>
                          </div>
                        {/each}
@@ -371,6 +389,8 @@
             {/each}
           </tbody>
         </table>
+          </div>
+          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
       </div>
     {:else}
       <p class="no-instructed-info">No quotes have been marked as instructed for this project yet, or instruction logs haven't loaded.</p>
@@ -407,365 +427,390 @@
 
 
 <style>
-/* Styles are important for layout and usability */
+  /* General page styling (assumed globally applied) */
 
   .instructed-container {
-  padding: 25px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  max-width: 1600px; /* Limit max width */
-  margin: 0 auto; /* Center */
+    padding: 2rem 1rem; /* Match general-info padding */
   }
   
+  /* Headings */
+  h1 {
+    font-size: 1.8rem; 
+    font-weight: 600; 
+    margin-bottom: 1.5rem;
+    color: #1a202c; 
+  }
+  
+  h2 {
+    font-size: 1.3rem; 
+    font-weight: 500; 
+    color: #2d3748; 
+    margin: 0; 
+  }
+
+  /* Header section */
   .instructed-header {
-  margin-bottom: 25px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-}
-.instructed-header h2 {
-    margin-bottom: 5px;
+    margin-bottom: 1.5rem;
+    /* Removed flex as it only contained h2 and p */
 }
 .instructed-header p {
-    color: #555;
-    font-size: 0.95em;
+      margin-top: 0.5rem;
+      color: #718096; /* Softer text for description */
+      font-size: 0.95rem;
   }
   
-
-  .table-container {
-  overflow-x: auto; /* Allow horizontal scrolling on small screens */
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  /* Table Styling */
+  .table-container { /* Renamed from quotes-table-container */
+    overflow-x: auto; 
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 2rem; 
   }
-
-  table {
+  
+  .table-container table { /* Target table within container */
     width: 100%;
     border-collapse: collapse;
-  font-size: 0.9em;
+    font-size: 0.9rem; /* MATCHING QUOTES */
+    white-space: nowrap; 
   }
-
-  th, td {
-  border: 1px solid #e0e0e0;
-  padding: 12px 15px; /* Slightly more padding */
+  
+  .table-container th,
+  .table-container td {
+    padding: 0.9rem 1.2rem; /* MATCHING QUOTES */
     text-align: left;
-  vertical-align: top; /* Align content to top */
-  white-space: nowrap; /* Prevent headers/simple cells from wrapping */
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    white-space: nowrap; 
   }
 
-  th {
-    background-color: #f8f9fa;
-  font-weight: 600; /* Slightly bolder */
-  color: #333;
-  position: sticky; /* Make headers sticky if table scrolls vertically */
-  top: 0;
-  z-index: 1;
-}
+  .table-container td {
+    color: #4a5568; 
+  }
+  
+  .table-container th {
+    background-color: #f7fafc; 
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    font-size: 0.8rem; /* MATCHING QUOTES */
+    letter-spacing: 0.05em;
+  }
 
-tr:nth-child(even) {
-  background-color: #fdfdfd;
-}
+  .table-container tbody tr:last-child td {
+    border-bottom: none; 
+  }
 
-tr:hover {
-  background-color: #f1f7ff; /* Light blue hover */
-}
+  .table-container tbody tr:hover {
+    background-color: #f7fafc; 
+  }
 
-/* Class for completed rows */
+  /* Completed Row Styling */
 .row-completed {
-    /* Use a subtle indicator instead of full background color */
-    /* background-color: #e6f4e6; */
-    border-left: 3px solid #28a745; /* Green left border */
+    background-color: #f0fff4; /* Light green background */
+  }
+  .row-completed td {
+    color: #38a169; /* Darker green text */
 }
 .row-completed:hover {
-    background-color: #e6f4e6; /* Add light green on hover */
-}
-
-
-a {
-  color: #0056b3;
-    text-decoration: none;
+      background-color: #e6fffa; /* Slightly different green on hover */
   }
 
-a:hover {
+  /* Email Link */
+  td a[href^="mailto:"] {
+      color: #3182ce;
+    text-decoration: none;
+      transition: color 0.2s ease-in-out;
+  }
+  td a[href^="mailto:"]:hover {
+      color: #2b6cb0;
     text-decoration: underline;
   }
-a[href^="mailto:"] {
-    word-break: break-all; /* Break long emails */
-    white-space: normal;
-}
 
-/* --- Buttons --- */
-button {
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 4px;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
-    font-size: 0.9em;
-}
-
-.notes-button, .upload-button, .add-custom-date-button, .delete-custom-date-button {
-  color: white;
-  padding: 6px 12px;
-  margin-right: 5px;
-}
-.notes-button:hover, .upload-button:hover, .add-custom-date-button:hover, .delete-custom-date-button:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.notes-button {
-    background-color: white;
-    border-color: #6c757d;
-color: black;
-    display: block; /* Keep as block or change if layout needs */
-    white-space: nowrap; /* Prevent text from wrapping */
-    text-align: left;
-    min-height: 40px; /* Match input height */
-    overflow: hidden; /* Required for text-overflow */
-    text-overflow: ellipsis; /* Show ... for overflow */
-    max-width: 100px; /* Updated maximum width */
-    /* width: 100%; */ /* Removed width: 100% */
-    box-sizing: border-box; /* Include padding in width */
-}
-
-
-.upload-button {
-    background-color: #17a2b8; /* Teal */
-    border-color: #17a2b8;
-}
-
-.add-custom-date-button {
-    background-color: #28a745; /* Green */
-    border-color: #28a745;
-    margin-top: 8px;
-    display: inline-block; /* Don't take full width */
-    width: auto;
-}
-
-
-.delete-custom-date-button {
-    background-color: #dc3545; /* Red */
-    border-color: #dc3545;
-    padding: 3px 8px;
-    font-size: 1em;
-      line-height: 1;
-    margin-left: 5px;
-    width: auto;
-}
-
-
-/* --- Inputs and Selects --- */
-select, input[type="date"], input[type="text"] {
-    padding: 6px 10px;
-    border-radius: 4px;
-      border: 1px solid #ced4da;
-    font-size: 0.9em;
-    font-family: inherit;
-    box-sizing: border-box; /* Include padding */
-    transition: border-color 0.2s ease;
-    min-height: 34px; /* Consistent height */
-}
-select:focus, input:focus {
-    border-color: #80bdff;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-
+  /* Work Status Select Styling */
   .status-dropdown-container {
-    min-width: 130px;
+      /* Optional: Add specific container styles if needed */
   }
 
   .work-status-select {
-    width: 100%; /* Make select fill container */
-    font-weight: bold;
-    
-    /* Remove default browser appearance */
+    padding: 0.4rem 2rem 0.4rem 0.8rem; 
+    border: 1px solid #cbd5e0;
+    border-radius: 15px; /* Pill shape */
+    font-size: 0.85rem; /* MATCHING QUOTES (like instruction-status-select) */
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    min-width: 120px; 
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    
-    /* Add padding to the right for the arrow */
-    padding-right: 30px; /* Increased padding for arrow */
-    
-    /* Add background arrow (SVG URL encoded) */
-    /* Default arrow color (e.g., for base state or if no status class matches) */
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236c757d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E"); 
     background-repeat: no-repeat;
-    background-position: right 10px center; /* Position arrow */
-    background-size: 10px 10px; /* Size of the arrow */
-}
+    background-position: right 0.75rem center;
+    background-size: 1em 1em;
+  }
+  .work-status-select:focus {
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
+  }
 
-/* Style dropdown based on status, ensuring arrow is visible */
+  /* Status-specific Select Styling */
   .work-status-select.not-started {
-    background-color: #f8d7da;
-    border-color: #f5c6cb;
-    color: #721c24;
-    /* Arrow color matches text */
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23721c24%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-color: #fff5f5; /* Light red */
+    border-color: #fed7d7;
+    color: #c53030;
   }
   .work-status-select.in-progress {
-    background-color: #fff3cd;
-    border-color: #ffeeba;
-    color: #856404;
-    /* Arrow color matches text */
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23856404%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-color: #fffaf0; /* Light orange/yellow */
+    border-color: #feebc8;
+    color: #975a16;
   }
   .work-status-select.completed {
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-    color: #155724;
-    /* Arrow color matches text */
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23155724%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-}
+    background-color: #f0fff4; /* Light green */
+    border-color: #c6f6d5;
+    color: #276749;
+  }
 
-.date-cell-group {
-    margin-bottom: 8px;
-    display: flex;
-    flex-direction: column;
-}
-.date-cell-group:last-child {
+  /* Date Inputs Styling */
+  td > .date-cell-group { /* Targeting the div directly inside td for dates */
+    margin-bottom: 0.75rem;
+  }
+  td > .date-cell-group:last-child {
     margin-bottom: 0;
 }
-
-.date-label {
-    font-size: 0.8em; /* Smaller label */
-    color: #495057;
-    margin-bottom: 3px;
+  .date-label { /* Styling for labels like 'Site Visit' */
     display: block;
+    font-size: 0.8rem;
+    color: #718096;
+    margin-bottom: 0.25rem;
     font-weight: 500;
 }
+  /* .standard-date-label can inherit from .date-label or have specific styles */
 
-.standard-date-label {
-    font-weight: 600; /* Slightly bolder for standard dates */
-}
+  input.date-input { /* Styling for the date input fields */
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
+    background-color: #fff;
+    width: auto; /* Don't force full width */
+    min-width: 130px; /* Ensure a reasonable minimum width */
+  }
+  input.date-input:focus {
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
+  }
+  /* Remove previous .date-cell, .date-entry styles if they are no longer used or conflicting */
+  /* .date-cell { ... } */
+  /* .date-entry { ... } */
+  /* .date-entry label { ... } */
+  /* .date-entry input[type="date"] { ... } */
 
 
-.date-input {
-    max-width: 160px;
-}
+  /* Notes Button Styling */
+  .notes-button {
+    background: none;
+    border: 1px dashed #cbd5e0; 
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    color: #718096; 
+    font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
+    cursor: pointer;
+    text-align: left;
+    width: 100%; 
+    min-width: 150px;
+    max-width: 150px; /* Changed from 250px */
+    overflow: hidden;   /* Ensure ellipsis works */
+    text-overflow: ellipsis; /* Ensure ellipsis works */
+    white-space: nowrap; /* Ensure ellipsis works */
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    font-style: italic; 
+  }
+  .notes-button:not(:empty) {
+      font-style: normal; /* Normal style if there are notes */
+      color: #4a5568;
+      border-style: solid; /* Solid border if notes exist */
+  }
+  .notes-button:hover {
+    background-color: #edf2f7;
+    border-color: #a0aec0;
+  }
 
-/* --- Custom Dates --- */
-.custom-dates-cell {
-    min-width: 300px; /* Provide enough space */
-    white-space: normal; /* Allow wrapping within this cell */
-}
-
-.custom-date-entry {
+  /* Works Upload Button Styling (Button style) */
+  .upload-button { /* Renamed from .works-upload-button for consistency? No, keep class, just change style */
+    background-color: #3182ce; /* Blue background */
+    color: white;
+    border: none; /* Remove border */
+    padding: 0.5rem 1rem; 
+    font-size: 0.85rem; /* Adjusted for consistency with other smaller buttons */
+    font-weight: 500;
+    border-radius: 6px; /* Standard button radius */
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    display: inline-block; /* Make it behave like a button */
+  }
+  .upload-button:hover {
+    background-color: #2b6cb0; /* Darker blue on hover */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .uploaded-works-preview {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0 0; 
+    font-size: 0.8rem; /* MATCHING QUOTES (action buttons in table) */
+    color: #718096;
+    display: flex; /* Use flex for vertical stacking */
+    flex-direction: column;
+    gap: 0.5rem; /* Space between list items */
+  }
+  .uploaded-works-preview li {
+    /* margin-bottom: 0.25rem; Removed, using gap on parent */
+    /* white-space: nowrap; Let flex handle wrapping if needed, but items will try not to */
+    /* overflow: hidden; Let individual items handle their overflow */
+    /* text-overflow: ellipsis; */
+    /* max-width: 150px; Remove fixed max-width from li */
     display: flex;
     align-items: center;
-    margin-bottom: 6px;
-    gap: 8px; /* Space between elements */
-    flex-wrap: nowrap; /* Keep inputs on one line */
-}
-
-.custom-date-title-input {
-    flex-grow: 1; /* Allow title to take available space */
-    min-width: 100px; /* Minimum width before shrinking */
-}
-
-.custom-date-input {
-     min-width: 130px; /* Ensure date input is wide enough */
-}
-
-/* --- Misc --- */
-.no-instructed-info, .loading-info {
-  color: #6c757d;
-  font-style: italic;
-  padding: 20px;
-  text-align: center;
-}
-
-.uploaded-works-preview {
-  list-style: none;
-  padding-left: 0;
-  margin-top: 8px;
-  font-size: 0.85em;
-  color: #333;
-}
-
-.uploaded-works-preview li {
-  margin-bottom: 5px;
-  padding: 4px;
-  background-color: #f9f9f9;
-  border-radius: 3px;
-  display: flex; /* Use flexbox for alignment */
-  align-items: center; /* Vertically align items */
-  gap: 8px; /* Space between items */
-  overflow: hidden; /* Hide overflow for the whole list item */
-}
-
+    gap: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    background-color: #f8f9fa; /* Light background for each item */
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+  }
 .work-title {
   font-weight: 500;
-  white-space: nowrap; /* Prevent title wrapping */
-  overflow: hidden; /* Hide overflow */
-  text-overflow: ellipsis; /* Show ellipsis (...) */
-  flex-shrink: 1; /* Allow shrinking but less likely */
-  min-width: 80px;
-}
-
+    color: #4a5568;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1; /* Allow title to shrink if needed */
+  }
 .work-version {
-  color: #555;
-  font-size: 0.9em;
-  flex-shrink: 0; /* Prevent version from shrinking */
-  white-space: nowrap; /* Keep version on one line */
-}
-
+    font-size: 0.8em; /* Relative to parent (0.8rem * 0.8) */
+    color: #718096;
+    flex-shrink: 0; /* Don't let version shrink easily */
+  }
 .work-description {
-  color: #777;
+    font-size: 0.8em; /* Relative to parent (0.8rem * 0.8) */
+    color: #718096;
   font-style: italic;
-  white-space: nowrap; /* Prevent description wrapping */
-  overflow: hidden; /* Hide overflow */
-  text-overflow: ellipsis; /* Show ellipsis (...) */
-  flex-grow: 1; /* Allow description to take available space */
-  min-width: 50px;
-}
-
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1; /* Allow description to take space */
+    display: none; /* Hide by default, too much info for summary */
+  }
 .work-link {
-  margin-left: auto; /* Push link and button to the right */
+    color: #3182ce;
+    font-size: 1rem; /* Link icon size */
   text-decoration: none;
-  flex-shrink: 0; /* Prevent link from shrinking */
+    flex-shrink: 0;
+  }
+  .work-link:hover {
+    color: #2b6cb0;
 }
-
 .delete-work-btn {
   background: none;
   border: none;
-  color: #dc3545; /* Red color for delete */
+    color: #e53e3e;
   cursor: pointer;
-  font-size: 1em;
-  padding: 0 4px;
-  line-height: 1; /* Adjust line height */
-  flex-shrink: 0; /* Prevent button from shrinking */
-}
-
+    font-size: 1rem; /* Icon size */
+    padding: 0 0.2rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
 .delete-work-btn:hover {
-  color: #a71d2a;
-}
+    color: #c53030;
+  }
 
-td:nth-child(1), /* Org */
-td:nth-child(2) { /* Contact */
-    white-space: normal; /* Allow wrapping */
-}
-td:nth-child(6), /* Status */
-td:nth-child(7), /* Dates */
-td:nth-child(8), /* Notes */
-td:nth-child(9), /* Works */
-td:nth-child(10) { /* Custom Dates */
-    white-space: normal; /* Allow wrapping in complex cells */
-}
+  /* Custom Dates Styling */
+  .custom-dates-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 250px; /* Ensure enough width */
+  }
+  .custom-date-entry {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+  }
+  .custom-date-entry input[type="text"] {
+      flex-grow: 1; 
+      padding: 0.4rem 0.6rem; 
+      border: 1px solid #cbd5e0;
+      border-radius: 4px;
+      font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
+      background-color: #fff;
+      min-width: 100px; /* Min width for title */
+  }
+  .custom-date-entry input[type="date"] {
+      padding: 0.4rem 0.6rem; 
+      border: 1px solid #cbd5e0;
+      border-radius: 4px;
+      font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
+      background-color: #fff;
+      min-width: 130px; /* Min width for date */
+  }
+  .custom-date-entry input:focus {
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
+  }
+  .add-custom-date-button { /* Apply standard button style */
+      background-color: #3182ce; /* Blue background */
+      color: white;
+      border: none; /* Remove border */
+      padding: 0.5rem 0.6rem; 
+      font-size: 0.85rem; /* Adjusted for consistency */
+      font-weight: 500;
+      border-radius: 6px; /* Standard button radius */
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+      margin-top: 0.75rem; /* Adjust spacing */
+      display: inline-block; 
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Subtle shadow */
+      width: auto; /* Allow button to size to content */
+      max-width: 150px; /* Changed max-width back to 150px */
+      text-align: center; /* Center text */
+  }
+  .add-custom-date-button:hover {
+      background-color: #2b6cb0; /* Darker blue on hover */
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
 
-/* Style for the main table */
-.instructed-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    table-layout: auto; /* Allow columns to adjust */
-}
+  .delete-custom-date-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem; /* Keep icon size reasonable, was 1.1rem */
+      padding: 0 0.3rem;
+  }
+  .delete-custom-date-btn:hover {
+      color: #c53030;
+  }
 
-/* Target the last column's data cells */
-.instructed-table tbody td:last-child {
-  min-width: 450px; /* Adjust this value as needed */
-  vertical-align: top;
-}
+  /* No Instructed Quotes State */
+  .instructed-container > p {
+    text-align: center;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #718096;
+  }
 
+  /* --- Scroll Buttons CSS (Copied from quotes page) --- */
+  /* .table-scroll-wrapper { ... } */ 
+  /* .scroll-btn { ... } */
+  /* .scroll-btn-left { ... } */
+  /* .scroll-btn-right { ... } */
+  /* --- Keeping these commented out as HTML was not added --- */
 </style> 

@@ -24,6 +24,23 @@
   let documents: DocumentData[] = []; 
   let isLoading = false; // Add loading state
 
+  // --- New: Reference to the scrollable table container ---
+  let tableContainerElement: HTMLDivElement;
+
+  // --- New: Scroll functions ---
+  function scrollLeft() {
+    if (tableContainerElement) {
+      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' }); // Scroll 150px left
+    }
+  }
+
+  function scrollRight() {
+    if (tableContainerElement) {
+      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' }); // Scroll 150px right
+    }
+  }
+  // ---------
+
   // Filtering function
   $: filteredDocuments = selectedCategory === 'All' 
     ? documents 
@@ -159,50 +176,53 @@
     {#if isLoading}
       <p>Loading documents...</p> 
     {:else}
-      <div class="documents-table-container">
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Size</th>
-              <th>Upload Date</th>
-              <th>Category</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each filteredDocuments as doc (doc._id)}
-              <tr>
-                <td class="file-name">
-                  <span class="file-icon">{getFileIcon(doc.mimetype)}</span>
-                  {doc.name}
-                </td>
-                <td>{doc.mimetype || 'N/A'}</td>
-                <td>{formatBytes(doc.size || 0)}</td>
-                <td>{new Date(doc.uploadDate).toLocaleDateString()}</td>
-                <td>
-                  <span class="category-badge">{doc.category}</span>
-                </td>
-                <td class="action-cell">
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" class="action-btn view-btn" title="View/Open file">View</a>
-                  <a href={doc.url} download={doc.name} class="action-btn download-btn" title="Download file">Download</a>
-                                    <button 
-                    class="action-btn delete-btn" 
-                    on:click={() => handleDeleteDocument(doc._id, doc.name)}
-                    title="Delete this document"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            {:else}
-               <tr>
-                   <td colspan="6" style="text-align: center; padding: 2rem;">No documents found for this category or project.</td>
-               </tr>
-            {/each}
-          </tbody>
-        </table>
+      <div class="table-scroll-wrapper">
+          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
+          <div class="documents-table-container" bind:this={tableContainerElement}>
+            <table class="documents-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Upload Date</th>
+                  <th>Category</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each filteredDocuments as doc (doc._id)}
+                  <tr>
+                    <td class="file-name">
+                      {doc.name}
+                    </td>
+                    <td>{doc.mimetype || 'N/A'}</td>
+                    <td>{formatBytes(doc.size || 0)}</td>
+                    <td>{new Date(doc.uploadDate).toLocaleDateString()}</td>
+                    <td>
+                      <span class="category-badge">{doc.category}</span>
+                    </td>
+                    <td class="action-cell">
+                      <a href={doc.url} target="_blank" rel="noopener noreferrer" class="action-btn view-btn" title="View/Open file">View</a>
+                      <a href={doc.url} download={doc.name} class="action-btn download-btn" title="Download file">Download</a>
+                                        <button 
+                      class="action-btn delete-btn" 
+                      on:click={() => handleDeleteDocument(doc._id, doc.name)}
+                      title="Delete this document"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                {:else}
+                   <tr>
+                       <td colspan="6" style="text-align: center; padding: 2rem;">No documents found for this category or project.</td>
+                   </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
       </div>
     {/if}
     
@@ -220,61 +240,89 @@
     {/if}
 
 <style>
+  /* General page styling (applied globally from +page.svelte) */
+  /* :global(body) ... */ /* Assuming global styles are already applied */
+
   .documents-container {
-    padding: 1rem 0;
+    padding: 2rem 1rem; /* Match general-info padding */
   }
   
+  /* Headings */
   h1 {
-    margin-bottom: 1.5rem;
-    color: #333;
+    font-size: 1.8rem; 
+    font-weight: 600; 
+    margin-bottom: 1.5rem; /* Slightly less margin for header below */
+    color: #1a202c; 
   }
   
+  h2 {
+    font-size: 1.3rem; 
+    font-weight: 500; 
+    color: #2d3748; 
+    margin: 0; /* Remove default margins */
+  }
+
+  /* Header section */
   .documents-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
   }
-  
-  h2 {
-    font-size: 1.5rem;
-    color: #555;
-    margin: 0;
-  }
-  
+
+  /* Upload Button (in header) */
   .upload-btn {
-    background-color: #28a745;
-    color: white;
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
     font-weight: 500;
+    background-color: #3182ce; /* Blue accent */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
-  
   .upload-btn:hover {
-    background-color: #218838;
+    background-color: #2b6cb0; /* Darker blue */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .upload-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); 
+  }
+  .upload-btn:disabled {
+    background-color: #a0aec0;
+    cursor: not-allowed;
+    box-shadow: none;
   }
   
+  /* Filter Bar */
   .filter-bar {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1.5rem;
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 5px;
-    border: 1px solid #e9ecef;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
   }
   
   .category-filter {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
   
   .filter-label {
     font-weight: 500;
-    color: #555;
+    color: #4a5568;
+    font-size: 0.9rem;
   }
   
   .category-buttons {
@@ -284,125 +332,218 @@
   }
   
   .category-btn {
-    padding: 0.4rem 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 15px; /* Pill shape */
     background-color: #fff;
+    color: #4a5568;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  }
+  
+  .category-btn:hover {
+    background-color: #edf2f7;
+    border-color: #a0aec0;
   }
   
   .category-btn.active {
-    background-color: #007bff;
+    background-color: #3182ce;
     color: white;
-    border-color: #007bff;
+    border-color: #3182ce;
+    font-weight: 500;
+  }
+
+  /* Search Box */
+  .search-box input[type="text"] {
+    padding: 0.6rem 1rem; /* Slightly smaller padding */
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 250px; /* Ensure it has some width */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+
+  .search-box input[type="text"]:focus {
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
   }
   
-  .search-box input {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    min-width: 250px;
-  }
-  
+  /* Table Styling */
   .documents-table-container {
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    overflow: hidden;
+    overflow-x: auto; /* Ensure horizontal scrolling is enabled */
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
   }
   
   .documents-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.9rem;
   }
   
   .documents-table th,
   .documents-table td {
-    padding: 1rem;
+    padding: 0.9rem 1.2rem;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
   }
   
   .documents-table th {
-    background-color: #f8f9fa;
+    background-color: #f7fafc; /* Very light grey header */
     font-weight: 600;
-    color: #495057;
+    color: #4a5568;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap; /* Keep headers from wrapping */
   }
-  
-  .documents-table tr:last-child td {
-    border-bottom: none;
+
+  .documents-table tbody tr:last-child td {
+    border-bottom: none; /* Remove border from last row */
   }
-  
-  .documents-table tr:hover {
-    background-color: #f8f9fa;
+
+  .documents-table tbody tr:hover {
+    background-color: #f7fafc; /* Subtle hover effect */
   }
   
   .file-name {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    /* display: flex; Remove flex if icon is removed */
+    /* align-items: center; */
+    /* gap: 0.75rem; */
+    font-weight: 500;
+    color: #2d3748;
   }
-  
+
   .file-icon {
-    font-size: 1.2rem;
+    /* font-size: 1.2rem; Style removed as icon is removed */
   }
   
   .category-badge {
     display: inline-block;
-    padding: 0.3rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    background-color: #e9ecef;
-    color: #495057;
-  }
-  
-  .action-cell {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 10px;
+    background-color: #e2e8f0;
+    color: #4a5568;
     white-space: nowrap;
-    display: flex;
-    gap: 0.5rem;
   }
   
-  .action-btn {
-    padding: 0.4rem 0.75rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  
-  .view-btn {
-    background-color: #6c757d;
-    color: white;
-  }
-  
-  .download-btn {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  .delete-btn {
-    background-color: #dc3545;
-    color: white;
-  }
-  
-  .action-btn:hover {
-    opacity: 0.9;
-  }
-  
-  .no-project-selected {
-    text-align: center;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: #f8f9fa;
-    border-radius: 0.5rem;
-    border: 1px solid #dee2e6;
+  /* Action Buttons in Table */
+  .action-cell {
+    white-space: nowrap; /* Prevent buttons wrapping */
+    text-align: right; /* Align actions to the right */
   }
   
   .action-btn {
     display: inline-block;
-    text-align: center;
+    padding: 0.3rem 0.7rem;
+    margin-left: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 4px;
     text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid transparent;
   }
+
+  .action-btn:first-child {
+      margin-left: 0;
+  }
+
+  /* Specific Button Styles */
+  .view-btn {
+    background-color: #ebf4ff; /* Light blue */
+    color: #3182ce;
+    border-color: #bee3f8;
+  }
+  .view-btn:hover {
+    background-color: #bee3f8;
+  }
+
+  .download-btn {
+    background-color: #f0fff4; /* Light green */
+    color: #38a169;
+    border-color: #c6f6d5;
+  }
+  .download-btn:hover {
+    background-color: #c6f6d5;
+  }
+
+  .delete-btn {
+    background-color: #fff5f5; /* Light red */
+    color: #e53e3e;
+    border-color: #fed7d7;
+  }
+  .delete-btn:hover {
+    background-color: #fed7d7;
+  }
+
+  /* Loading and No Project/Documents States */
+  p[style*="text-align: center"] /* Targeting the 'No documents found' row */,
+  .documents-container > p /* Targeting the 'Loading...' message */ {
+    text-align: center;
+    padding: 2rem;
+    color: #718096;
+    font-style: italic;
+  }
+
+  /* Reuse no-project style from general page */
+  .no-project-selected {
+    text-align: center;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #718096;
+  }
+
+  /* --- New: Table Scroll Wrapper and Buttons --- */
+  .table-scroll-wrapper {
+    position: relative; /* Context for absolute positioning of buttons */
+    margin-bottom: 2rem; /* Keep space below */
+  }
+
+  .scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
+    border: 1px solid #cbd5e0;
+    border-radius: 50%; /* Circle */
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
+    cursor: pointer;
+    color: #4a5568;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: inline-flex; /* Use inline-flex */
+    align-items: center;    /* Flexbox: Vertically center content */
+    justify-content: center; /* Flexbox: Horizontally center content */
+    padding: 0; /* Remove padding if flex is centering */
+  }
+
+  .scroll-btn:hover {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  }
+
+  .scroll-btn-left {
+    left: -18px; /* Position halfway outside the container */
+  }
+
+  .scroll-btn-right {
+    right: -18px; /* Position halfway outside the container */
+  }
+  /* ------------------------------------------- */
 </style> 

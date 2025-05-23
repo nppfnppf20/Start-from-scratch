@@ -33,6 +33,23 @@
   let quoteForDocumentUpload: Quote | null = null;
   let documentUploadType: 'quote' | 'instruction' | null = null;
 
+  // --- New: Reference to the scrollable table container ---
+  let tableContainerElement: HTMLDivElement;
+
+  // --- New: Scroll functions ---
+  function scrollLeft() {
+    if (tableContainerElement) {
+      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' }); // Scroll 150px left
+    }
+  }
+
+  function scrollRight() {
+    if (tableContainerElement) {
+      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' }); // Scroll 150px right
+    }
+  }
+  // ---------
+
   function openNewQuoteModal() {
     currentQuoteToEdit = null;
     showQuoteModal = true;
@@ -139,90 +156,94 @@
       <button class="add-quote-btn" on:click={openNewQuoteModal} disabled={!$selectedProject}>+ Add New Quote</button>
     </div>
     
-    <div class="quotes-table-container">
-      <table class="quotes-table">
-        <thead>
-          <tr>
-            <th>Discipline</th>
-            <th>Survey Type</th>
-            <th>Organisation</th>
-            <th>Contact Name</th>
-            <th>Email</th>
-            <th>Line Items</th>
-            <th>Total (excl. VAT)</th>
-            <th>Instruction Status</th>
-            <th>Actions</th>
-            <th>Quotes</th>
-            <th>Instruction</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each $currentProjectQuotes as quote (quote.id)}
+    <div class="table-scroll-wrapper">
+      <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
+      <div class="quotes-table-container" bind:this={tableContainerElement}>
+        <table class="quotes-table">
+          <thead>
             <tr>
-              <td>{quote.discipline}</td>
-              <td>{quote.surveyType}</td>
-              <td>{quote.organisation}</td>
-              <td>{quote.contactName}</td>
-              <td><a href="mailto:{quote.email}">{quote.email}</a></td>
-              <td class="text-center">
-                <button 
-                    type="button" 
-                    class="line-items-button" 
-                    title="View Line Items" 
-                    on:click={() => openLineItemsModal(quote)}
-                    aria-label={`View ${quote.lineItems.length} line items`}
-                >
-                  {quote.lineItems.length}
-                  <span class="plus-sign">+</span>
-                </button>
-              </td>
-              <td class="text-right">£{quote.total.toFixed(2)}</td>
-              <td>
-                <select 
-                  class="instruction-status-select"
-                  class:status-instructed={quote.instructionStatus === 'instructed'}
-                  class:status-partially-instructed={quote.instructionStatus === 'partially instructed'}
-                  class:status-pending={quote.instructionStatus === 'pending'}
-                  class:status-will-not-be-instructed={quote.instructionStatus === 'will not be instructed'}
-                  value={quote.instructionStatus}
-                  id={`status-select-${quote.id}`}
-                  on:change={(e) => handleStatusChange(quote.id, e.currentTarget.value as InstructionStatus, quote)}
-                >
-                  {#each instructionStatuses as status}
-                    <option value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
-                  {/each}
-                </select>
-              </td>
-              <td class="action-cell">
-                <button 
-                  class="action-btn delete-btn" 
-                  title="Delete Quote" 
-                  on:click={() => handleDeleteQuote(quote.id, quote.organisation)}
-                >Delete</button>
-                <button 
-                  class="action-btn edit-btn" 
-                  title="Edit Quote"
-                  on:click={() => openEditQuoteModal(quote)} 
-                >Edit</button>
-              </td>
-              <td class="action-cell icon-cell">
-                <button 
-                  class="action-btn icon-btn" 
-                  title="Manage Quote Documents"
-                  on:click={() => openDocumentUploadModal(quote, 'quote')}
-                >📎</button>
-              </td>
-              <td class="action-cell icon-cell">
-                <button 
-                  class="action-btn icon-btn" 
-                  title="Manage Instruction Documents"
-                  on:click={() => openDocumentUploadModal(quote, 'instruction')}
-                >📎</button>
-              </td>
+              <th>Discipline</th>
+              <th>Survey Type</th>
+              <th>Organisation</th>
+              <th>Contact Name</th>
+              <th>Email</th>
+              <th>Line Items</th>
+              <th>Total (excl. VAT)</th>
+              <th>Instruction Status</th>
+              <th>Actions</th>
+              <th>Quotes</th>
+              <th>Instruction</th>
             </tr>
-          {/each}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {#each $currentProjectQuotes as quote (quote.id)}
+              <tr>
+                <td>{quote.discipline}</td>
+                <td>{quote.surveyType}</td>
+                <td>{quote.organisation}</td>
+                <td>{quote.contactName}</td>
+                <td><a href="mailto:{quote.email}">{quote.email}</a></td>
+                <td class="text-center">
+                  <button 
+                      type="button" 
+                      class="line-items-button" 
+                      title="View Line Items" 
+                      on:click={() => openLineItemsModal(quote)}
+                      aria-label={`View ${quote.lineItems.length} line items`}
+                  >
+                    {quote.lineItems.length}
+                    <span class="plus-sign">+</span>
+                  </button>
+                </td>
+                <td class="text-right">£{quote.total.toFixed(2)}</td>
+                <td>
+                  <select 
+                    class="instruction-status-select"
+                    class:status-instructed={quote.instructionStatus === 'instructed'}
+                    class:status-partially-instructed={quote.instructionStatus === 'partially instructed'}
+                    class:status-pending={quote.instructionStatus === 'pending'}
+                    class:status-will-not-be-instructed={quote.instructionStatus === 'will not be instructed'}
+                    value={quote.instructionStatus}
+                    id={`status-select-${quote.id}`}
+                    on:change={(e) => handleStatusChange(quote.id, e.currentTarget.value as InstructionStatus, quote)}
+                  >
+                    {#each instructionStatuses as status}
+                      <option value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
+                    {/each}
+                  </select>
+                </td>
+                <td class="action-cell">
+                  <button 
+                    class="action-btn delete-btn" 
+                    title="Delete Quote" 
+                    on:click={() => handleDeleteQuote(quote.id, quote.organisation)}
+                  >Delete</button>
+                  <button 
+                    class="action-btn edit-btn" 
+                    title="Edit Quote"
+                    on:click={() => openEditQuoteModal(quote)} 
+                  >Edit</button>
+                </td>
+                <td class="action-cell icon-cell">
+                  <button 
+                    class="action-btn icon-btn" 
+                    title="Manage Quote Documents"
+                    on:click={() => openDocumentUploadModal(quote, 'quote')}
+                  >📎</button>
+                </td>
+                <td class="action-cell icon-cell">
+                  <button 
+                    class="action-btn icon-btn" 
+                    title="Manage Instruction Documents"
+                    on:click={() => openDocumentUploadModal(quote, 'instruction')}
+                  >📎</button>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
     </div>
   {:else}
     <p>Please select a project to view quotes.</p>
@@ -264,259 +285,312 @@
 </div>
 
 <style>
+  /* General page styling (assumed globally applied) */
+
   .quotes-container {
-    padding: 1rem 0;
+    padding: 2rem 1rem; /* Match general-info padding */
   }
   
+  /* Headings */
   h1 {
+    font-size: 1.8rem; 
+    font-weight: 600; 
     margin-bottom: 1.5rem;
-    color: #333;
+    color: #1a202c; 
   }
   
+  h2 {
+    font-size: 1.3rem; 
+    font-weight: 500; 
+    color: #2d3748; 
+    margin: 0; 
+  }
+
+  /* Header section */
   .quotes-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
   }
-  
-  h2 {
-    font-size: 1.5rem;
-    color: #555;
-    margin: 0;
+
+  /* Add Quote Button */
+  .add-quote-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    background-color: #3182ce; /* Blue accent */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  .add-quote-btn:hover {
+    background-color: #2b6cb0; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .add-quote-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); 
+  }
+  .add-quote-btn:disabled {
+    background-color: #a0aec0;
+    cursor: not-allowed;
+    box-shadow: none;
   }
   
+  /* Table Styling */
   .quotes-table-container {
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    overflow-x: auto;
+    overflow-x: scroll; /* Changed from auto to scroll for persistent visibility */
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 2rem; /* Space below table */
   }
   
   .quotes-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1200px;
+    font-size: 0.9rem;
+    white-space: nowrap; /* Prevent wrapping in cells initially */
   }
   
   .quotes-table th,
   .quotes-table td {
-    padding: 1rem;
+    padding: 0.9rem 1.2rem;
     text-align: left;
-    border-bottom: 1px solid #eee;
-    font-size: 0.95rem;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    white-space: nowrap; /* Keep cells from wrapping */
+  }
+
+  .quotes-table td {
+    color: #4a5568; /* Slightly softer text color for data */
   }
   
   .quotes-table th {
-    background-color: #f8f9fa;
+    background-color: #f7fafc; 
     font-weight: 600;
-    color: #495057;
-    white-space: nowrap;
+    color: #4a5568;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
   }
-  
-  .quotes-table tr:last-child td {
-    border-bottom: none;
+
+  .quotes-table tbody tr:last-child td {
+    border-bottom: none; 
   }
-  
-  .quotes-table tr:hover {
-    background-color: #f8f9fa;
+
+  .quotes-table tbody tr:hover {
+    background-color: #f7fafc; 
   }
-  
+
+  /* Specific Cell Alignments */
   .text-center {
     text-align: center;
   }
-  
   .text-right {
     text-align: right;
   }
-  
-  .status-badge {
-    display: inline-block;
-    padding: 0.3rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
+
+  /* Email Link */
+  td a[href^="mailto:"] {
+      color: #3182ce;
+      text-decoration: none;
+      transition: color 0.2s ease-in-out;
+  }
+  td a[href^="mailto:"]:hover {
+      color: #2b6cb0;
+      text-decoration: underline;
+  }
+
+  /* Line Items Button */
+  .line-items-button {
+    background-color: #edf2f7;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%; /* Circle */
+    width: auto; /* Adjust width based on content */
+    min-width: 28px; /* Keep minimum size */
+    height: 28px;
+    font-size: 0.9rem;
     font-weight: 500;
-    text-transform: capitalize;
-    white-space: nowrap;
+    /* line-height: 26px; Remove fixed line height */
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    display: inline-flex; /* Use flex for centering */
+    align-items: center;
+    justify-content: center;
+    /* position: relative; Remove relative positioning */
+    padding: 0 0.5rem; /* Add some horizontal padding */
+    gap: 0.25rem; /* Add gap between number and plus */
+  }
+  .line-items-button:hover {
+    background-color: #e2e8f0;
+    border-color: #cbd5e0;
+  }
+  .line-items-button .plus-sign {
+    /* display: none; Remove hiding */
+    display: inline; /* Show the plus sign */
+    font-size: 0.8em; /* Make plus slightly smaller */
+    font-weight: bold;
+    line-height: 1; /* Ensure it doesn't affect button height much */
+  }
+
+  /* Instruction Status Select */
+  .instruction-status-select {
+    padding: 0.4rem 2rem 0.4rem 0.8rem; /* Increase right padding for arrow */
+    border: 1px solid #cbd5e0;
+    border-radius: 15px; /* Pill shape */
+    font-size: 0.85rem;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    min-width: 120px; /* Ensure dropdown is wide enough */
+    appearance: none; /* Hide default arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E"); /* Add custom arrow */
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em 1em;
+  }
+  .instruction-status-select:focus {
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
+  }
+
+  /* Status-specific Select Styling */
+  .instruction-status-select.status-instructed {
+    background-color: #f0fff4; /* Light green */
+    border-color: #c6f6d5;
+    color: #276749;
+  }
+  .instruction-status-select.status-partially-instructed {
+    background-color: #fffaf0; /* Light orange/yellow */
+    border-color: #feebc8;
+    color: #975a16;
+  }
+  .instruction-status-select.status-pending {
+    background-color: #ebf4ff; /* Light blue */
+    border-color: #bee3f8;
+    color: #2c5282;
+  }
+  .instruction-status-select.status-will-not-be-instructed {
+    background-color: #fff5f5; /* Light red */
+    border-color: #fed7d7;
+    color: #c53030;
   }
   
-  .status-pending {
-    background-color: #ffc107;
-    color: #212529;
-  }
-  
-  .status-accepted {
-    background-color: #28a745;
-    color: white;
-  }
-  
-  .status-rejected {
-    background-color: #dc3545;
-    color: white;
-  }
-  
+  /* Action Buttons in Table */
   .action-cell {
-    white-space: nowrap;
+    text-align: center; /* Center align actions */
   }
   
   .action-btn {
-    padding: 0.4rem 0.5rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-  
-  .view-btn, .details-btn {
-    background-color: #6c757d;
-    color: white;
-  }
-  
-  .edit-btn, .download-btn {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  .instruct-btn {
-    background-color: #28a745;
-    color: white;
-  }
-  
-  .action-btn:hover {
-    opacity: 0.9;
-  }
-  
-  a {
-    color: #007bff;
-    text-decoration: none;
-  }
-  
-  a:hover {
-    text-decoration: underline;
-  }
-  
-  .instruction-status-select {
-    padding: 0.4rem 1.8rem 0.4rem 0.8rem;
-    border: 1px solid #ced4da;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    background-color: white;
-    min-width: 150px;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1em 1em;
-  }
-  
-  .instruction-status-select:focus {
-    outline: none;
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
-  }
-  
-  .instruction-status-select.status-instructed,
-  .instruction-status-select.status-partially-instructed {
-    background-color: #d4edda;
-    color: #155724;
-    border-color: #c3e6cb;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23155724'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
-  }
-  
-  .instruction-status-select.status-pending {
-    background-color: #fff3cd;
-    color: #856404;
-    border-color: #ffeeba;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23856404'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
-  }
-  
-  .instruction-status-select.status-will-not-be-instructed {
-    background-color: #f8d7da;
-    color: #721c24;
-    border-color: #f5c6cb;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23721c24'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
-  }
-
-  .line-items-button {
-      background: none;
-      border: none;
-      padding: 0.2rem 0.5rem;
-      cursor: pointer;
-      font-size: 0.95rem;
-      color: #007bff;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      border-radius: 4px;
-  }
-
-  .line-items-button:hover {
-      text-decoration: underline;
-      background-color: rgba(0, 123, 255, 0.1);
-  }
-
-  .plus-sign {
-      font-weight: bold;
-      font-size: 1.1em;
-      line-height: 1;
-  }
-
-  .delete-btn {
-    background-color: #dc3545;
-    color: white;
-  }
-
-  .icon-cell {
-      text-align: center;
-  }
-
-  .icon-btn {
-      background: none;
-      border: none;
-      font-size: 1.3rem;
-      cursor: pointer;
-      color: #6c757d;
-      padding: 0.2rem;
-      line-height: 1;
-  }
-  
-  .icon-btn:hover {
-      color: #343a40;
-  }
-
-  .add-quote-btn {
-    background-color: #28a745;
-    color: white;
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    margin: 0 0.2rem; /* Adjust spacing */
+    font-size: 0.8rem;
     font-weight: 500;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    border: 1px solid transparent;
+    background: none;
+    color: #718096; /* Default subtle grey */
   }
-  
-  .add-quote-btn:hover {
-    background-color: #218838;
+  .action-btn:hover {
+     background-color: #edf2f7; /* Light grey background on hover */
+     color: #2d3748; /* Darker text on hover */
   }
 
-  .add-quote-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
+  /* Specific Button Styles */
+  .edit-btn {
+    /* Maybe a subtle blue hint? */
+     /* border-color: #bee3f8; */
+  }
+  .delete-btn {
+    /* Maybe a subtle red hint? */
+     /* border-color: #fed7d7; */
+     /* color: #e53e3e; */
+  }
+  .delete-btn:hover {
+      background-color: #fed7d7; /* Light red background on hover */
+      color: #c53030; /* Red text on hover */
   }
 
-  .quotes-table th, .quotes-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-  .quotes-table th { background-color: #f2f2f2; }
-  .action-buttons { display: flex; gap: 5px; }
-  .action-btn { padding: 3px 6px; font-size: 0.8em; border-radius: 3px; cursor: pointer; border: 1px solid transparent; }
-  .view-items-btn { background-color: #17a2b8; color: white; }
-  .edit-btn { background-color: #ffc107; color: black; }
-  .delete-btn { background-color: #dc3545; color: white; }
-  .status-select { padding: 4px; border-radius: 4px; border: 1px solid #ccc; }
-  .status-pending { background-color: #fff3cd; }
-  .status-will-not-be-instructed { background-color: #f8d7da; }
-  .status-partially-instructed { background-color: #d1ecf1; }
-  .status-instructed { background-color: #d4edda; }
-  .partial-total { font-size: 0.8em; color: #555; margin-left: 5px; }
-  .no-quotes-message { margin-top: 1rem; font-style: italic; color: #666; }
+  /* Icon Buttons */
+  .icon-cell {
+    width: 40px; /* Fixed width for icon cells */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .icon-btn {
+    font-size: 1.1rem; /* Larger emoji */
+    padding: 0.2rem 0.4rem;
+    border: none;
+  }
+  .icon-btn:hover {
+    background-color: #e2e8f0;
+  }
+
+  /* No Project State */
+  .quotes-container > p {
+    text-align: center;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #718096;
+  }
+
+  /* --- New: Table Scroll Wrapper and Buttons --- */
+  .table-scroll-wrapper {
+    position: relative; /* Context for absolute positioning of buttons */
+    margin-bottom: 2rem; /* Keep space below */
+  }
+
+  .scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
+    border: 1px solid #cbd5e0;
+    border-radius: 50%; /* Circle */
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
+    cursor: pointer;
+    color: #4a5568;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: inline-flex; /* Use inline-flex */
+    align-items: center;    /* Flexbox: Vertically center content */
+    justify-content: center; /* Flexbox: Horizontally center content */
+    padding: 0; /* Remove padding if flex is centering */
+  }
+
+  .scroll-btn:hover {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  }
+
+  .scroll-btn-left {
+    left: -18px; /* Position halfway outside the container */
+  }
+
+  .scroll-btn-right {
+    right: -18px; /* Position halfway outside the container */
+  }
+  /* ------------------------------------------- */
 </style> 

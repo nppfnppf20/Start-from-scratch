@@ -4,7 +4,6 @@
   import { onMount, onDestroy } from 'svelte';
   import { beforeNavigate } from '$app/navigation';
   
-  let disabledFields: Record<string, boolean> = {};
   let initialProjectData: typeof $selectedProject = null;
   let hasUnsavedChanges = false;
   let currentInitialDataProjectId: string | null = null;
@@ -197,11 +196,6 @@
 <div class="general-info">
   <h1>General Project Information</h1>
   
-  <div class="legend">
-    <input type="checkbox" checked disabled title="Example disabled field checkbox">
-    <input type="text" value="= field fixed/frozen" disabled class="legend-text-box">
-  </div>
-  
   {#if $selectedProject}
     <form class="project-form" on:submit={handleSubmit}>
       <!-- Section: Basic Information -->
@@ -209,88 +203,61 @@
         <h2>Basic Information</h2>
         <div class="form-grid">
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="clientOrSpvName">Client (or SPV) Name</label>
-              <input type="checkbox" bind:checked={disabledFields.clientName} title="Disable field">
-            </div>
-            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientName} disabled={disabledFields.clientName} />
+            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientName} />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="detailedDescription">Detailed Description of Development</label>
-              <input type="checkbox" bind:checked={disabledFields.detailedDescription} title="Disable field">
-            </div>
-            <textarea id="detailedDescription" name="detailedDescription" rows="4" bind:value={$selectedProject.detailedDescription} disabled={disabledFields.detailedDescription}></textarea>
+            <textarea id="detailedDescription" name="detailedDescription" rows="4" bind:value={$selectedProject.detailedDescription}></textarea>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="proposedUseDuration">Proposed Use Duration (years)</label>
-              <input type="checkbox" bind:checked={disabledFields.proposedUseDuration} title="Disable field">
-            </div>
-            <input type="number" id="proposedUseDuration" name="proposedUseDuration" min="0" bind:value={$selectedProject.proposedUseDuration} disabled={disabledFields.proposedUseDuration} use:numbersOnly />
+            <input type="number" id="proposedUseDuration" name="proposedUseDuration" min="0" bind:value={$selectedProject.proposedUseDuration} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label>Project Type</label>
-              <input type="checkbox" bind:checked={disabledFields.projectType} title="Disable field">
-            </div>
             <div class="radio-group">
               <label class="radio-label">
-                <input type="radio" name="projectType" value="solar" bind:group={$selectedProject.projectType} disabled={disabledFields.projectType} /> Solar
+                <input type="radio" name="projectType" value="solar" bind:group={$selectedProject.projectType} /> Solar
               </label>
               <label class="radio-label">
-                <input type="radio" name="projectType" value="bess" bind:group={$selectedProject.projectType} disabled={disabledFields.projectType} /> BESS
+                <input type="radio" name="projectType" value="bess" bind:group={$selectedProject.projectType} /> BESS
               </label>
               <label class="radio-label">
-                <input type="radio" name="projectType" value="solarBess" bind:group={$selectedProject.projectType} disabled={disabledFields.projectType} /> Solar & BESS
+                <input type="radio" name="projectType" value="solarBess" bind:group={$selectedProject.projectType} /> Solar & BESS
               </label>
               <label class="radio-label">
-                <input type="radio" name="projectType" value="other" bind:group={$selectedProject.projectType} disabled={disabledFields.projectType} /> Other
+                <input type="radio" name="projectType" value="other" bind:group={$selectedProject.projectType} /> Other
               </label>
             </div>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="address">Address</label>
-              <input type="checkbox" bind:checked={disabledFields.address} title="Disable field">
-            </div>
-            <textarea id="address" name="address" rows="3" bind:value={$selectedProject.address} disabled={disabledFields.address}></textarea>
+            <textarea id="address" name="address" rows="3" bind:value={$selectedProject.address}></textarea>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="area">Area (ha)</label>
-              <input type="checkbox" bind:checked={disabledFields.area} title="Disable field">
-            </div>
-            <input type="number" id="area" name="area" step="0.01" min="0" bind:value={$selectedProject.area} disabled={disabledFields.area} use:numbersOnly />
+            <input type="number" id="area" name="area" step="0.01" min="0" bind:value={$selectedProject.area} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="localPlanningAuthority">Local Planning Authority</label>
-              <input type="checkbox" bind:checked={disabledFields.localPlanningAuthority} title="Disable field">
-            </div>
-            <input type="text" id="localPlanningAuthority" name="localPlanningAuthority" bind:value={$selectedProject.localPlanningAuthority} disabled={disabledFields.localPlanningAuthority} />
+            <input type="text" id="localPlanningAuthority" name="localPlanningAuthority" bind:value={$selectedProject.localPlanningAuthority} />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="distributionNetwork">Distribution Network (DNO)</label>
-              <input type="checkbox" bind:checked={disabledFields.distributionNetwork} title="Disable field">
-            </div>
-            <input type="text" id="distributionNetwork" name="distributionNetwork" bind:value={$selectedProject.distributionNetwork} disabled={disabledFields.distributionNetwork} />
+            <input type="text" id="distributionNetwork" name="distributionNetwork" bind:value={$selectedProject.distributionNetwork} />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="siteDesignations">Site Designations</label>
-              <input type="checkbox" bind:checked={disabledFields.siteDesignations} title="Disable field">
-            </div>
-            <textarea id="siteDesignations" name="siteDesignations" rows="3" bind:value={$selectedProject.siteDesignations} disabled={disabledFields.siteDesignations}></textarea>
+            <textarea id="siteDesignations" name="siteDesignations" rows="3" bind:value={$selectedProject.siteDesignations}></textarea>
           </div>
         </div>
       </section>
@@ -300,59 +267,38 @@
         <h2>Equipment Specification (Solar)</h2>
         <div class="form-grid">
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="solarExportCapacity">Solar Export Capacity (MWh)</label>
-              <input type="checkbox" bind:checked={disabledFields.solarExportCapacity} title="Disable field">
-            </div>
-            <input type="number" id="solarExportCapacity" name="solarExportCapacity" step="0.1" min="0" bind:value={$selectedProject.solarExportCapacity} disabled={disabledFields.solarExportCapacity} use:numbersOnly />
+            <input type="number" id="solarExportCapacity" name="solarExportCapacity" step="0.1" min="0" bind:value={$selectedProject.solarExportCapacity} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="pvMaxPanelHeight">PV Max Panel Height (m)</label>
-              <input type="checkbox" bind:checked={disabledFields.pvMaxPanelHeight} title="Disable field">
-            </div>
-            <input type="number" id="pvMaxPanelHeight" name="pvMaxPanelHeight" step="0.01" min="0" bind:value={$selectedProject.pvMaxPanelHeight} disabled={disabledFields.pvMaxPanelHeight} use:numbersOnly />
+            <input type="number" id="pvMaxPanelHeight" name="pvMaxPanelHeight" step="0.01" min="0" bind:value={$selectedProject.pvMaxPanelHeight} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="fenceHeight">Fence Height (m)</label>
-              <input type="checkbox" bind:checked={disabledFields.fenceHeight} title="Disable field">
-            </div>
-            <input type="number" id="fenceHeight" name="fenceHeight" step="0.01" min="0" bind:value={$selectedProject.fenceHeight} disabled={disabledFields.fenceHeight} use:numbersOnly />
+            <input type="number" id="fenceHeight" name="fenceHeight" step="0.01" min="0" bind:value={$selectedProject.fenceHeight} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="pvClearanceFromGround">PV Clearance from Ground (m)</label>
-              <input type="checkbox" bind:checked={disabledFields.pvClearanceFromGround} title="Disable field">
-            </div>
-            <input type="number" id="pvClearanceFromGround" name="pvClearanceFromGround" step="0.01" min="0" bind:value={$selectedProject.pvClearanceFromGround} disabled={disabledFields.pvClearanceFromGround} use:numbersOnly />
+            <input type="number" id="pvClearanceFromGround" name="pvClearanceFromGround" step="0.01" min="0" bind:value={$selectedProject.pvClearanceFromGround} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="numberOfSolarPanels">Number of Solar Panels</label>
-              <input type="checkbox" bind:checked={disabledFields.numberOfSolarPanels} title="Disable field">
-            </div>
-            <input type="number" id="numberOfSolarPanels" name="numberOfSolarPanels" min="0" bind:value={$selectedProject.numberOfSolarPanels} disabled={disabledFields.numberOfSolarPanels} use:numbersOnly />
+            <input type="number" id="numberOfSolarPanels" name="numberOfSolarPanels" min="0" bind:value={$selectedProject.numberOfSolarPanels} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="panelTilt">Panel Tilt (degrees from horizontal)</label>
-              <input type="checkbox" bind:checked={disabledFields.panelTilt} title="Disable field">
-            </div>
-            <input type="number" id="panelTilt" name="panelTilt" step="0.1" min="0" max="90" bind:value={$selectedProject.panelTilt} disabled={disabledFields.panelTilt} use:numbersOnly />
+            <input type="number" id="panelTilt" name="panelTilt" step="0.1" min="0" max="90" bind:value={$selectedProject.panelTilt} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="panelTiltDirection">Panel Tilt Direction</label>
-              <input type="checkbox" bind:checked={disabledFields.panelTiltDirection} title="Disable field">
-            </div>
-            <select id="panelTiltDirection" name="panelTiltDirection" bind:value={$selectedProject.panelTiltDirection} disabled={disabledFields.panelTiltDirection}>
+            <select id="panelTiltDirection" name="panelTiltDirection" bind:value={$selectedProject.panelTiltDirection}>
               <option value="">Select direction</option>
               <option value="N">North</option>
               <option value="NE">North East</option>
@@ -372,19 +318,13 @@
         <h2>Equipment Specification (BESS)</h2>
         <div class="form-grid">
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="bessExportCapacity">BESS Export Capacity</label>
-              <input type="checkbox" bind:checked={disabledFields.bessExportCapacity} title="Disable field">
-            </div>
-            <input type="number" id="bessExportCapacity" name="bessExportCapacity" step="0.1" min="0" bind:value={$selectedProject.bessExportCapacity} disabled={disabledFields.bessExportCapacity} use:numbersOnly />
+            <input type="number" id="bessExportCapacity" name="bessExportCapacity" step="0.1" min="0" bind:value={$selectedProject.bessExportCapacity} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="bessContainers">BESS No. of Containers</label>
-              <input type="checkbox" bind:checked={disabledFields.bessContainers} title="Disable field">
-            </div>
-            <input type="number" id="bessContainers" name="bessContainers" min="0" bind:value={$selectedProject.bessContainers} disabled={disabledFields.bessContainers} use:numbersOnly />
+            <input type="number" id="bessContainers" name="bessContainers" min="0" bind:value={$selectedProject.bessContainers} use:numbersOnly />
           </div>
         </div>
       </section>
@@ -394,35 +334,23 @@
         <h2>Project Metrics</h2>
         <div class="form-grid">
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="gwhPerYear">GWh per year</label>
-              <input type="checkbox" bind:checked={disabledFields.gwhPerYear} title="Disable field">
-            </div>
-            <input type="number" id="gwhPerYear" name="gwhPerYear" step="0.1" min="0" bind:value={$selectedProject.gwhPerYear} disabled={disabledFields.gwhPerYear} use:numbersOnly />
+            <input type="number" id="gwhPerYear" name="gwhPerYear" step="0.1" min="0" bind:value={$selectedProject.gwhPerYear} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="homesPowered">Homes powered per year</label>
-              <input type="checkbox" bind:checked={disabledFields.homesPowered} title="Disable field">
-            </div>
-            <input type="number" id="homesPowered" name="homesPowered" min="0" bind:value={$selectedProject.homesPowered} disabled={disabledFields.homesPowered} use:numbersOnly />
+            <input type="number" id="homesPowered" name="homesPowered" min="0" bind:value={$selectedProject.homesPowered} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="co2Offset">CO2 tonnes offset per year</label>
-              <input type="checkbox" bind:checked={disabledFields.co2Offset} title="Disable field">
-            </div>
-            <input type="number" id="co2Offset" name="co2Offset" step="0.1" min="0" bind:value={$selectedProject.co2Offset} disabled={disabledFields.co2Offset} use:numbersOnly />
+            <input type="number" id="co2Offset" name="co2Offset" step="0.1" min="0" bind:value={$selectedProject.co2Offset} use:numbersOnly />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="equivalentCars">Equivalent no. of cars per year</label>
-              <input type="checkbox" bind:checked={disabledFields.equivalentCars} title="Disable field">
-            </div>
-            <input type="number" id="equivalentCars" name="equivalentCars" min="0" bind:value={$selectedProject.equivalentCars} disabled={disabledFields.equivalentCars} use:numbersOnly />
+            <input type="number" id="equivalentCars" name="equivalentCars" min="0" bind:value={$selectedProject.equivalentCars} use:numbersOnly />
           </div>
         </div>
       </section>
@@ -432,58 +360,40 @@
         <h2>Information for Surveyors</h2>
         <div class="form-grid">
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="accessArrangements">Access Arrangements</label>
-              <input type="checkbox" bind:checked={disabledFields.accessArrangements} title="Disable field">
-            </div>
-            <textarea id="accessArrangements" name="accessArrangements" rows="3" bind:value={$selectedProject.accessArrangements} disabled={disabledFields.accessArrangements}></textarea>
+            <textarea id="accessArrangements" name="accessArrangements" rows="3" bind:value={$selectedProject.accessArrangements}></textarea>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="accessContact">Access Contact</label>
-              <input type="checkbox" bind:checked={disabledFields.accessContact} title="Disable field">
-            </div>
-            <input type="text" id="accessContact" name="accessContact" bind:value={$selectedProject.accessContact} disabled={disabledFields.accessContact} />
+            <input type="text" id="accessContact" name="accessContact" bind:value={$selectedProject.accessContact} />
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="parkingDetails">Parking Details</label>
-              <input type="checkbox" bind:checked={disabledFields.parkingDetails} title="Disable field">
-            </div>
-            <textarea id="parkingDetails" name="parkingDetails" rows="2" bind:value={$selectedProject.parkingDetails} disabled={disabledFields.parkingDetails}></textarea>
+            <textarea id="parkingDetails" name="parkingDetails" rows="2" bind:value={$selectedProject.parkingDetails}></textarea>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label>ATV Use?</label>
-              <input type="checkbox" bind:checked={disabledFields.atvUse} title="Disable field">
-            </div>
             <div class="radio-group">
               <label class="radio-label">
-                <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} disabled={disabledFields.atvUse} /> Yes
+                <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} /> Yes
               </label>
               <label class="radio-label">
-                <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} disabled={disabledFields.atvUse} /> No
+                <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} /> No
               </label>
             </div>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="additionalNotes">Additional Notes</label>
-              <input type="checkbox" bind:checked={disabledFields.additionalNotes} title="Disable field">
-            </div>
-            <textarea id="additionalNotes" name="additionalNotes" rows="3" bind:value={$selectedProject.additionalNotes} disabled={disabledFields.additionalNotes}></textarea>
+            <textarea id="additionalNotes" name="additionalNotes" rows="3" bind:value={$selectedProject.additionalNotes}></textarea>
           </div>
           
           <div class="form-group">
-            <div class="label-with-checkbox">
               <label for="invoicingDetails">Invoicing Details</label>
-              <input type="checkbox" bind:checked={disabledFields.invoicingDetails} title="Disable field">
-            </div>
-            <textarea id="invoicingDetails" name="invoicingDetails" rows="3" bind:value={$selectedProject.invoicingDetails} disabled={disabledFields.invoicingDetails}></textarea>
+            <textarea id="invoicingDetails" name="invoicingDetails" rows="3" bind:value={$selectedProject.invoicingDetails}></textarea>
           </div>
         </div>
       </section>
@@ -499,190 +409,208 @@
 </div>
 
 <style>
+  /* General page styling */
+  :global(body) { /* Apply to body for overall background */
+    background-color: #f8f9fa; /* Light grey background like the dashboard */
+    font-family: 'Inter', sans-serif; /* Common modern sans-serif font */
+  }
+
   .general-info {
-    padding: 1rem 0;
+    padding: 2rem 1rem; /* Adjusted padding for wider layout */
+    /* max-width: 1200px; */ /* Removed to allow wider content */
+    /* margin: 0 auto; */ /* Not needed if not max-width constrained */
   }
   
   h1 {
-    margin-bottom: 1.5rem;
-    color: #333;
+    font-size: 1.8rem; /* Slightly larger */
+    font-weight: 600; /* Bolder */
+    margin-bottom: 2rem; /* More space below */
+    color: #1a202c; /* Darker text color */
   }
   
   h2 {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-    color: #555;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 0.5rem;
+    font-size: 1.3rem; /* Slightly larger */
+    font-weight: 500; /* Medium weight */
+    margin-bottom: 1.5rem; /* More space */
+    color: #2d3748; /* Slightly lighter dark color */
+    border-bottom: 1px solid #e2e8f0; /* Lighter border */
+    padding-bottom: 0.75rem; /* More padding below */
   }
   
   .project-form {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 2.5rem; /* Increased gap between sections */
   }
   
+  /* Card-like styling for form sections */
   .form-section {
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    padding: 1.5rem;
+    background-color: #ffffff; /* White background for cards */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Softer shadow */
+    padding: 2rem; /* Increased padding */
+    border: 1px solid #e2e8f0; /* Subtle border */
   }
   
   .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.25rem;
+    gap: 1.5rem; /* Increased gap */
   }
   
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem; /* Slightly increased gap */
   }
   
   label {
     font-weight: 500;
-    color: #555;
+    color: #4a5568; /* Softer text color */
+    font-size: 0.9rem; /* Slightly smaller label */
   }
   
+  /* Input field styling */
   input[type="text"],
   input[type="number"],
   textarea,
   select {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.75rem; /* More padding */
+    border: 1px solid #cbd5e0; /* Lighter border */
+    border-radius: 6px; /* Slightly more rounded */
     font-size: 1rem;
     width: 100%;
     font-family: inherit;
+    background-color: #fff; /* Ensure white background */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+      border-color: #4299e1; /* Blue border on focus */
+      box-shadow: 0 0 0 1px #4299e1; /* Subtle blue glow */
+      outline: none; /* Remove default outline */
   }
   
   .radio-group {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
+    margin-top: 0.25rem; /* Add a bit of space above radio buttons */
   }
   
   .radio-label {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem; /* Increased gap */
     font-weight: normal;
+    color: #4a5568;
+  }
+
+  /* Style radio buttons themselves for better visibility */
+  input[type="radio"] {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #cbd5e0;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s ease-in-out;
+  }
+
+  input[type="radio"]:checked {
+    border-color: #3182ce; /* Blue border when checked */
+  }
+
+  input[type="radio"]:checked::before {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    background-color: #3182ce; /* Blue dot */
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
   
   textarea {
     resize: vertical;
-    min-height: 40px;
+    min-height: 80px; /* Taller default height */
   }
   
   .no-project-selected {
     text-align: center;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: #f8f9fa;
-    border-radius: 0.5rem;
-    border: 1px solid #dee2e6;
-  }
-  
-  /* Styles for label + checkbox container */
-  .label-with-checkbox {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-  
-  .label-with-checkbox label {
-    flex-grow: 1; /* Allows label to take available space */
-    margin-right: 0.5rem; /* Space between label and checkbox */
-    /* Override potential full width from form-group > label */
-    width: auto;
+    margin: 3rem auto; /* More margin */
+    padding: 2.5rem;
+    background-color: #ffffff; /* White background */
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #718096; /* Softer text color */
   }
   
   /* Styles for disabled fields */
   input:disabled,
   textarea:disabled,
   select:disabled {
-    background-color: #e9ecef;
-    color: black;
+    background-color: #e2e8f0; /* Lighter disabled background */
+    color: #718096; /* Greyer disabled text */
+    cursor: not-allowed;
+    border-color: #cbd5e0; /* Ensure border matches other disabled */
+  }
+  
+  .radio-group input[type="radio"]:disabled + * { 
+    color: #a0aec0; /* Even lighter color for disabled radio text */
     cursor: not-allowed;
   }
   
-  .radio-group input[type="radio"]:disabled + * { /* Targets the text next to the radio */
-    color: black;
+  input[type="radio"]:disabled {
+    border-color: #e2e8f0;
+    background-color: #edf2f7;
     cursor: not-allowed;
   }
-  
-  .radio-label input[type="radio"]:disabled {
-      cursor: not-allowed;
-  }
-  
-  .label-with-checkbox input[type="checkbox"] {
-    flex-shrink: 0; /* Prevent checkbox from shrinking */
-  }
-  
-  /* Legend styles */
-  .legend {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem; /* Add space below legend */
-  }
-  
-  .legend input[type="checkbox"] {
-    font-size: 0.9rem; /* Slightly smaller text for legend */
-    background-color: #e9ecef;
-    color: black;
-    cursor: default; /* Indicate it's not interactive */
-    width: auto; /* Fit content */
-  }
-  
-  .legend .legend-text-box {
-    /* Ensure it looks like other disabled inputs */
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem; /* Slightly smaller text for legend */
-    background-color: #e9ecef;
-    opacity: 0.9; /* Slightly less opaque than fully disabled fields */
-    color: #6c757d; /* Standard disabled text color */
-    cursor: default; /* Indicate it's not interactive */
-    width: auto; /* Fit content */
+  input[type="radio"]:disabled:checked::before {
+     background-color: #a0aec0; /* Grey dot for disabled checked */
   }
 
   /* Hide number input spinners */
-  /* Chrome, Safari, Edge, Opera */
   input::-webkit-outer-spin-button,
   input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-
-  /* Firefox */
   input[type=number] {
     -moz-appearance: textfield;
   }
 
+  /* Button Styling */
   .save-button {
     display: block;
-    margin: 2rem auto 1rem; /* Center button with spacing */
-    padding: 0.8rem 1.5rem;
+    margin: 2.5rem auto 1.5rem; /* More spacing */
+    padding: 0.9rem 2rem; /* Larger padding */
     font-size: 1.1rem;
-    background-color: #28a745; /* Green */
+    font-weight: 500; /* Medium weight */
+    /* background-color: #3182ce; Blue like image accents */
+    background-color: #2f855a; /* A green like the 'Active' status */
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px; /* Match input rounding */
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
   .save-button:hover {
-    background-color: #218838;
+    /* background-color: #2b6cb0; Darker blue */
+    background-color: #276749; /* Darker green */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Larger shadow on hover */
   }
-  .no-project-selected {
-    text-align: center;
-    margin-top: 2rem;
-    font-style: italic;
-    color: #666;
+  .save-button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); /* Focus ring like inputs */
   }
 </style>

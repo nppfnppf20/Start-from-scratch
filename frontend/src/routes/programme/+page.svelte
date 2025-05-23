@@ -271,21 +271,27 @@
   }
 
   function handleKeyDateSave(event: CustomEvent<{ title: string; date: string; color: string; id?: string }>) {
-    if (!$selectedProject) return;
+    console.log('handleKeyDateSave CALLED in +page.svelte. Event detail:', event.detail);
+    if (!$selectedProject) {
+      console.error('No selected project in handleKeyDateSave');
+      return;
+    }
     const { title, date, color, id } = event.detail;
 
     if (id && eventBeingEdited) {
-        updateProgrammeEvent({ 
+        console.log('Attempting to UPDATE programme event:', eventBeingEdited);
+        updateProgrammeEvent({
             ...eventBeingEdited,
-            title, 
-            date, 
-            color 
+            title,
+            date,
+            color
         });
     } else {
+        console.log('Attempting to ADD programme event for project:', $selectedProject.id);
         addProgrammeEvent({
             projectId: $selectedProject.id,
             title,
-            date, 
+            date,
             color
         });
     }

@@ -12,6 +12,23 @@
   import { format, parseISO } from 'date-fns';
   // Removed getContext, setContext, writable as they are not directly used here now
 
+  // --- New: Reference to the scrollable table container ---
+  // let tableContainerElement: HTMLDivElement; // Variable not added due to HTML edit issues
+
+  // --- New: Scroll functions (kept for potential future use) ---
+  // function scrollLeft() {
+  //   if (tableContainerElement) {
+  //     tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' });
+  //   }
+  // }
+
+  // function scrollRight() {
+  //   if (tableContainerElement) {
+  //     tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' });
+  //   }
+  // }
+  // ---------
+
   // Filter for project quotes
   $: projectQuotes = $selectedProject
     ? $currentProjectQuotes // Assumes quotes are loaded when project is selected
@@ -141,126 +158,130 @@
     </div>
 
     {#if projectQuotes.length > 0}
-      <div class="reviews-table-container">
-        <table class="reviews-table">
-          <thead>
-            <tr>
-              <th>Contact Name</th>
-              <!-- <th>Email</th> -->
-              <th>Organisation</th>
-              <th>Quality</th>
-              <th>Responsiveness</th>
-              <th>Delivered on Time</th>
-              <th>Overall Review <span class="required-indicator">*</span></th>
-              <th>Notes</th>
-              <th>Actions</th> <!-- New Column for Buttons -->
-            </tr>
-          </thead>
-          <tbody>
-            {#each projectQuotes as quote (quote.id)}
-              <!-- Directly access the store and find the feedback reactively -->
-              {@const feedback = $surveyorFeedbacks.find(fb => fb.quoteId === quote.id)}
-              {@const isEditing = editingQuoteId === quote.id}
-              <tr class:is-editing={isEditing}>
-                <td>
-                    <!-- {console.log(`[Component] Rendering row for ${quote.id}. IsEditing: ${isEditing}. Feedback:`, feedback)} --> <!-- Keep log commented/removed for now -->
-                    {quote.contactName}
-                </td>
-                <!-- <td>{quote.email || 'N/A'}</td> -->
-                <td>{quote.organisation}</td>
+      <div class="table-scroll-wrapper">
+          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
+          <div class="reviews-table-container" bind:this={tableContainerElement}>
+            <table class="reviews-table">
+              <thead>
+                <tr>
+                  <th>Contact Name</th>
+                  <!-- <th>Email</th> -->
+                  <th>Organisation</th>
+                  <th>Quality</th>
+                  <th>Responsiveness</th>
+                  <th>Delivered on Time</th>
+                  <th>Overall Review <span class="required-indicator">*</span></th>
+                  <th>Notes</th>
+                  <th>Actions</th> <!-- New Column for Buttons -->
+                </tr>
+              </thead>
+              <tbody>
+                {#each projectQuotes as quote (quote.id)}
+                  <!-- Directly access the store and find the feedback reactively -->
+                  {@const feedback = $surveyorFeedbacks.find(fb => fb.quoteId === quote.id)}
+                  {@const isEditing = editingQuoteId === quote.id}
+                  <tr class:is-editing={isEditing}>
+                    <td>
+                        <!-- {console.log(`[Component] Rendering row for ${quote.id}. IsEditing: ${isEditing}. Feedback:`, feedback)} --> <!-- Keep log commented/removed for now -->
+                        {quote.contactName}
+                    </td>
+                    <!-- <td>{quote.email || 'N/A'}</td> -->
+                    <td>{quote.organisation}</td>
 
-                <!-- Quality -->
-                <td class="rating-cell">
-                    {#if isEditing}
-                        <StarRating
-                            value={editableFeedback?.quality}
-                            readonly={!isEditing}
-                            on:update={(e) => handleEditableRatingUpdate('quality', e.detail)}
-                        />
-                    {:else}
-                        <StarRating value={feedback?.quality} readonly={true} />
-                    {/if}
-                </td>
+                    <!-- Quality -->
+                    <td class="rating-cell">
+                        {#if isEditing}
+                            <StarRating
+                                value={editableFeedback?.quality}
+                                readonly={!isEditing}
+                                on:update={(e) => handleEditableRatingUpdate('quality', e.detail)}
+                            />
+                        {:else}
+                            <StarRating value={feedback?.quality} readonly={true} />
+                        {/if}
+                    </td>
 
-                <!-- Responsiveness -->
-                <td class="rating-cell">
-                     {#if isEditing}
-                        <StarRating
-                            value={editableFeedback?.responsiveness}
-                             readonly={!isEditing}
-                            on:update={(e) => handleEditableRatingUpdate('responsiveness', e.detail)}
-                        />
-                    {:else}
-                        <StarRating value={feedback?.responsiveness} readonly={true} />
-                    {/if}
-                </td>
+                    <!-- Responsiveness -->
+                    <td class="rating-cell">
+                         {#if isEditing}
+                            <StarRating
+                                value={editableFeedback?.responsiveness}
+                                 readonly={!isEditing}
+                                on:update={(e) => handleEditableRatingUpdate('responsiveness', e.detail)}
+                            />
+                        {:else}
+                            <StarRating value={feedback?.responsiveness} readonly={true} />
+                        {/if}
+                    </td>
 
-                 <!-- Delivered on Time -->
-                 <td class="rating-cell">
-                     {#if isEditing}
-                        <StarRating
-                            value={editableFeedback?.deliveredOnTime}
-                             readonly={!isEditing}
-                            on:update={(e) => handleEditableRatingUpdate('deliveredOnTime', e.detail)}
-                        />
-                    {:else}
-                        <StarRating value={feedback?.deliveredOnTime} readonly={true} />
-                    {/if}
-                </td>
+                     <!-- Delivered on Time -->
+                     <td class="rating-cell">
+                         {#if isEditing}
+                            <StarRating
+                                value={editableFeedback?.deliveredOnTime}
+                                 readonly={!isEditing}
+                                on:update={(e) => handleEditableRatingUpdate('deliveredOnTime', e.detail)}
+                            />
+                        {:else}
+                            <StarRating value={feedback?.deliveredOnTime} readonly={true} />
+                        {/if}
+                    </td>
 
-                <!-- Overall Review -->
-                <td class="rating-cell">
-                     {#if isEditing}
-                        <StarRating
-                            value={editableFeedback?.overallReview}
-                            readonly={!isEditing}
-                            on:update={(e) => handleEditableRatingUpdate('overallReview', e.detail)}
-                        />
-                    {:else}
-                        <StarRating value={feedback?.overallReview} readonly={true} />
-                    {/if}
-                </td>
+                    <!-- Overall Review -->
+                    <td class="rating-cell">
+                         {#if isEditing}
+                            <StarRating
+                                value={editableFeedback?.overallReview}
+                                readonly={!isEditing}
+                                on:update={(e) => handleEditableRatingUpdate('overallReview', e.detail)}
+                            />
+                        {:else}
+                            <StarRating value={feedback?.overallReview} readonly={true} />
+                        {/if}
+                    </td>
 
-                <!-- Notes -->
-                <td class="notes-cell">
-                    {#if isEditing}
-                        <textarea
-                            class="notes-textarea"
-                            rows="3"
-                            bind:value={editableFeedback.notes}
-                            placeholder="Enter review notes..."
-                            aria-label="Review notes for {quote.organisation}"
-                        ></textarea>
-                    {:else}
-                        <div class="notes-display" title={feedback?.notes || 'No notes added.'}>
-                             {#if feedback?.notes}
-                                <!-- Basic preview, could truncate -->
-                                <span>{feedback.notes.length > 100 ? feedback.notes.substring(0, 97) + '...' : feedback.notes}</span>
-                             {:else}
-                                <span class="placeholder">No notes added.</span>
+                    <!-- Notes -->
+                    <td class="notes-cell">
+                        {#if isEditing}
+                            <textarea
+                                class="notes-textarea"
+                                rows="3"
+                                bind:value={editableFeedback.notes}
+                                placeholder="Enter review notes..."
+                                aria-label="Review notes for {quote.organisation}"
+                            ></textarea>
+                        {:else}
+                            <div class="notes-display" title={feedback?.notes || 'No notes added.'}>
+                                 {#if feedback?.notes}
+                                    <!-- Basic preview, could truncate -->
+                                    <span>{feedback.notes.length > 100 ? feedback.notes.substring(0, 97) + '...' : feedback.notes}</span>
+                                 {:else}
+                                    <span class="placeholder">No notes added.</span>
+                                 {/if}
+                            </div>
+                        {/if}
+                    </td>
+
+                    <!-- Actions -->
+                     <td class="actions-cell">
+                        {#if isEditing}
+                            <button class="save-btn" on:click={saveChanges} title="Save changes">Save</button>
+                            <button class="cancel-btn" on:click={cancelEditing} title="Discard changes">Cancel</button>
+                        {:else}
+                            <button class="edit-btn" on:click={() => startEditing(quote)} title="Edit review">Edit</button>
+                            <button class="delete-btn" on:click={() => handleDeleteReview(quote.id, quote.organisation)} title="Delete review">Delete</button>
+                            <!-- Display saved date? -->
+                             {#if feedback?.updatedAt}
+                                <div class="last-saved" title="Last saved">Saved: {format(parseISO(feedback.updatedAt), 'd MMM yyyy HH:mm')}</div>
                              {/if}
-                        </div>
-                    {/if}
-                </td>
-
-                <!-- Actions -->
-                 <td class="actions-cell">
-                    {#if isEditing}
-                        <button class="save-btn" on:click={saveChanges} title="Save changes">Save</button>
-                        <button class="cancel-btn" on:click={cancelEditing} title="Discard changes">Cancel</button>
-                    {:else}
-                        <button class="edit-btn" on:click={() => startEditing(quote)} title="Edit review">Edit</button>
-                        <button class="delete-btn" on:click={() => handleDeleteReview(quote.id, quote.organisation)} title="Delete review">Delete</button>
-                        <!-- Display saved date? -->
-                         {#if feedback?.updatedAt}
-                            <div class="last-saved" title="Last saved">Saved: {format(parseISO(feedback.updatedAt), 'd MMM yyyy HH:mm')}</div>
-                         {/if}
-                    {/if}
-                 </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+                        {/if}
+                     </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
       </div>
     {:else}
       <p class="no-data-message">No quotes found for this project yet.</p>
@@ -273,184 +294,216 @@
 </div>
 
 <style>
+  /* General page styling (assumed globally applied) */
+
   .reviews-container {
-    padding: 25px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 1400px;
-    margin: 0 auto;
+    padding: 2rem 1rem; /* Match general-info padding */
+  }
+  
+  /* Headings */
+  h1 {
+    font-size: 1.8rem; 
+    font-weight: 600; 
+    margin-bottom: 1.5rem;
+    color: #1a202c; 
+  }
+  
+  h2 {
+    font-size: 1.3rem; 
+    font-weight: 500; 
+    color: #2d3748; 
+    margin: 0; 
   }
 
-  h1, h2 {
-      color: #333;
-  }
+  /* Header section */
   .reviews-header {
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #eee;
+    margin-bottom: 1.5rem;
   }
-   .reviews-header p {
-      font-size: 0.9em;
-      color: #666;
+  .reviews-header p {
+      margin-top: 0.5rem;
+      color: #718096; 
+      font-size: 0.95rem;
   }
-
-  .reviews-table-container {
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    overflow-x: auto;
-    border: 1px solid #ddd;
+  
+  /* Table Styling */
+  .reviews-table-container { 
+    overflow-x: auto; 
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 2rem; 
   }
-
-  .reviews-table {
+  
+  .reviews-table { 
     width: 100%;
     border-collapse: collapse;
-    min-width: 900px;
+    font-size: 0.9rem;
+    white-space: nowrap; 
   }
-
+  
   .reviews-table th,
   .reviews-table td {
-    padding: 10px 12px;
+    padding: 0.9rem 1.2rem;
     text-align: left;
-    border-bottom: 1px solid #eee;
-    font-size: 0.9rem;
+    border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
+    white-space: nowrap; 
   }
 
+  .reviews-table td {
+    color: #4a5568; 
+  }
+  
   .reviews-table th {
-    background-color: #f8f9fa;
+    background-color: #f7fafc; 
     font-weight: 600;
-    color: #495057;
-    white-space: nowrap;
-    position: sticky;
-    top: 0;
-    z-index: 1;
+    color: #4a5568;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
   }
-  .reviews-table th .required-indicator {
-      color: #dc3545;
+
+  .reviews-table tbody tr:last-child td {
+    border-bottom: none; 
+  }
+
+  .reviews-table tbody tr:hover {
+    background-color: #f7fafc; 
+  }
+
+  /* Editing Row Highlight */
+  tr.is-editing {
+      background-color: #ebf8ff; /* Light blue highlight */
+  }
+  tr.is-editing:hover {
+      background-color: #e0f2fe; /* Slightly darker blue on hover */
+  }
+
+  /* Required Indicator */
+  .required-indicator {
+      color: #e53e3e; /* Red */
       font-weight: bold;
-      margin-left: 2px;
+      margin-left: 0.25rem;
   }
 
-  .reviews-table tr:last-child td {
-      border-bottom: none;
-  }
-
-  .reviews-table tr:hover {
-      background-color: #f8f9fa;
-  }
-  .reviews-table tr.is-editing {
-      background-color: #fffcee; /* Light yellow background for editing row */
-  }
-
+  /* Rating Cell */
   .rating-cell {
-      min-width: 110px;
+      /* Ensure star rating component fits well */
+      min-width: 120px; 
       text-align: center;
-      padding-top: 15px; /* Extra padding for stars */
-      padding-bottom: 15px;
   }
 
+  /* Notes Cell Styling */
   .notes-cell {
-      min-width: 250px;
-      max-width: 400px; /* Prevent excessive width */
-      vertical-align: top;
-      white-space: normal;
+      min-width: 200px; /* Ensure enough space */
+      white-space: normal; /* Allow notes to wrap */
+      vertical-align: top; /* Align notes content top */
   }
-  .notes-display {
-      max-height: 80px; /* Limit display height */
-      overflow-y: auto;
-      padding: 6px;
-      border: 1px solid transparent; /* Match textarea border for alignment */
-      line-height: 1.4;
-      cursor: default; /* Indicate non-editable */
-  }
+
   .notes-textarea {
       width: 100%;
-      box-sizing: border-box;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      padding: 6px 8px;
+      padding: 0.5rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 0.9rem;
       font-family: inherit;
-      font-size: inherit;
       resize: vertical;
       min-height: 60px;
-      transition: border-color 0.2s ease;
   }
   .notes-textarea:focus {
-      border-color: #80bdff;
-      outline: 0;
-      box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
   }
 
-  .actions-cell {
-      text-align: center;
-      white-space: nowrap;
-      vertical-align: middle;
-      min-width: 150px; /* Ensure buttons fit */
+  .notes-display {
+      color: #4a5568;
+      font-size: 0.9rem;
+      max-height: 100px; /* Limit height */
+      overflow-y: auto; /* Add scroll if needed */
+      padding: 0.2rem;
   }
-
-  .actions-cell button {
-      margin-right: 8px;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9em;
-      transition: background-color 0.2s ease;
-  }
-
-  .edit-btn {
-      background-color: #007bff;
-      color: white;
-  }
-  .edit-btn:hover {
-      background-color: #0056b3;
-  }
-
-  .delete-btn {
-      background-color: #dc3545; /* Red for delete */
-      color: white;
-  }
-  .delete-btn:hover {
-      background-color: #c82333; /* Darker red on hover */
-  }
-
-  .save-btn {
-      background-color: #198754; /* Updated green */
-      border-color: #146c43;
-      color: white;
-  }
-  .save-btn:hover {
-      background-color: #146c43;
-      border-color: #105635;
-  }
-
-  .cancel-btn {
-      background-color: #6c757d;
-      border-color: #5c636a;
-      color: white;
-  }
-  .cancel-btn:hover {
-      background-color: #5c636a;
-      border-color: #51585e;
-  }
-
-  .last-saved {
-      font-size: 0.75em;
-      color: #6c757d;
-      margin-top: 5px;
-      text-align: center;
-  }
-
-  .placeholder {
-     color: #6c757d;
-     font-style: italic;
-  }
-
-  .no-data-message, p { /* General message styling */
-      padding: 20px;
-      text-align: center;
-      color: #6c757d;
+  .notes-display .placeholder {
+      color: #a0aec0;
       font-style: italic;
   }
 
+  /* Actions Cell Styling */
+  .actions-cell {
+      text-align: center; /* Center buttons */
+      white-space: normal; /* Allow wrapping if needed */
+      vertical-align: top; /* Align top */
+      min-width: 150px;
+  }
+
+  /* Action Buttons (Edit, Delete, Save, Cancel) */
+  .actions-cell button {
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      margin: 0.2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 4px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+      border: 1px solid transparent;
+      background: none;
+      color: #718096; 
+  }
+  .actions-cell button:hover {
+      background-color: #edf2f7; 
+      color: #2d3748; 
+  }
+
+  .edit-btn {
+      border-color: #a0aec0; /* Subtle border */
+  }
+  .delete-btn {
+      /* Inherit default hover, but make text red */
+       color: #e53e3e;
+  }
+  .delete-btn:hover {
+      background-color: #fed7d7; /* Light red */
+      color: #c53030; 
+  }
+  .save-btn {
+      background-color: #38a169; /* Green */
+      color: white;
+      border-color: #38a169;
+  }
+  .save-btn:hover {
+      background-color: #2f855a; 
+  }
+  .cancel-btn {
+      border-color: #a0aec0; /* Similar to edit */
+  }
+
+  /* Last Saved Info */
+  .last-saved {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-top: 0.5rem;
+      text-align: center;
+  }
+
+  /* No Quotes Message */
+  .no-quotes {
+    text-align: center;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #718096;
+  }
+
+  /* --- Scroll Buttons CSS (Commented out as HTML was not added) --- */
+  /* .table-scroll-wrapper { ... } */ 
+  /* .scroll-btn { ... } */
+  /* .scroll-btn-left { ... } */
+  /* .scroll-btn-right { ... } */
+  /* ------------------------------------------- */
 </style>
