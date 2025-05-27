@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import { browser } from '$app/environment'; // Import browser check
 
 // Define the base URL for your API
-const API_BASE_URL = 'http://localhost:5000/api'; // Adjust if your backend runs elsewhere
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // --- Helper Function to map _id to id recursively ---
 function mapMongoId<T>(item: any): T {
