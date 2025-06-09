@@ -229,6 +229,7 @@ export async function selectProjectById(id: string | null) {
         currentProjectQuotes.set([]);
         currentInstructionLogs.set([]);
         surveyorFeedbacks.set([]); // Clear feedback too
+        allProgrammeEvents.set([]); // *** CLEAR PROGRAMME EVENTS ***
         return true;
    }
 
@@ -249,19 +250,23 @@ export async function selectProjectById(id: string | null) {
        selectedProject.set(projectDetails);
        console.log('Full project details loaded and selected:', projectDetails);
 
-       // Load related data
-       await loadQuotesForProject(id);
-       await loadInstructionLogsForProject(id);
-       await loadSurveyorFeedback(id); // *** ADDED CALL ***
+       // Load all related data in parallel for efficiency
+       await Promise.all([
+           loadQuotesForProject(id),
+           loadInstructionLogsForProject(id),
+           loadSurveyorFeedback(id),
+           loadProgrammeEvents(id) // Load programme events alongside other data
+       ]);
 
        return true;
    } catch (error) {
        console.error(`Failed to fetch details for project ${id}:`, error);
        selectedProject.set(null); // Clear selection on error
-       // Clear related data on error
+       // Clear all related data on error
        currentProjectQuotes.set([]);
        currentInstructionLogs.set([]);
-       surveyorFeedbacks.set([]); // *** CLEAR FEEDBACK STORE ***
+       surveyorFeedbacks.set([]);
+       allProgrammeEvents.set([]); // Ensure programme events are cleared on error
        alert(`Error loading project details: ${error}`);
        return false;
    }

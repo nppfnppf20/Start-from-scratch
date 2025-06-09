@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const ProgrammeEvent = require('../models/programmeEvent.js'); // Import the Mongoose model directly
+const ProgrammeEvent = require('../models/ProgrammeEvent.js'); // Import the Mongoose model directly
 
 // --- Define API Routes and Handlers for Programme Events ---
 
