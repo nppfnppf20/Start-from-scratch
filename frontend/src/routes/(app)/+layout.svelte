@@ -1,5 +1,5 @@
 <script lang="ts">
-    import "../app.css";
+    import "../../app.css";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
     import { selectedProject } from "$lib/stores/projectStore";

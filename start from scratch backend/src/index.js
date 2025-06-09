@@ -74,6 +74,37 @@ app.use(cors(corsOptions));
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+    // --- Simple Password Authentication Middleware ---
+    const requireAuth = (req, res, next) => {
+      // This is a special, unprotected route the frontend can use to verify a password.
+      if (req.path === '/api/auth/verify') {
+        const { password } = req.body;
+        if (password && password === process.env.SITE_PASSWORD) {
+          return res.status(200).json({ msg: 'Password is correct.' });
+        } else {
+          return res.status(401).json({ msg: 'Incorrect password.' });
+        }
+      }
+
+      // For all other API routes, check for the authorization header.
+      const providedPassword = req.headers.authorization;
+      const secretPassword = process.env.SITE_PASSWORD;
+
+      if (!secretPassword) {
+        console.error('FATAL: SITE_PASSWORD is not set in the .env file.');
+        return res.status(500).json({ msg: 'Server configuration error.' });
+      }
+
+      if (providedPassword && providedPassword === secretPassword) {
+        next(); // Password is correct, proceed to the actual route.
+      } else {
+        res.status(401).json({ msg: 'Unauthorized' }); // Block the request.
+      }
+    };
+
+    // Apply the authentication middleware to all /api routes.
+    app.use('/api', requireAuth);
+
 // +++ Statically serve the uploads directory +++
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -96,3 +127,4 @@ app.use('/api/programme-events', programmeEventRoutes);
 
 // --- Start Server ---\n
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+

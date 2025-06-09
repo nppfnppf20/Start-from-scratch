@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment'; // Import browser check
+import { getAuthHeader } from './authStore';
 
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -103,7 +104,9 @@ export async function loadProjects() {
 
   try {
     console.log('Fetching projects from API...');
-    const response = await fetch(`${API_BASE_URL}/projects`);
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: getAuthHeader()
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -147,6 +150,7 @@ export async function addProject(projectData: { name: string; client?: string; t
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeader()
       },
       body: JSON.stringify(projectData),
     });
@@ -190,6 +194,7 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeader()
       },
       body: JSON.stringify(dataToSend),
     });
@@ -235,7 +240,9 @@ export async function selectProjectById(id: string | null) {
 
    console.log(`Selecting project by ID: ${id}`);
    try {
-       const response = await fetch(`${API_BASE_URL}/projects/${id}`);
+       const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+        headers: getAuthHeader()
+       });
        if (!response.ok) {
             const errorData = await response.json().catch(() => ({message: 'Failed to parse error response'}));
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || errorData.message || 'Failed to fetch project details'}`);
@@ -300,6 +307,7 @@ export async function deleteProject(projectId: string) {
   try {
       const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: 'DELETE',
+          headers: getAuthHeader()
       });
 
       if (!response.ok) {
@@ -373,7 +381,9 @@ async function loadQuotesForProject(projectId: string | null) {
 
   try {
     console.log(`Fetching quotes for project: ${projectId}`);
-    const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`);
+    const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`, {
+      headers: getAuthHeader()
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -405,7 +415,10 @@ export async function addQuote(quoteData: Omit<Quote, 'id' | 'total' | 'createdA
   try {
     const response = await fetch(`${API_BASE_URL}/quotes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
       body: JSON.stringify(quoteData),
     });
 
@@ -436,7 +449,10 @@ export async function updateQuote(quoteId: string, updateData: Partial<Omit<Quot
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
       body: JSON.stringify(updateData),
     });
 
@@ -488,6 +504,7 @@ export async function deleteQuote(quoteId: string) {
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'DELETE',
+      headers: getAuthHeader()
     });
 
     if (!response.ok) {
@@ -713,7 +730,9 @@ async function loadProgrammeEvents(projectId: string | null) {
   try {
     console.log(`Fetching programme events for project: ${projectId}`);
     // Use the backend route we defined: GET /api/programme-events/project/:projectId
-    const response = await fetch(`${API_BASE_URL}/programme-events/project/${projectId}`);
+    const response = await fetch(`${API_BASE_URL}/programme-events/project/${projectId}`, {
+      headers: getAuthHeader()
+    });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to fetch programme events'}`);
@@ -753,7 +772,10 @@ export async function addProgrammeEvent(eventData: Omit<ProgrammeEvent, 'id' | '
     // Use the backend route: POST /api/programme-events
     const response = await fetch(`${API_BASE_URL}/programme-events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
       body: JSON.stringify(eventData),
     });
 
@@ -806,7 +828,10 @@ export async function updateProgrammeEvent(eventToUpdate: ProgrammeEvent): Promi
     // Use the backend route: PUT /api/programme-events/:eventId
     const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
       body: JSON.stringify(updateData),
     });
 
@@ -852,6 +877,7 @@ export async function deleteProgrammeEvent(eventId: string): Promise<boolean> {
   try {
       const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
           method: 'DELETE',
+          headers: getAuthHeader()
       });
 
       if (!response.ok) {
@@ -972,7 +998,9 @@ async function loadInstructionLogsForProject(projectId: string | null) {
 
   console.log(`Fetching instruction logs for project ID: ${projectId}`);
   try {
-    const response = await fetch(`${API_BASE_URL}/instruction-logs?projectId=${projectId}`);
+    const response = await fetch(`${API_BASE_URL}/instruction-logs?projectId=${projectId}`, {
+      headers: getAuthHeader()
+    });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch instruction logs'}`);
@@ -1001,6 +1029,7 @@ export async function upsertInstructionLog(quoteId: string, logData: Partial<Omi
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                ...getAuthHeader()
             },
             body: JSON.stringify(logData), // Send only the updatable fields
         });
@@ -1071,7 +1100,9 @@ async function loadSurveyorFeedback(projectId: string | null) {
 
   console.log(`Fetching surveyor feedback for project ID: ${projectId}`);
   try {
-    const response = await fetch(`${API_BASE_URL}/surveyor-feedback?projectId=${projectId}`);
+    const response = await fetch(`${API_BASE_URL}/surveyor-feedback?projectId=${projectId}`, {
+      headers: getAuthHeader()
+    });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch surveyor feedback'}`);
@@ -1115,6 +1146,7 @@ export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<Surveyor
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                ...getAuthHeader()
             },
             body: JSON.stringify(dataToUpdate),
         });
@@ -1165,6 +1197,7 @@ export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> 
     try {
         const response = await fetch(`${API_BASE_URL}/surveyor-feedback/${quoteId}`, {
             method: 'DELETE',
+            headers: getAuthHeader()
         });
 
         if (!response.ok) {
