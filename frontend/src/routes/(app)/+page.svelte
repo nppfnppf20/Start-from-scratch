@@ -179,10 +179,9 @@
 
       if (success) {
           alert("Project information saved successfully!");
-          initialProjectData = JSON.parse(JSON.stringify(currentProject));
-          currentInitialDataProjectId = currentProject.id;
-          hasUnsavedChanges = false; 
-          console.log('Project saved, initialProjectData updated, hasUnsavedChanges reset to false (Log 15).');
+          // After a successful save, the new "initial" state is the state we just saved.
+          // The reactive block will now compare against this new baseline and set hasUnsavedChanges to false.
+          initialProjectData = JSON.parse(JSON.stringify(get(selectedProject)));
       } else {
           alert("Failed to save project information. Check console for errors.");
       }
