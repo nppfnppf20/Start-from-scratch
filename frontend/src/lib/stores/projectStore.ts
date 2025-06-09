@@ -50,7 +50,7 @@ interface Project {
   id: string;
   name: string;
   // Basic Project Information
-  clientName?: string;
+  client?: string;
   detailedDescription?: string;
   proposedUseDuration?: number;
   projectType?: 'solar' | 'bess' | 'solarBess' | 'other';
@@ -172,8 +172,8 @@ export async function addProject(projectData: { name: string; client?: string; t
 }
 
 // Function to update an existing project via API
-export async function updateProject(projectId: string, updatedData: Partial<Project>) {
-  if (!browser) return false; // Don't run on server
+export async function updateProject(projectId: string, updatedData: Partial<Project>): Promise<Project | null> {
+  if (!browser) return null; // Don't run on server
 
   // Create a copy to avoid modifying the original object directly if needed
   const dataToSend = { ...updatedData };
@@ -199,7 +199,7 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
     }
 
     let updatedProjectFromServer = await response.json();
-    updatedProjectFromServer = { ...updatedProjectFromServer, id: updatedProjectFromServer._id };
+    updatedProjectFromServer = mapMongoId<Project>(updatedProjectFromServer);
 
     // Update the local stores
     projects.update(existing =>
@@ -209,12 +209,12 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
     selectedProject.update(current =>
       current && current.id === projectId ? updatedProjectFromServer : current
     );
-    return true;
+    return updatedProjectFromServer;
 
   } catch (error) {
     console.error("Failed to update project:", error);
     alert(`Error updating project: ${error}`); // Simple user feedback
-    return false;
+    return null;
   }
 }
 

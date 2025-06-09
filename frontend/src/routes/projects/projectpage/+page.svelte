@@ -1,0 +1,581 @@
+<script lang="ts">
+  import { selectedProject, updateProject } from "$lib/stores/projectStore";
+  import { get } from 'svelte/store';
+  import { onMount, onDestroy } from 'svelte';
+  import { beforeNavigate } from '$app/navigation';
+  
+  let initialProjectData: typeof $selectedProject = null;
+  let hasUnsavedChanges = false;
+  let lastProjectId: string | null = null;
+
+  function deepEqual(obj1: any, obj2: any) {
+    if (obj1 === null || obj2 === null) {
+      return obj1 === obj2;
+    }
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') {
+      return obj1 === obj2;
+    }
+
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+
+    if (keys1.length !== keys2.length) {
+      return false;
+    }
+
+    for (const key of keys1) {
+      if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Simplified reactive logic to manage initial data and the unsaved changes flag.
+  // This single block replaces the previous, more complex subscription and reactive blocks.
+  $: {
+    if ($selectedProject) {
+      // If the project ID is different from the last one we saw, it means a new 
+      // project has been selected. We must then reset our "initial data" baseline.
+      if ($selectedProject.id !== lastProjectId) {
+        initialProjectData = JSON.parse(JSON.stringify($selectedProject));
+        lastProjectId = $selectedProject.id;
+      }
+    } else {
+      // If no project is selected, we clear our baseline.
+      initialProjectData = null;
+      lastProjectId = null;
+    }
+  }
+
+  // `hasUnsavedChanges` is now a simple, derived reactive statement. It will always be correct.
+  $: hasUnsavedChanges = $selectedProject && initialProjectData 
+    ? !deepEqual($selectedProject, initialProjectData) 
+    : false;
+
+
+  onMount(() => {
+    window.addEventListener('beforeunload', handleBeforeUnload);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  });
+
+  beforeNavigate(({ cancel }) => {
+    if (hasUnsavedChanges) {
+      if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        cancel();
+      } else {
+        // User confirmed they want to leave. Revert the store to the initial state to discard their changes.
+        if (initialProjectData) {
+          selectedProject.set(JSON.parse(JSON.stringify(initialProjectData)));
+        } else {
+          selectedProject.set(null);
+        }
+      }
+    }
+  });
+
+  function handleBeforeUnload(event: BeforeUnloadEvent) {
+    if (hasUnsavedChanges) {
+      event.preventDefault();
+      event.returnValue = ''; 
+      return '';
+    }
+  }
+
+  // Svelte action to restrict input to numbers and allowed control keys
+  function numbersOnly(node: HTMLInputElement) {
+    function handleKeydown(event: KeyboardEvent) {
+      const allowedKeys = [
+        'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End'
+      ];
+
+      // Allow standard control keys
+      if (allowedKeys.includes(event.key)) {
+        return;
+      }
+
+      // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Cmd+A (for Mac)
+      if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v', 'x'].includes(event.key.toLowerCase())) {
+        return;
+      }
+
+      // Allow decimal point only if step allows it and one doesn't already exist
+      const step = node.getAttribute('step');
+      const allowDecimal = step && (step === '0.1' || step === '0.01');
+      if (allowDecimal && event.key === '.' && !node.value.includes('.')) {
+         return;
+      }
+
+      // Allow negative sign only if min allows it and it's at the start
+      const min = node.getAttribute('min');
+      const allowNegative = min && parseFloat(min) < 0;
+      if (allowNegative && event.key === '-' && node.value.length === 0) {
+          return;
+      }
+
+      // Prevent any other non-digit key
+      if (event.key.length === 1 && !/\d/.test(event.key)) {
+        event.preventDefault();
+      }
+    }
+
+    node.addEventListener('keydown', handleKeydown);
+
+    return {
+      destroy() {
+        node.removeEventListener('keydown', handleKeydown);
+      }
+    };
+  }
+
+  async function handleSubmit(event: Event) {
+    event.preventDefault();
+    
+    // Use the reactive `$selectedProject` variable directly. This guarantees
+    // we are using the most up-to-date data from the form fields.
+    const currentProject = $selectedProject;
+
+    if (currentProject) {
+      const updatedProject = await updateProject(currentProject.id, currentProject);
+
+      if (updatedProject) {
+          alert("Project information saved successfully!");
+          // After a successful save, the new data from the server becomes our "initial data" baseline.
+          // This will cause `hasUnsavedChanges` to become false automatically.
+          initialProjectData = JSON.parse(JSON.stringify(updatedProject));
+      } else {
+          alert("Failed to save project information. Check console for errors.");
+      }
+    } else {
+        console.error("handleSubmit called but no project is selected.");
+        alert("Error: No project selected to save.");
+    }
+  }
+</script>
+
+<div class="general-info">
+  <h1>General Project Information</h1>
+  
+  {#if $selectedProject}
+    <form class="project-form" on:submit={handleSubmit}>
+      <!-- Section: Basic Information -->
+      <section class="form-section">
+        <h2>Basic Information</h2>
+        <div class="form-grid">
+          <div class="form-group">
+              <label for="clientOrSpvName">Client (or SPV) Name</label>
+            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.client} />
+          </div>
+          
+          <div class="form-group">
+              <label for="detailedDescription">Detailed Description of Development</label>
+            <textarea id="detailedDescription" name="detailedDescription" rows="4" bind:value={$selectedProject.detailedDescription}></textarea>
+          </div>
+          
+          <div class="form-group">
+              <label for="proposedUseDuration">Proposed Use Duration (years)</label>
+            <input type="number" id="proposedUseDuration" name="proposedUseDuration" min="0" bind:value={$selectedProject.proposedUseDuration} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label>Project Type</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="projectType" value="solar" bind:group={$selectedProject.projectType} /> Solar
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="projectType" value="bess" bind:group={$selectedProject.projectType} /> BESS
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="projectType" value="solarBess" bind:group={$selectedProject.projectType} /> Solar & BESS
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="projectType" value="other" bind:group={$selectedProject.projectType} /> Other
+              </label>
+            </div>
+          </div>
+          
+          <div class="form-group">
+              <label for="address">Address</label>
+            <textarea id="address" name="address" rows="3" bind:value={$selectedProject.address}></textarea>
+          </div>
+          
+          <div class="form-group">
+              <label for="area">Area (ha)</label>
+            <input type="number" id="area" name="area" step="0.01" min="0" bind:value={$selectedProject.area} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="localPlanningAuthority">Local Planning Authority</label>
+            <input type="text" id="localPlanningAuthority" name="localPlanningAuthority" bind:value={$selectedProject.localPlanningAuthority} />
+          </div>
+          
+          <div class="form-group">
+              <label for="distributionNetwork">Distribution Network (DNO)</label>
+            <input type="text" id="distributionNetwork" name="distributionNetwork" bind:value={$selectedProject.distributionNetwork} />
+          </div>
+          
+          <div class="form-group">
+              <label for="siteDesignations">Site Designations</label>
+            <textarea id="siteDesignations" name="siteDesignations" rows="3" bind:value={$selectedProject.siteDesignations}></textarea>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section: Equipment Specification (Solar) -->
+      <section class="form-section">
+        <h2>Equipment Specification (Solar)</h2>
+        <div class="form-grid">
+          <div class="form-group">
+              <label for="solarExportCapacity">Solar Export Capacity (MWh)</label>
+            <input type="number" id="solarExportCapacity" name="solarExportCapacity" step="0.1" min="0" bind:value={$selectedProject.solarExportCapacity} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="pvMaxPanelHeight">PV Max Panel Height (m)</label>
+            <input type="number" id="pvMaxPanelHeight" name="pvMaxPanelHeight" step="0.01" min="0" bind:value={$selectedProject.pvMaxPanelHeight} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="fenceHeight">Fence Height (m)</label>
+            <input type="number" id="fenceHeight" name="fenceHeight" step="0.01" min="0" bind:value={$selectedProject.fenceHeight} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="pvClearanceFromGround">PV Clearance from Ground (m)</label>
+            <input type="number" id="pvClearanceFromGround" name="pvClearanceFromGround" step="0.01" min="0" bind:value={$selectedProject.pvClearanceFromGround} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="numberOfSolarPanels">Number of Solar Panels</label>
+            <input type="number" id="numberOfSolarPanels" name="numberOfSolarPanels" min="0" bind:value={$selectedProject.numberOfSolarPanels} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="panelTilt">Panel Tilt (degrees from horizontal)</label>
+            <input type="number" id="panelTilt" name="panelTilt" step="0.1" min="0" max="90" bind:value={$selectedProject.panelTilt} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="panelTiltDirection">Panel Tilt Direction</label>
+            <select id="panelTiltDirection" name="panelTiltDirection" bind:value={$selectedProject.panelTiltDirection}>
+              <option value="">Select direction</option>
+              <option value="N">North</option>
+              <option value="NE">North East</option>
+              <option value="E">East</option>
+              <option value="SE">South East</option>
+              <option value="S">South</option>
+              <option value="SW">South West</option>
+              <option value="W">West</option>
+              <option value="NW">North West</option>
+            </select>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section: Equipment Specification (BESS) -->
+      <section class="form-section">
+        <h2>Equipment Specification (BESS)</h2>
+        <div class="form-grid">
+          <div class="form-group">
+              <label for="bessExportCapacity">BESS Export Capacity</label>
+            <input type="number" id="bessExportCapacity" name="bessExportCapacity" step="0.1" min="0" bind:value={$selectedProject.bessExportCapacity} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="bessContainers">BESS No. of Containers</label>
+            <input type="number" id="bessContainers" name="bessContainers" min="0" bind:value={$selectedProject.bessContainers} use:numbersOnly />
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section: Project Metrics -->
+      <section class="form-section">
+        <h2>Project Metrics</h2>
+        <div class="form-grid">
+          <div class="form-group">
+              <label for="gwhPerYear">GWh per year</label>
+            <input type="number" id="gwhPerYear" name="gwhPerYear" step="0.1" min="0" bind:value={$selectedProject.gwhPerYear} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="homesPowered">Homes powered per year</label>
+            <input type="number" id="homesPowered" name="homesPowered" min="0" bind:value={$selectedProject.homesPowered} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="co2Offset">CO2 tonnes offset per year</label>
+            <input type="number" id="co2Offset" name="co2Offset" step="0.1" min="0" bind:value={$selectedProject.co2Offset} use:numbersOnly />
+          </div>
+          
+          <div class="form-group">
+              <label for="equivalentCars">Equivalent no. of cars per year</label>
+            <input type="number" id="equivalentCars" name="equivalentCars" min="0" bind:value={$selectedProject.equivalentCars} use:numbersOnly />
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section: Information for Surveyors -->
+      <section class="form-section">
+        <h2>Information for Surveyors</h2>
+        <div class="form-grid">
+          <div class="form-group">
+              <label for="accessArrangements">Access Arrangements</label>
+            <textarea id="accessArrangements" name="accessArrangements" rows="3" bind:value={$selectedProject.accessArrangements}></textarea>
+          </div>
+          
+          <div class="form-group">
+              <label for="accessContact">Access Contact</label>
+            <input type="text" id="accessContact" name="accessContact" bind:value={$selectedProject.accessContact} />
+          </div>
+          
+          <div class="form-group">
+              <label for="parkingDetails">Parking Details</label>
+            <textarea id="parkingDetails" name="parkingDetails" rows="2" bind:value={$selectedProject.parkingDetails}></textarea>
+          </div>
+          
+          <div class="form-group">
+              <label>ATV Use?</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} /> Yes
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} /> No
+              </label>
+            </div>
+          </div>
+          
+          <div class="form-group">
+              <label for="additionalNotes">Additional Notes</label>
+            <textarea id="additionalNotes" name="additionalNotes" rows="3" bind:value={$selectedProject.additionalNotes}></textarea>
+          </div>
+          
+          <div class="form-group">
+              <label for="invoicingDetails">Invoicing Details</label>
+            <textarea id="invoicingDetails" name="invoicingDetails" rows="3" bind:value={$selectedProject.invoicingDetails}></textarea>
+          </div>
+        </div>
+      </section>
+      
+      <button type="submit" class="save-button">Save Project Information</button>
+    </form>
+  {:else}
+    <div class="no-project-selected">
+      <h2>No Project Selected</h2>
+      <p>Please select a project from the dropdown above to edit project information.</p>
+    </div>
+  {/if}
+</div>
+
+<style>
+  /* General page styling */
+  :global(body) { /* Apply to body for overall background */
+    background-color: #f8f9fa; /* Light grey background like the dashboard */
+    font-family: 'Inter', sans-serif; /* Common modern sans-serif font */
+  }
+
+  .general-info {
+    padding: 2rem 1rem; /* Adjusted padding for wider layout */
+    /* max-width: 1200px; */ /* Removed to allow wider content */
+    /* margin: 0 auto; */ /* Not needed if not max-width constrained */
+  }
+  
+  h1 {
+    font-size: 1.8rem; /* Slightly larger */
+    font-weight: 600; /* Bolder */
+    margin-bottom: 2rem; /* More space below */
+    color: #1a202c; /* Darker text color */
+  }
+  
+  h2 {
+    font-size: 1.3rem; /* Slightly larger */
+    font-weight: 500; /* Medium weight */
+    margin-bottom: 1.5rem; /* More space */
+    color: #2d3748; /* Slightly lighter dark color */
+    border-bottom: 1px solid #e2e8f0; /* Lighter border */
+    padding-bottom: 0.75rem; /* More padding below */
+  }
+  
+  .project-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem; /* Increased gap between sections */
+  }
+  
+  /* Card-like styling for form sections */
+  .form-section {
+    background-color: #ffffff; /* White background for cards */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Softer shadow */
+    padding: 2rem; /* Increased padding */
+    border: 1px solid #e2e8f0; /* Subtle border */
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem; /* Increased gap */
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem; /* Slightly increased gap */
+  }
+  
+  label {
+    font-weight: 500;
+    color: #4a5568; /* Softer text color */
+    font-size: 0.9rem; /* Slightly smaller label */
+  }
+  
+  /* Input field styling */
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select {
+    padding: 0.75rem; /* More padding */
+    border: 1px solid #cbd5e0; /* Lighter border */
+    border-radius: 6px; /* Slightly more rounded */
+    font-size: 1rem;
+    width: 100%;
+    font-family: inherit;
+    background-color: #fff; /* Ensure white background */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+      border-color: #4299e1; /* Blue border on focus */
+      box-shadow: 0 0 0 1px #4299e1; /* Subtle blue glow */
+      outline: none; /* Remove default outline */
+  }
+  
+  .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.25rem; /* Add a bit of space above radio buttons */
+  }
+  
+  .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* Increased gap */
+    font-weight: normal;
+    color: #4a5568;
+  }
+
+  /* Style radio buttons themselves for better visibility */
+  input[type="radio"] {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #cbd5e0;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s ease-in-out;
+  }
+
+  input[type="radio"]:checked {
+    border-color: #3182ce; /* Blue border when checked */
+  }
+
+  input[type="radio"]:checked::before {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    background-color: #3182ce; /* Blue dot */
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  
+  textarea {
+    resize: vertical;
+    min-height: 80px; /* Taller default height */
+  }
+  
+  .no-project-selected {
+    text-align: center;
+    margin: 3rem auto; /* More margin */
+    padding: 2.5rem;
+    background-color: #ffffff; /* White background */
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #718096; /* Softer text color */
+  }
+  
+  /* Styles for disabled fields */
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    background-color: #e2e8f0; /* Lighter disabled background */
+    color: #718096; /* Greyer disabled text */
+    cursor: not-allowed;
+    border-color: #cbd5e0; /* Ensure border matches other disabled */
+  }
+  
+  .radio-group input[type="radio"]:disabled + * { 
+    color: #a0aec0; /* Even lighter color for disabled radio text */
+    cursor: not-allowed;
+  }
+  
+  input[type="radio"]:disabled {
+    border-color: #e2e8f0;
+    background-color: #edf2f7;
+    cursor: not-allowed;
+  }
+  input[type="radio"]:disabled:checked::before {
+     background-color: #a0aec0; /* Grey dot for disabled checked */
+  }
+
+  /* Hide number input spinners */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  /* Button Styling */
+  .save-button {
+    display: block;
+    margin: 2.5rem auto 1.5rem; /* More spacing */
+    padding: 0.9rem 2rem; /* Larger padding */
+    font-size: 1.1rem;
+    font-weight: 500; /* Medium weight */
+    /* background-color: #3182ce; Blue like image accents */
+    background-color: #2f855a; /* A green like the 'Active' status */
+    color: white;
+    border: none;
+    border-radius: 6px; /* Match input rounding */
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .save-button:hover {
+    /* background-color: #2b6cb0; Darker blue */
+    background-color: #276749; /* Darker green */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Larger shadow on hover */
+  }
+  .save-button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); /* Focus ring like inputs */
+  }
+</style> 
