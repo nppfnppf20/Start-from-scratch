@@ -204,7 +204,7 @@
         <div class="form-grid">
           <div class="form-group">
               <label for="clientOrSpvName">Client (or SPV) Name</label>
-            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientName} />
+            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientOrSpvName} />
           </div>
           
           <div class="form-group">

@@ -50,7 +50,8 @@ interface Project {
   id: string;
   name: string;
   // Basic Project Information
-  clientName?: string;
+  client?: string; // Umbrella client name from the modal
+  clientOrSpvName?: string; // Specific client/SPV name from the main form
   detailedDescription?: string;
   proposedUseDuration?: number;
   projectType?: 'solar' | 'bess' | 'solarBess' | 'other';
