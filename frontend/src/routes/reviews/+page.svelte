@@ -159,8 +159,7 @@
 
     {#if projectQuotes.length > 0}
       <div class="table-scroll-wrapper">
-          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
-          <div class="reviews-table-container" bind:this={tableContainerElement}>
+          <div class="reviews-table-container">
             <table class="reviews-table">
               <thead>
                 <tr>
@@ -281,10 +280,9 @@
               </tbody>
             </table>
           </div>
-          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
       </div>
     {:else}
-      <p class="no-data-message">No quotes found for this project yet.</p>
+      <p>This project has no instructed surveyors to review.</p>
     {/if}
 
   {:else}
