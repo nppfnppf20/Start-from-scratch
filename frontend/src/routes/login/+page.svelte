@@ -1,10 +1,31 @@
 <script lang="ts">
   import { verifyAndSetPassword } from '$lib/stores/authStore';
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
 
   let password = '';
   let errorMessage = '';
   let isLoading = false;
+  let isCheckingAuth = true; // Start in a checking state to prevent content flash
+
+  onMount(async () => {
+    // Check if the user is already authenticated from a previous session
+    const storedPassword = localStorage.getItem('site_password');
+    if (storedPassword) {
+      const success = await verifyAndSetPassword(storedPassword);
+      if (success) {
+        // If the stored password is valid, redirect to the main app.
+        // `replaceState` prevents the user from using the back button to get to the login page.
+        goto('/', { replaceState: true }); 
+      } else {
+        // Stored password was wrong (e.g., changed on backend), so allow user to try again.
+        isCheckingAuth = false; 
+      }
+    } else {
+      // No stored password, so show the login form.
+      isCheckingAuth = false;
+    }
+  });
 
   async function handleLogin() {
     isLoading = true;
@@ -21,6 +42,8 @@
   }
 </script>
 
+<!-- Only show the login form if we are NOT in the middle of an auth check -->
+{#if !isCheckingAuth}
 <div class="login-container">
   <div class="login-box">
     <h1>Enter Password</h1>
@@ -51,6 +74,7 @@
     </form>
   </div>
 </div>
+{/if}
 
 <style>
   .login-container {
