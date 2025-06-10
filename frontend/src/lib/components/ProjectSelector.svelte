@@ -1,6 +1,6 @@
 <script lang="ts">
   import { projects, selectedProject, addProject as addProjectToStore, selectProjectById } from '$lib/stores/projectStore';
-  import { writable, get } from 'svelte/store';
+  import { writable, get, derived } from 'svelte/store';
   import { browser } from '$app/environment';
 
   let showAddProjectInput = writable(false);
@@ -9,6 +9,7 @@
   let selectedTeamMembers: string[] = [];
   let isCollectionsOpen = writable(false);
   let selectedProjectId = '';
+  let newTeamMemberInitial = ''; // For the new team member input
 
   $: if ($selectedProject) {
     selectedProjectId = $selectedProject.id;
@@ -16,8 +17,48 @@
     selectedProjectId = '';
   }
 
-  const clients = ['Client A', 'Client B', 'Client C'];
-  const teams = ['JR', 'RM', 'PE', 'AD', 'SS'];
+  // This automatically creates a unique, sorted list of clients from your projects.
+  const uniqueClients = derived(projects, $projects => {
+    if (!$projects) return [];
+    // Use a Set to get unique client names that are not null or empty
+    // The type guard `(c): c is string` tells TypeScript that the filter ensures the result is a string.
+    const clients = new Set($projects.map(p => p.client).filter((c): c is string => !!c));
+    // Convert the Set to an array and sort it
+    return Array.from(clients).sort((a, b) => a.localeCompare(b));
+  });
+
+  // --- DYNAMIC TEAM MEMBERS ---
+  const allTeamMembers = writable<string[]>([]);
+
+  // This derived store reads team members from projects and updates the writable store
+  derived(projects, $projects => {
+    if (!$projects || $projects.length === 0) return [];
+    const fromProjects = new Set($projects.flatMap(p => p.teamMembers || []));
+    return Array.from(fromProjects);
+  }).subscribe(projectTeams => {
+    allTeamMembers.update(currentTeams => {
+        const combined = new Set([...currentTeams, ...projectTeams]);
+        return Array.from(combined).sort();
+    });
+  });
+
+  function addTeamMember() {
+    const initial = newTeamMemberInitial.trim().toUpperCase();
+    if (initial && initial.length > 0 && initial.length <= 3) {
+        allTeamMembers.update(current => {
+            const newSet = new Set(current);
+            if (newSet.has(initial)) {
+                alert(`Team member '${initial}' already exists.`);
+                return Array.from(newSet).sort();
+            }
+            newSet.add(initial);
+            return Array.from(newSet).sort();
+        });
+        newTeamMemberInitial = ''; // Clear input
+    } else {
+        alert('Please enter a valid initial (1-3 characters).');
+    }
+  }
 
   function toggleAddProjectForm() {
     showAddProjectInput.update(value => !value);
@@ -119,21 +160,37 @@
         required
         aria-label="New project name"
       />
-      <select bind:value={selectedClient} aria-label="Select Client">
-        <option value="" disabled>Select Client</option>
-        {#each clients as client}
-          <option value={client}>{client}</option>
+      <input 
+        type="text" 
+        bind:value={selectedClient} 
+        placeholder="Enter or select client" 
+        aria-label="Client Name"
+        list="client-list"
+      />
+      <datalist id="client-list">
+        {#each $uniqueClients as client (client)}
+          <option value={client}></option>
         {/each}
-      </select>
+      </datalist>
       <div class="checkbox-group-container" aria-label="Select Team Members">
           <div class="checkbox-group-header">Team</div>
           <div class="checkbox-list">
-            {#each teams as team (team)}
+            {#each $allTeamMembers as team (team)}
               <div class="checkbox-item">
                 <input type="checkbox" id="team-{team}" bind:group={selectedTeamMembers} value={team} />
                 <label for="team-{team}" title={team}>{team}</label>
               </div>
             {/each}
+          </div>
+          <div class="add-team-member-form">
+            <input 
+              type="text" 
+              bind:value={newTeamMemberInitial} 
+              placeholder="Add Initial"
+              maxlength="3"
+              aria-label="New team member initial"
+            />
+            <button on:click|preventDefault={addTeamMember} type="button" class="add-initial-btn">+</button>
           </div>
       </div>
       <button on:click={addNewProject}>Add</button>
@@ -265,6 +322,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
   }
 
   .add-project-form input[type="text"] {
@@ -278,39 +336,42 @@
   .current-project {
       font-weight: bold;
       margin-left: auto;
+      font-style: italic;
+      color: #555;
+      white-space: nowrap;
   }
 
   .checkbox-group-container {
     border: 1px solid #ccc;
     border-radius: 4px;
-    background-color: white;
-    min-width: 150px;
+    padding: 0.5rem;
+    background-color: #fff;
     display: flex;
     flex-direction: column;
   }
 
   .checkbox-group-header {
-    padding: 0.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
     font-size: 0.9rem;
     color: #555;
-    border-bottom: 1px solid #eee;
-    background-color: #f8f8f8;
   }
 
   .checkbox-list {
-    max-height: 100px;
-    overflow-y: auto;
-    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .checkbox-item {
     display: flex;
     align-items: center;
-    margin-bottom: 0.3rem;
+    gap: 0.25rem;
   }
 
   .checkbox-item label {
-    margin-left: 0.5rem;
     cursor: pointer;
   }
 
@@ -318,14 +379,34 @@
     cursor: pointer;
   }
 
-  .checkbox-group-container { display: flex; flex-direction: column; border: 1px solid #ccc; border-radius: 4px; padding: 0.5rem; background-color: #fff; margin-left: 0.5rem; }
-  .checkbox-group-header { font-size: 0.8em; font-weight: bold; margin-bottom: 0.3rem; color: #555; text-align: center; }
-  .checkbox-list { display: flex; gap: 0.5rem; flex-wrap: nowrap; }
-  .checkbox-item { display: flex; align-items: center; gap: 0.2rem; }
-  .checkbox-item input[type="checkbox"] { margin: 0; min-width: auto; }
-  .checkbox-item label { font-size: 0.9em; white-space: nowrap; cursor: pointer; }
-  .add-project-form button { margin-left: 0.5rem; }
-  .current-project { margin-left: auto; font-style: italic; color: #555; }
+  .add-team-member-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+  }
+
+  .add-team-member-form input {
+    flex-grow: 1;
+    min-width: 50px;
+    width: 80px;
+  }
+
+  .add-initial-btn {
+    padding: 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    flex-shrink: 0;
+  }
+
   select:disabled { background-color: #eee; cursor: not-allowed; }
   option[disabled] { color: #999; }
 </style> 
