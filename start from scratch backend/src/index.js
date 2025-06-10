@@ -42,13 +42,14 @@ const connectDB = async () => {
 connectDB();
 
 // --- CORS Configuration ---
-const RENDER_FRONTEND_URL = process.env.RENDER_FRONTEND_URL; // You'll set this in Render's env vars for the backend
+const RENDER_FRONTEND_URLS = process.env.RENDER_FRONTEND_URLS; // You'll set this in Render's env vars for the backend
 
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [];
-    if (RENDER_FRONTEND_URL) {
-      allowedOrigins.push(RENDER_FRONTEND_URL);
+    if (RENDER_FRONTEND_URLS) {
+      // Split the comma-separated string into an array of origins
+      allowedOrigins.push(...RENDER_FRONTEND_URLS.split(',').map(url => url.trim()));
     }
     // Allow local development origins if not in a 'production' environment
     // You might set NODE_ENV=production in Render's environment variables
