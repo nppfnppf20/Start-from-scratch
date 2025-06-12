@@ -36,14 +36,18 @@ const InstructionLogSchema = new Schema({
     // Operational Fields (from old SurveyorReview)
     workStatus: {
         type: String,
-        enum: ['not started', 'in progress', 'completed', 'Under TRP Review', 'Under Client Review'],
+        enum: ['not started', 'in progress', 'completed', 'TRP Reviewing', 'Client reviewing'],
         default: 'not started'
     },
     siteVisitDate: { type: Date },
     reportDraftDate: { type: Date },
-    operationalNotes: { // Renamed from notes? Keep separate from feedback notes.
+    operationalNotes: {
         type: String,
-        trim: true
+        default: ''
+    },
+    holdUpNotes: {
+        type: String,
+        default: ''
     },
     uploadedWorks: {
         type: [UploadedWorkSchema],
@@ -61,4 +65,5 @@ const InstructionLogSchema = new Schema({
 // Ensure quoteId is unique to prevent duplicates
 // InstructionLogSchema.index({ quoteId: 1 }, { unique: true }); // Already set unique: true on field
 
-module.exports = mongoose.model('InstructionLog', InstructionLogSchema); 
+const InstructionLog = mongoose.model('InstructionLog', InstructionLogSchema);
+module.exports = InstructionLog; 

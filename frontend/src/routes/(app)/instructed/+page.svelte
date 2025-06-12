@@ -36,6 +36,11 @@
   let currentQuoteForNotes: Quote | null = null;
   let currentOperationalNotes: string | undefined = ''; // Renamed for clarity
 
+  // Modal state for Hold Ups Notes
+  let showHoldUpNotesModal = false;
+  let currentQuoteForHoldUpNotes: Quote | null = null;
+  let currentHoldUpNotes: string | undefined = '';
+
   // Modal state for Document Upload
   let showDocumentUploadModal = false;
   let currentQuoteForUpload: Quote | null = null;
@@ -75,7 +80,7 @@
   }
   
   // Work status options for dropdown
-  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed', 'Under TRP Review', 'Under Client Review'];
+  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed', 'TRP Reviewing', 'Client reviewing'];
 
   // --- Notes Modal Functions ---
   function openNotesModal(quote: Quote) {
@@ -98,6 +103,29 @@
     console.log(`Saving notes for quote ${currentQuoteForNotes.id}`);
     await upsertInstructionLog(currentQuoteForNotes.id, { operationalNotes: newNotes });
     closeNotesModal();
+  }
+
+  // --- Hold Up Notes Modal Functions ---
+  function openHoldUpNotesModal(quote: Quote) {
+    const log = findLog(quote.id);
+    currentQuoteForHoldUpNotes = quote;
+    currentHoldUpNotes = log?.holdUpNotes;
+    showHoldUpNotesModal = true;
+  }
+
+  function closeHoldUpNotesModal() {
+    showHoldUpNotesModal = false;
+    currentQuoteForHoldUpNotes = null;
+    currentHoldUpNotes = '';
+  }
+
+  async function handleSaveHoldUpNotes(event: CustomEvent<{ notes: string }>) {
+    if (!$selectedProject || !currentQuoteForHoldUpNotes || !browser) return;
+    
+    const newNotes = event.detail.notes;
+    console.log(`Saving hold up notes for quote ${currentQuoteForHoldUpNotes.id}`);
+    await upsertInstructionLog(currentQuoteForHoldUpNotes.id, { holdUpNotes: newNotes });
+    closeHoldUpNotesModal();
   }
 
   // --- Document Upload Modal Functions ---
@@ -221,6 +249,7 @@
   // Reactive logging (add this within the <script> tag but outside any function)
   $: console.log("Checking modal condition:", { show: showDocumentUploadModal, quote: !!currentQuoteForUpload });
 
+  let viewMode: 'table' | 'tile' = 'table'; // Default to table view
 </script>
 
 <div class="instructed-container">
@@ -232,7 +261,19 @@
       <p>Tracking operational progress for instructed quotes.</p>
     </div>
     
+    <div class="view-switcher">
+      <button class:active={viewMode === 'table'} on:click={() => viewMode = 'table'} title="Table View">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        <span>Table</span>
+      </button>
+      <button class:active={viewMode === 'tile'} on:click={() => viewMode = 'tile'} title="Tile View">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span>Tiles</span>
+      </button>
+    </div>
+    
     {#if instructedQuotes.length > 0}
+       {#if viewMode === 'table'}
       <div class="table-scroll-wrapper">
           <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
           <div class="table-container" bind:this={tableContainerElement}>
@@ -246,6 +287,7 @@
               <th>Quote Amt.</th>
               <th>Work Status</th>
               <th>Dates</th>
+              <th>Hold Ups</th>
               <th>Notes</th>
               <th>Works</th>
               <th>Custom Dates</th>
@@ -276,7 +318,7 @@
                 <td>
                   <div class="status-dropdown-container">
                      <select
-                        class="work-status-dropdown {currentWorkStatus.replace(/\s+/g, '-')}"
+                        class="work-status-dropdown {currentWorkStatus.toLowerCase().replace(/\s+/g, '-')}"
                         value={currentWorkStatus}
                         on:change={(e) => handleWorkStatusChange(quote.id, e.currentTarget.value as WorkStatus)}
                         title="Set work status"
@@ -312,6 +354,11 @@
                         title="Set report draft date"
                     />
                   </div>
+                </td>
+                <td>
+                  <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)} title="Edit hold up notes">
+                    {getNotesPreview(log?.holdUpNotes)}
+                  </button>
                 </td>
                 <td>
                    <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit operational notes">
@@ -392,6 +439,92 @@
           </div>
           <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
       </div>
+      {:else if viewMode === 'tile'}
+        <div class="tile-view-container">
+          {#each instructedQuotes as quote (quote.id)}
+            {@const log = findLog(quote.id)}
+            <div class="surveyor-tile">
+              <div class="tile-header">
+                <h3>{quote.organisation}</h3>
+                <span class="survey-type">{quote.surveyType}</span>
+              </div>
+              <div class="tile-body">
+                <div class="tile-section">
+                  <p><strong>Contact:</strong> {quote.contactName}</p>
+                  <p><strong>Email:</strong> <a href="mailto:{quote.email}">{quote.email}</a></p>
+                  <p><strong>Quote:</strong> £{quote.partiallyInstructedTotal?.toFixed(2) ?? quote.total.toFixed(2)}</p>
+                </div>
+
+                <div class="tile-section work-status-section">
+                  <label for={`work-status-tile-${quote.id}`}>Work Status:</label>
+                  <select
+                    id={`work-status-tile-${quote.id}`}
+                    class="work-status-dropdown {log?.workStatus?.toLowerCase().replace(/\s+/g, '-') || 'not-started'}"
+                    on:change={(e) => handleWorkStatusChange(quote.id, e.currentTarget.value as WorkStatus)}
+                  >
+                    <option value="" disabled selected>{log?.workStatus || 'Select...'}</option>
+                    {#each workStatuses as status}
+                      <option value={status} selected={log?.workStatus === status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    {/each}
+                  </select>
+                </div>
+                
+                <div class="tile-section">
+                  <strong>Dates:</strong>
+                  <div class="date-inputs">
+                    <div class="date-input-group">
+                      <label for={`tile-site-visit-${quote.id}`}>Site Visit:</label>
+                      <input type="date" id={`tile-site-visit-${quote.id}`} value={formatDateForInput(log?.siteVisitDate)} on:change={(e) => handleDateUpdate(quote.id, 'siteVisitDate', e.currentTarget.value)} />
+                    </div>
+                    <div class="date-input-group">
+                      <label for={`tile-report-draft-${quote.id}`}>Report Draft:</label>
+                      <input type="date" id={`tile-report-draft-${quote.id}`} value={formatDateForInput(log?.reportDraftDate)} on:change={(e) => handleDateUpdate(quote.id, 'reportDraftDate', e.currentTarget.value)} />
+                    </div>
+                    {#if log?.customDates}
+                      {#each log.customDates as customDate (customDate.id)}
+                        <div class="date-input-group custom-date-group">
+                          <input type="text" class="custom-date-title-input" value={customDate.title} on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'title', e.currentTarget.value)} placeholder="Custom Title" />
+                          <input type="date" class="custom-date-input" value={formatDateForInput(customDate.date)} on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'date', e.currentTarget.value)} />
+                          <button class="delete-custom-date-btn" on:click={() => handleDeleteCustomDate(quote.id, customDate.id)}>&times;</button>
+                        </div>
+                      {/each}
+                    {/if}
+                    <button class="add-custom-date-btn" on:click={() => handleAddCustomDate(quote.id)}>+ Add Date</button>
+                  </div>
+                </div>
+
+                <div class="tile-section tile-actions">
+                   <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)}>
+                    {getNotesPreview(log?.holdUpNotes)}
+                  </button>
+                </div>
+                 <div class="tile-section tile-actions">
+                   <strong>Works:</strong>
+                  <div class="works-cell">
+                     {#if log?.uploadedWorks && log.uploadedWorks.length > 0}
+                          <ul class="uploaded-works-list">
+                              {#each log.uploadedWorks as work, i}
+                                  <li>
+                                      <a href={work.url || '#'} target="_blank" rel="noopener noreferrer">
+                                        {work.title || `File ${i+1}`} (v{work.version})
+                                      </a>
+                                  </li>
+                              {/each}
+                          </ul>
+                      {:else}
+                          <span class="no-works">No works uploaded</span>
+                      {/if}
+                      <button class="upload-work-btn" on:click={() => openDocumentUploadModal(quote)}>+</button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
     {:else}
       <p class="no-instructed-info">No quotes have been marked as instructed for this project yet, or instruction logs haven't loaded.</p>
     {/if}
@@ -411,6 +544,15 @@
   />
 {/if}
 
+{#if showHoldUpNotesModal && currentQuoteForHoldUpNotes}
+  <NotesModal
+    initialNotes={currentHoldUpNotes}
+    organisationName={currentQuoteForHoldUpNotes.organisation}
+    on:save={handleSaveHoldUpNotes}
+    on:cancel={closeHoldUpNotesModal}
+  />
+{/if}
+
 <!-- Add log before the check -->
 {console.log("Rendering check for Document Upload Modal:", showDocumentUploadModal, currentQuoteForUpload)} 
 {#if showDocumentUploadModal && currentQuoteForUpload}
@@ -427,6 +569,20 @@
 
 
 <style>
+  /* CSS Variables for status colors */
+  :root {
+    --status-not-started-bg: #fff5f5;
+    --status-not-started-color: #c53030;
+    --status-in-progress-bg: #fff3cd;
+    --status-in-progress-color: #856404;
+    --status-completed-bg: #d4edda;
+    --status-completed-color: #155724;
+    --status-trp-reviewing-bg: #cce5ff;
+    --status-trp-reviewing-color: #004085;
+    --status-client-reviewing-bg: #e2d9f3;
+    --status-client-reviewing-color: #493267;
+  }
+
   /* General page styling (assumed globally applied) */
 
   .instructed-container {
@@ -534,7 +690,7 @@
   }
 
   .work-status-dropdown {
-    padding: 0.4rem 2rem 0.4rem 0.8rem; 
+    padding: 8px 12px;
     border: 1px solid #cbd5e0;
     border-radius: 15px; /* Pill shape */
     font-size: 0.85rem; /* MATCHING QUOTES (like instruction-status-select) */
@@ -549,6 +705,10 @@
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 1em 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
   }
   .work-status-dropdown:focus {
       border-color: #4299e1; 
@@ -558,26 +718,30 @@
 
   /* Status-specific Select Styling */
   .work-status-dropdown.not-started {
-    background-color: #fff5f5; /* Light red */
-    border-color: #fed7d7;
-    color: #c53030;
+    background-color: var(--status-not-started-bg);
+    color: var(--status-not-started-color);
+    border-color: var(--status-not-started-bg);
   }
   .work-status-dropdown.in-progress {
-    background-color: #fff3cd; /* Light yellow */
-    color: #856404;
+    background-color: var(--status-in-progress-bg);
+    color: var(--status-in-progress-color);
+    border-color: var(--status-in-progress-bg);
   }
   .work-status-dropdown.completed {
-    background-color: #d4edda; /* Light green */
-    color: #155724;
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+    border-color: var(--status-completed-bg);
   }
-  .work-status-dropdown.under-trp-review {
-    background-color: #cce5ff; /* Light blue */
-    color: #004085;
-  }
-  .work-status-dropdown.under-client-review {
-    background-color: #fff3cd; /* Light yellow */
-    color: #856404;
-  }
+.work-status-dropdown.trp-reviewing {
+  background-color: var(--status-trp-reviewing-bg);
+  color: var(--status-trp-reviewing-color);
+  border-color: var(--status-trp-reviewing-bg);
+}
+.work-status-dropdown.client-reviewing {
+  background-color: var(--status-client-reviewing-bg);
+  color: var(--status-client-reviewing-color);
+  border-color: var(--status-client-reviewing-bg);
+}
 
   /* Date Inputs Styling */
   td > .date-cell-group { /* Targeting the div directly inside td for dates */
@@ -618,31 +782,15 @@
 
   /* Notes Button Styling */
   .notes-button {
-    background: none;
-    border: 1px dashed #cbd5e0; 
+    width: 100%;
+    padding: 10px;
+    background-color: #f1f1f1;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 0.4rem 0.8rem;
-    color: #718096; 
-    font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
-    cursor: pointer;
     text-align: left;
-    width: 100%; 
-    min-width: 150px;
-    max-width: 150px; /* Changed from 250px */
-    overflow: hidden;   /* Ensure ellipsis works */
-    text-overflow: ellipsis; /* Ensure ellipsis works */
-    white-space: nowrap; /* Ensure ellipsis works */
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    font-style: italic; 
-  }
-  .notes-button:not(:empty) {
-      font-style: normal; /* Normal style if there are notes */
-      color: #4a5568;
-      border-style: solid; /* Solid border if notes exist */
-  }
-  .notes-button:hover {
-    background-color: #edf2f7;
-    border-color: #a0aec0;
+    cursor: pointer;
+    font-style: italic;
+    color: #555;
   }
 
   /* Works Upload Button Styling (Button style) */
@@ -819,4 +967,272 @@
   /* .scroll-btn-left { ... } */
   /* .scroll-btn-right { ... } */
   /* --- Keeping these commented out as HTML was not added --- */
+
+  .date-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .date-input-group label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #333;
+    min-width: 100px;
+  }
+
+  .date-input-group input[type="date"],
+  .date-input-group input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+    flex-grow: 1;
+  }
+  
+  .custom-date-group {
+    display: flex;
+    gap: 4px;
+  }
+
+  .custom-date-title-input {
+    flex-basis: 50%;
+  }
+  .custom-date-input {
+    flex-basis: 50%;
+  }
+  .delete-custom-date-btn, .add-custom-date-btn {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+  }
+
+  .delete-custom-date-btn {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  .add-custom-date-btn {
+     background-color: #e2e8f0;
+     align-self: flex-start;
+     margin-top: 4px;
+  }
+
+  /* Notes & Works Section */
+  .notes-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #f1f1f1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    font-style: italic;
+    color: #555;
+  }
+  .works-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .uploaded-works-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .upload-work-btn {
+     padding: 2px 6px;
+     font-size: 1.2em;
+     line-height: 1;
+     background-color: #e2e8f0;
+     border: 1px solid #cbd5e0;
+     border-radius: 50%;
+  }
+
+  .view-switcher {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1.5rem;
+    gap: 0.5rem;
+  }
+
+  .view-switcher button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .view-switcher button:hover {
+    background-color: #f3f4f6;
+  }
+
+  .view-switcher button.active {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+    color: #111827;
+  }
+  .view-switcher button svg {
+    stroke: #6b7280;
+  }
+  .view-switcher button.active svg {
+    stroke: #111827;
+  }
+
+  /* Tile View Styles */
+  .tile-view-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .surveyor-tile {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease-in-out;
+  }
+
+   .surveyor-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.07);
+  }
+
+  .tile-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tile-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+
+  .tile-header .survey-type {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #4b5563;
+    background-color: #f3f4f6;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .tile-body {
+    padding: 0.75rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex-grow: 1;
+  }
+
+  .tile-section {
+    border-top: 1px solid #f3f4f6;
+    padding-top: 1rem;
+  }
+  
+  .tile-section:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  
+  .tile-section strong {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #374151;
+  }
+
+  .tile-section p {
+    margin: 0.25rem 0;
+    color: #4b5563;
+  }
+  
+  .tile-section a {
+      color: #2563eb;
+      text-decoration: none;
+  }
+  .tile-section a:hover {
+      text-decoration: underline;
+  }
+
+  .work-status-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .work-status-section label {
+      font-weight: 500;
+      color: #374151;
+  }
+
+  .tile-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+  }
+
+  .completed {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+  }
+  .trp-reviewing {
+    background-color: var(--status-trp-reviewing-bg);
+    color: var(--status-trp-reviewing-color);
+  }
+  .client-reviewing {
+    background-color: var(--status-client-reviewing-bg);
+    color: var(--status-client-reviewing-color);
+  }
+
+  .date-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  /* Tile View Status Classes */
+  .not-started {
+    background-color: var(--status-not-started-bg);
+    color: var(--status-not-started-color);
+  }
+  .in-progress {
+    background-color: var(--status-in-progress-bg);
+    color: var(--status-in-progress-color);
+  }
+  .completed {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+  }
+  .trp-reviewing {
+    background-color: var(--status-trp-reviewing-bg);
+    color: var(--status-trp-reviewing-color);
+  }
+  .client-reviewing {
+    background-color: var(--status-client-reviewing-bg);
+    color: var(--status-client-reviewing-color);
+  }
+
 </style> 
