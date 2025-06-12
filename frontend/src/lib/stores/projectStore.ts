@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment'; // Import browser check
 import { getAuthHeader } from './authStore';
 
@@ -248,26 +248,18 @@ export async function selectProjectById(id: string | null) {
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || errorData.message || 'Failed to fetch project details'}`);
        }
        let projectDetails = await response.json();
-       projectDetails = mapMongoId<Project>(projectDetails); // Use helper here too for consistency
-
-       if (!projectDetails) {
-           throw new Error('API returned empty response for project details');
-       }
-
+       projectDetails = { ...projectDetails, id: projectDetails._id };
        selectedProject.set(projectDetails);
-       console.log('Full project details loaded and selected:', projectDetails);
 
-       // Load all related data in parallel for efficiency
-       await Promise.all([
-           loadQuotesForProject(id),
-           loadInstructionLogsForProject(id),
-           loadSurveyorFeedback(id),
-           loadProgrammeEvents(id) // Load programme events alongside other data
-       ]);
+       // Load associated data for the newly selected project
+       await loadQuotesForProject(id);
+       await loadInstructionLogsForProject(id);
+       await loadSurveyorFeedback(id);
+       await loadProgrammeEvents(id); // Ensure programme events are also loaded
 
        return true;
    } catch (error) {
-       console.error(`Failed to fetch details for project ${id}:`, error);
+       console.error("Failed to select project:", error);
        selectedProject.set(null); // Clear selection on error
        // Clear all related data on error
        currentProjectQuotes.set([]);
@@ -341,6 +333,7 @@ export async function deleteProject(projectId: string) {
 
 // --- Quote Interface and Store ---
 export interface LineItem {
+  item: string;
   description: string;
   cost: number;
 }
@@ -523,6 +516,38 @@ export async function deleteQuote(quoteId: string) {
     return false;
   }
 }
+
+// --- Derived Stores for Autocomplete ---
+
+export const uniqueDisciplines = derived(
+  currentProjectQuotes,
+  ($quotes) => {
+    console.log('UniqueDisciplines store received quotes:', $quotes);
+    if (!$quotes) return [];
+    const disciplines = new Set($quotes.map(q => q.discipline).filter(d => !!d));
+    console.log('Found unique disciplines:', disciplines);
+    return Array.from(disciplines).sort();
+  }
+);
+
+export const uniqueOrganisations = derived(
+  currentProjectQuotes,
+  ($quotes) => {
+    if (!$quotes) return [];
+    const organisations = new Set($quotes.map(q => q.organisation).filter(o => !!o));
+    return Array.from(organisations).sort();
+  }
+);
+
+export const uniqueLineItemItems = derived(
+  currentProjectQuotes,
+  ($quotes) => {
+    if (!$quotes) return [];
+    // Use flatMap to get items from all lineItems arrays in all quotes
+    const items = new Set($quotes.flatMap(q => q.lineItems.map(li => li.item)).filter(i => !!i && i.trim() !== ''));
+    return Array.from(items).sort();
+  }
+);
 
 // --- Review Interface and Store ---
 export type WorkStatus = 'in progress' | 'completed' | 'not started';

@@ -20,8 +20,8 @@ export const load: LayoutLoad = async ({ route }) => {
         // If the user is authenticated, load the project data.
         // We only load projects if we are not on the login page to avoid unnecessary calls.
         if (get(isAuthenticated)) {
-            console.log('Layout Load (browser): Triggering loadProjects...');
-            await loadProjects();
+        console.log('Layout Load (browser): Triggering loadProjects...');
+        await loadProjects();
         }
     }
     

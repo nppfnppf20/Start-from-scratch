@@ -3,6 +3,11 @@ const { Schema } = mongoose;
 
 // Schema for line items within a quote
 const LineItemSchema = new Schema({
+    item: {
+        type: String,
+        required: false, // Optional for now
+        trim: true
+    },
     description: {
         type: String,
         required: [true, 'Line item description is required'],
@@ -26,11 +31,6 @@ const QuoteSchema = new Schema({
         type: String,
         required: [true, 'Discipline is required'],
         trim: true
-    },
-    surveyType: {
-        type: String,
-        trim: true
-        // required: false // Optional as per interface
     },
     organisation: {
         type: String,

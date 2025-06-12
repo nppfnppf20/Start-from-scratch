@@ -3,9 +3,8 @@
   import {
     addQuote,
     updateQuote,
-    type InstructionStatus,
     type Quote,
-    type LineItem
+    type LineItem,
   } from "$lib/stores/projectStore"; // Import only necessary store functions
   import NotesModal from '$lib/components/NotesModal.svelte';
 
@@ -13,6 +12,9 @@
   export let isOpen: boolean = false;
   export let quoteToEdit: Quote | null = null; // Pass null for new quote, quote object for edit
   export let projectId: string | undefined = undefined; // Needed for adding new quotes
+  export let disciplines: string[] = [];
+  export let organisations: string[] = [];
+  export let lineItems: string[] = [];
 
   // --- Events ---
   const dispatch = createEventDispatcher<{close: void}>(); // Only 'close' needed, save handled internally
@@ -25,31 +27,19 @@
   let showAddNotesModal = false;
   let currentNotesForModal: string | undefined = '';
 
-  // Instruction status options
-  const instructionStatuses: InstructionStatus[] = [
-    'pending',
-    'will not be instructed',
-    'partially instructed',
-    'instructed'
-  ];
-
   // --- Utility Functions ---
   function createNewLineItem(): LineItem {
-    return { description: '', cost: 0 };
+    return { item: '', description: '', cost: 0 };
   }
 
   function createInitialFormState() {
     return {
       discipline: '',
-      surveyType: '',
       organisation: '',
       contactName: '',
       email: '',
       lineItems: [createNewLineItem()] as LineItem[],
       additionalNotes: '',
-      instructionStatus: 'pending' as InstructionStatus, // Default to pending for new
-      status: 'pending' as string,
-      date: new Date().toISOString().split('T')[0],
       // quoteFile: null as File | null // Removed file handling for simplicity now
     };
   }
@@ -71,15 +61,11 @@
           quoteForm = {
               ...createInitialFormState(), // Start fresh but override
               discipline: quoteToEdit.discipline,
-              surveyType: quoteToEdit.surveyType || '',
               organisation: quoteToEdit.organisation,
               contactName: quoteToEdit.contactName,
               email: quoteToEdit.email || '',
               lineItems: quoteToEdit.lineItems.length > 0 ? quoteToEdit.lineItems.map(item => ({ ...item })) : [createNewLineItem()], // Ensure at least one line item row
               additionalNotes: quoteToEdit.additionalNotes || '',
-              instructionStatus: quoteToEdit.instructionStatus,
-              status: quoteToEdit.status || 'pending',
-              date: quoteToEdit.date ? quoteToEdit.date.split('T')[0] : new Date().toISOString().split('T')[0] // Format date correctly if exists
               // quoteFile: null // Reset file input if needed
           };
       } else {
@@ -160,15 +146,12 @@
     // Prepare data for the store/API call
     const quoteDataForStore: Partial<Omit<Quote, 'id' | 'total'>> = {
       discipline: quoteForm.discipline,
-      surveyType: quoteForm.surveyType || undefined,
       organisation: quoteForm.organisation,
       contactName: quoteForm.contactName,
       email: quoteForm.email || undefined,
       lineItems: validLineItems, // Already filtered
       additionalNotes: quoteForm.additionalNotes || undefined,
-      instructionStatus: quoteForm.instructionStatus,
-      status: quoteForm.status,
-      date: quoteForm.date || undefined,
+      instructionStatus: 'pending', // Always set default for new quotes
       // Add projectId only when creating a new quote
       ...( !isEditing && { projectId: projectId } )
     };
@@ -214,15 +197,21 @@
           <div class="form-grid-modal"> <!-- Use grid for better layout -->
               <div class="form-row">
                 <label for="discipline">Discipline*</label>
-                <input type="text" id="discipline" bind:value={quoteForm.discipline} required>
-              </div>
-              <div class="form-row">
-                 <label for="surveyType">Survey Type</label>
-                 <input type="text" id="surveyType" bind:value={quoteForm.surveyType}>
+                <input type="text" id="discipline" bind:value={quoteForm.discipline} required list="discipline-list">
+                <datalist id="discipline-list">
+                  {#each disciplines as discipline (discipline)}
+                    <option value={discipline}></option>
+                  {/each}
+                </datalist>
               </div>
                <div class="form-row">
                  <label for="organisation">Organisation*</label>
-                 <input type="text" id="organisation" bind:value={quoteForm.organisation} required>
+                 <input type="text" id="organisation" bind:value={quoteForm.organisation} required list="organisation-list">
+                 <datalist id="organisation-list">
+                    {#each organisations as organisation (organisation)}
+                      <option value={organisation}></option>
+                    {/each}
+                 </datalist>
                </div>
                <div class="form-row">
                  <label for="contactName">Contact Name*</label>
@@ -232,39 +221,37 @@
                  <label for="email">Email</label>
                  <input type="email" id="email" bind:value={quoteForm.email}>
                </div>
-               <div class="form-row">
-                 <label for="date">Date</label>
-                 <input type="date" id="date" bind:value={quoteForm.date}>
-               </div>
-               <div class="form-row">
-                 <label for="instructionStatus">Instruction Status</label>
-                 <select id="instructionStatus" bind:value={quoteForm.instructionStatus}>
-                     {#each instructionStatuses as status} <option value={status}>{status}</option> {/each}
-                 </select>
-               </div>
-               <div class="form-row">
-                 <label for="status">Internal Status</label>
-                 <input type="text" id="status" bind:value={quoteForm.status} placeholder="e.g., Draft, Sent">
-               </div>
           </div>
 
           <!-- Line Items Section -->
-          <h4>Line Items*</h4>
-          {#each quoteForm.lineItems as item, index}
-             <div class="line-item-row">
-                <input type="text" placeholder="Description" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
-                <input type="number" placeholder="Cost" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
-                <button type="button" on:click={() => removeLineItem(index)} disabled={quoteForm.lineItems.length <= 1} title="Remove Line Item">-</button>
-             </div>
-          {/each}
-          <button type="button" on:click={addLineItem} class="add-line-item-btn" title="Add Line Item">+ Add Line Item</button>
-          <p class="modal-total">Calculated Total: £{quoteTotal.toFixed(2)}</p>
+          <div class="line-items-section">
+            <h4>Line Items (Total: £{quoteTotal.toFixed(2)})</h4>
+            <div class="line-item-header">
+              <label>Item</label>
+              <label>Description</label>
+              <label>£ excl. VAT</label>
+            </div>
+            <datalist id="line-item-list">
+              {#each lineItems as item (item)}
+                <option value={item}></option>
+              {/each}
+            </datalist>
+            {#each quoteForm.lineItems as item, index}
+               <div class="line-item-row">
+                 <input type="text" placeholder="Item" bind:value={item.item} list="line-item-list">
+                 <input type="text" class="line-item-desc" placeholder="Description" bind:value={item.description}>
+                 <input type="number" class="line-item-cost" placeholder="Cost" bind:value={item.cost}>
+                 <button type="button" on:click={() => removeLineItem(index)} class="remove-line-item-btn" title="Remove Line Item">×</button>
+               </div>
+            {/each}
+            <button type="button" on:click={addLineItem} class="add-line-item-btn" title="Add Line Item">+ Add Line Item</button>
+          </div>
 
           <!-- Notes Section -->
           <div class="form-row notes-row">
              <label>Additional Notes</label>
              <textarea rows="3" readonly bind:value={quoteForm.additionalNotes} placeholder="Click button to add/edit notes"></textarea>
-             <button type="button" on:click={openAddNotesModal}>Add/Edit Notes</button>
+             <button type="button" on:click={openAddNotesModal} class="notes-btn">Add/Edit Notes</button>
           </div>
 
           <!-- Optional File Upload Placeholder -->
@@ -337,20 +324,35 @@
 
   h4 { margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
 
-  .line-item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-  .line-item-row input[type="text"] { flex-grow: 1; }
-  .line-item-row input[type="number"] { width: 110px; }
-  .line-item-row button {
-      padding: 5px 9px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; line-height: 1;
+  .line-item-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 100px auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    padding: 0 0.5rem;
   }
-  .line-item-row button:disabled { background-color: #f8d7da; cursor: not-allowed; }
+
+  .line-item-desc {
+    width: 100%; /* Ensure it takes full space */
+  }
+  .line-item-cost {
+    width: 100px;
+  }
+  .remove-line-item-btn {
+    padding: 5px 9px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; line-height: 1;
+  }
   .add-line-item-btn {
       margin-top: 5px; background-color: #17a2b8; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; align-self: flex-start;
   }
 
   .modal-total { font-weight: bold; margin: 15px 0; text-align: right; font-size: 1.1em; }
 
-  .notes-row { display: flex; flex-direction: column; margin-top: 15px; }
+  .notes-row {
+    display: flex;
+    flex-direction: column;
+    margin-top: 15px;
+  }
   .notes-row textarea { margin-bottom: 5px; background-color: #f8f9fa; min-height: 60px; }
   .notes-row button { align-self: flex-start; background-color: #6c757d; }
 
@@ -360,5 +362,38 @@
   .cancel-btn { background-color: #6c757d; color: white; }
   .submit-btn:hover { background-color: #218838; }
   .cancel-btn:hover { background-color: #5a6268; }
+
+  /* Hide arrows from number input */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  .line-item-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 100px auto;
+    gap: 0.5rem;
+    font-weight: bold;
+    font-size: 0.8em;
+    color: #555;
+    margin-bottom: 0.25rem;
+    padding: 0 0.5rem;
+  }
+
+  .add-line-item-btn, .notes-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    transition: background-color 0.2s;
+  }
+
+  .add-line-item-btn:hover, .notes-btn:hover {
+    background-color: #0b5ed7; /* A slightly darker blue for hover */
+  }
 
 </style> 

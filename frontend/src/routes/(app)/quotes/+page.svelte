@@ -6,7 +6,10 @@
     deleteQuote,
     type InstructionStatus, 
     type Quote, 
-    type LineItem
+    type LineItem,
+    uniqueDisciplines,
+    uniqueOrganisations,
+    uniqueLineItemItems
   } from "$lib/stores/projectStore";
   import { get } from 'svelte/store';
   import QuoteModal from '$lib/components/QuoteModal.svelte';
@@ -249,12 +252,17 @@
     <p>Please select a project to view quotes.</p>
   {/if}
   
-  <QuoteModal 
-    bind:isOpen={showQuoteModal}
-    quoteToEdit={currentQuoteToEdit} 
-    projectId={$selectedProject?.id}
-    on:close={handleModalClose}
-  />
+  {#if showQuoteModal && $selectedProject}
+    <QuoteModal 
+      isOpen={showQuoteModal} 
+      quoteToEdit={currentQuoteToEdit} 
+      projectId={$selectedProject.id}
+      disciplines={$uniqueDisciplines}
+      organisations={$uniqueOrganisations}
+      lineItems={$uniqueLineItemItems}
+      on:close={handleModalClose}
+    />
+  {/if}
 
   {#if showLineItemsModal && selectedQuoteForLineItems}
     <LineItemsModal 
