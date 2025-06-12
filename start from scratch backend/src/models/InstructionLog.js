@@ -36,7 +36,7 @@ const InstructionLogSchema = new Schema({
     // Operational Fields (from old SurveyorReview)
     workStatus: {
         type: String,
-        enum: ['not started', 'in progress', 'completed'],
+        enum: ['not started', 'in progress', 'completed', 'Under TRP Review', 'Under Client Review'],
         default: 'not started'
     },
     siteVisitDate: { type: Date },

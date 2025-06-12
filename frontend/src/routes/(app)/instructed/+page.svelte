@@ -75,7 +75,7 @@
   }
   
   // Work status options for dropdown
-  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed'];
+  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed', 'Under TRP Review', 'Under Client Review'];
 
   // --- Notes Modal Functions ---
   function openNotesModal(quote: Quote) {
@@ -276,7 +276,7 @@
                 <td>
                   <div class="status-dropdown-container">
                      <select
-                        class="work-status-select {currentWorkStatus.replace(/\s+/g, '-')}"
+                        class="work-status-dropdown {currentWorkStatus.replace(/\s+/g, '-')}"
                         value={currentWorkStatus}
                         on:change={(e) => handleWorkStatusChange(quote.id, e.currentTarget.value as WorkStatus)}
                         title="Set work status"
@@ -302,7 +302,7 @@
                     />
                   </div>
                   <div class="date-cell-group">
-                    <label for="report-draft-{quote.id}" class="date-label standard-date-label">Report Draft</label>
+                    <label for="report-draft-{quote.id}" class="date-label standard-date-label">Draft Report Expected</label>
                     <input
                         id="report-draft-{quote.id}"
                         type="date"
@@ -533,7 +533,7 @@
       /* Optional: Add specific container styles if needed */
   }
 
-  .work-status-select {
+  .work-status-dropdown {
     padding: 0.4rem 2rem 0.4rem 0.8rem; 
     border: 1px solid #cbd5e0;
     border-radius: 15px; /* Pill shape */
@@ -550,27 +550,33 @@
     background-position: right 0.75rem center;
     background-size: 1em 1em;
   }
-  .work-status-select:focus {
+  .work-status-dropdown:focus {
       border-color: #4299e1; 
       box-shadow: 0 0 0 1px #4299e1; 
       outline: none;
   }
 
   /* Status-specific Select Styling */
-  .work-status-select.not-started {
+  .work-status-dropdown.not-started {
     background-color: #fff5f5; /* Light red */
     border-color: #fed7d7;
     color: #c53030;
   }
-  .work-status-select.in-progress {
-    background-color: #fffaf0; /* Light orange/yellow */
-    border-color: #feebc8;
-    color: #975a16;
+  .work-status-dropdown.in-progress {
+    background-color: #fff3cd; /* Light yellow */
+    color: #856404;
   }
-  .work-status-select.completed {
-    background-color: #f0fff4; /* Light green */
-    border-color: #c6f6d5;
-    color: #276749;
+  .work-status-dropdown.completed {
+    background-color: #d4edda; /* Light green */
+    color: #155724;
+  }
+  .work-status-dropdown.under-trp-review {
+    background-color: #cce5ff; /* Light blue */
+    color: #004085;
+  }
+  .work-status-dropdown.under-client-review {
+    background-color: #fff3cd; /* Light yellow */
+    color: #856404;
   }
 
   /* Date Inputs Styling */

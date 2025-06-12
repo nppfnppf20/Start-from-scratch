@@ -525,7 +525,7 @@ export async function deleteQuote(quoteId: string) {
 }
 
 // --- Review Interface and Store ---
-export type WorkStatus = 'in progress' | 'completed' | 'not started';
+export type WorkStatus = 'in progress' | 'completed' | 'not started' | 'Under TRP Review' | 'Under Client Review';
 
 // New interface for uploaded work details
 export interface UploadedWork {
@@ -977,7 +977,7 @@ export interface InstructionLog {
   id: string; // Corresponds to _id from backend
   projectId: string;
   quoteId: string;
-  workStatus?: 'not started' | 'in progress' | 'completed';
+  workStatus?: 'not started' | 'in progress' | 'completed' | 'Under TRP Review' | 'Under Client Review';
   siteVisitDate?: string; // ISO date string
   reportDraftDate?: string; // ISO date string
   operationalNotes?: string;
