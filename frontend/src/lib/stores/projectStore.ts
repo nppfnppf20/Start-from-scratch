@@ -1033,10 +1033,11 @@ export interface InstructionLog {
   id: string; // Corresponds to _id from backend
   projectId: string;
   quoteId: string;
-  workStatus?: 'not started' | 'in progress' | 'completed' | 'Under TRP Review' | 'Under Client Review';
+  workStatus?: 'not started' | 'in progress' | 'completed' | 'Under TRP Review' | 'Client reviewing';
   siteVisitDate?: string; // ISO date string
   reportDraftDate?: string; // ISO date string
   operationalNotes?: string;
+  holdUpNotes?: string;
   uploadedWorks?: UploadedWork[]; // Uses existing UploadedWork interface
   customDates?: CustomDate[];   // Uses existing CustomDate interface
   createdAt?: string;
