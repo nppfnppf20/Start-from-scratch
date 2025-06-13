@@ -248,8 +248,6 @@
 
   // Reactive logging (add this within the <script> tag but outside any function)
   $: console.log("Checking modal condition:", { show: showDocumentUploadModal, quote: !!currentQuoteForUpload });
-
-  let viewMode: 'table' | 'tile' = 'table'; // Default to table view
 </script>
 
 <div class="instructed-container">
@@ -261,19 +259,7 @@
       <p>Tracking operational progress for instructed quotes.</p>
     </div>
     
-    <div class="view-switcher">
-      <button class:active={viewMode === 'table'} on:click={() => viewMode = 'table'} title="Table View">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-        <span>Table</span>
-      </button>
-      <button class:active={viewMode === 'tile'} on:click={() => viewMode = 'tile'} title="Tile View">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        <span>Tiles</span>
-      </button>
-    </div>
-    
     {#if instructedQuotes.length > 0}
-       {#if viewMode === 'table'}
       <div class="table-scroll-wrapper">
           <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
           <div class="table-container" bind:this={tableContainerElement}>
@@ -439,94 +425,8 @@
           </div>
           <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
       </div>
-      {:else if viewMode === 'tile'}
-        <div class="tile-view-container">
-          {#each instructedQuotes as quote (quote.id)}
-            {@const log = findLog(quote.id)}
-            <div class="surveyor-tile">
-              <div class="tile-header">
-                <h3>{quote.organisation}</h3>
-                <span class="survey-type">{quote.surveyType}</span>
-              </div>
-              <div class="tile-body">
-                <div class="tile-section">
-                  <p><strong>Contact:</strong> {quote.contactName}</p>
-                  <p><strong>Email:</strong> <a href="mailto:{quote.email}">{quote.email}</a></p>
-                  <p><strong>Quote:</strong> £{quote.partiallyInstructedTotal?.toFixed(2) ?? quote.total.toFixed(2)}</p>
-                </div>
-
-                <div class="tile-section work-status-section">
-                  <label for={`work-status-tile-${quote.id}`}>Work Status:</label>
-                  <select
-                    id={`work-status-tile-${quote.id}`}
-                    class="work-status-dropdown {log?.workStatus?.toLowerCase().replace(/\s+/g, '-') || 'not-started'}"
-                    on:change={(e) => handleWorkStatusChange(quote.id, e.currentTarget.value as WorkStatus)}
-                  >
-                    <option value="" disabled selected>{log?.workStatus || 'Select...'}</option>
-                    {#each workStatuses as status}
-                      <option value={status} selected={log?.workStatus === status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </option>
-                    {/each}
-                  </select>
-                </div>
-                
-                <div class="tile-section">
-                  <strong>Dates:</strong>
-                  <div class="date-inputs">
-                    <div class="date-input-group">
-                      <label for={`tile-site-visit-${quote.id}`}>Site Visit:</label>
-                      <input type="date" id={`tile-site-visit-${quote.id}`} value={formatDateForInput(log?.siteVisitDate)} on:change={(e) => handleDateUpdate(quote.id, 'siteVisitDate', e.currentTarget.value)} />
-                    </div>
-                    <div class="date-input-group">
-                      <label for={`tile-report-draft-${quote.id}`}>Report Draft:</label>
-                      <input type="date" id={`tile-report-draft-${quote.id}`} value={formatDateForInput(log?.reportDraftDate)} on:change={(e) => handleDateUpdate(quote.id, 'reportDraftDate', e.currentTarget.value)} />
-                    </div>
-                    {#if log?.customDates}
-                      {#each log.customDates as customDate (customDate.id)}
-                        <div class="date-input-group custom-date-group">
-                          <input type="text" class="custom-date-title-input" value={customDate.title} on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'title', e.currentTarget.value)} placeholder="Custom Title" />
-                          <input type="date" class="custom-date-input" value={formatDateForInput(customDate.date)} on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'date', e.currentTarget.value)} />
-                          <button class="delete-custom-date-btn" on:click={() => handleDeleteCustomDate(quote.id, customDate.id)}>&times;</button>
-                        </div>
-                      {/each}
-                    {/if}
-                    <button class="add-custom-date-btn" on:click={() => handleAddCustomDate(quote.id)}>+ Add Date</button>
-                  </div>
-                </div>
-
-                <div class="tile-section tile-actions">
-                   <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)}>
-                    {getNotesPreview(log?.holdUpNotes)}
-                  </button>
-                </div>
-                 <div class="tile-section tile-actions">
-                   <strong>Works:</strong>
-                  <div class="works-cell">
-                     {#if log?.uploadedWorks && log.uploadedWorks.length > 0}
-                          <ul class="uploaded-works-list">
-                              {#each log.uploadedWorks as work, i}
-                                  <li>
-                                      <a href={work.url || '#'} target="_blank" rel="noopener noreferrer">
-                                        {work.title || `File ${i+1}`} (v{work.version})
-                                      </a>
-                                  </li>
-                              {/each}
-                          </ul>
-                      {:else}
-                          <span class="no-works">No works uploaded</span>
-                      {/if}
-                      <button class="upload-work-btn" on:click={() => openDocumentUploadModal(quote)}>+</button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          {/each}
-        </div>
-      {/if}
     {:else}
-      <p class="no-instructed-info">No quotes have been marked as instructed for this project yet, or instruction logs haven't loaded.</p>
+      <p>No instructed surveyors found for this project.</p>
     {/if}
   {:else}
     <p class="loading-info">Loading project details...</p>
