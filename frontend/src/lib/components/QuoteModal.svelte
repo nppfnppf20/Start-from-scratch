@@ -7,7 +7,6 @@
     type Quote,
     type LineItem
   } from "$lib/stores/projectStore"; // Import only necessary store functions
-  import NotesModal from '$lib/components/NotesModal.svelte';
 
   // --- Props ---
   export let isOpen: boolean = false;
@@ -21,21 +20,9 @@
   let isEditing = false;
   let quoteToEditId: string | null = null;
 
-  // State for Add/Edit Notes Modal
-  let showAddNotesModal = false;
-  let currentNotesForModal: string | undefined = '';
-
-  // Instruction status options
-  const instructionStatuses: InstructionStatus[] = [
-    'pending',
-    'will not be instructed',
-    'partially instructed',
-    'instructed'
-  ];
-
   // --- Utility Functions ---
   function createNewLineItem(): LineItem {
-    return { description: '', cost: 0 };
+    return { item: '', description: '', cost: 0 };
   }
 
   function createInitialFormState() {
@@ -45,12 +32,10 @@
       organisation: '',
       contactName: '',
       email: '',
+      phoneNumber: '',
       lineItems: [createNewLineItem()] as LineItem[],
       additionalNotes: '',
       instructionStatus: 'pending' as InstructionStatus, // Default to pending for new
-      status: 'pending' as string,
-      date: new Date().toISOString().split('T')[0],
-      // quoteFile: null as File | null // Removed file handling for simplicity now
     };
   }
 
@@ -75,12 +60,10 @@
               organisation: quoteToEdit.organisation,
               contactName: quoteToEdit.contactName,
               email: quoteToEdit.email || '',
+              phoneNumber: quoteToEdit.phoneNumber || '',
               lineItems: quoteToEdit.lineItems.length > 0 ? quoteToEdit.lineItems.map(item => ({ ...item })) : [createNewLineItem()], // Ensure at least one line item row
               additionalNotes: quoteToEdit.additionalNotes || '',
               instructionStatus: quoteToEdit.instructionStatus,
-              status: quoteToEdit.status || 'pending',
-              date: quoteToEdit.date ? quoteToEdit.date.split('T')[0] : new Date().toISOString().split('T')[0] // Format date correctly if exists
-              // quoteFile: null // Reset file input if needed
           };
       } else {
           console.log("Initializing modal form for new quote");
@@ -123,21 +106,6 @@
     }
   }
 
-  // --- Notes Modal Functions ---
-  function openAddNotesModal() {
-    currentNotesForModal = quoteForm.additionalNotes;
-    showAddNotesModal = true;
-  }
-
-  function closeAddNotesModal() {
-    showAddNotesModal = false;
-  }
-
-  function handleSaveAddNotes(event: CustomEvent<{ notes: string }>) {
-    quoteForm.additionalNotes = event.detail.notes;
-    closeAddNotesModal();
-  }
-
   // --- Form Submission ---
   async function submitQuote() {
     if (!isEditing && !projectId) {
@@ -157,6 +125,13 @@
       return;
     }
 
+    // New validation for 'item' field
+    const invalidItem = validLineItems.find(item => !item.item || item.item.trim() === '');
+    if (invalidItem) {
+        alert('Please fill in the "Item" for all line items.');
+        return;
+    }
+
     // Prepare data for the store/API call
     const quoteDataForStore: Partial<Omit<Quote, 'id' | 'total'>> = {
       discipline: quoteForm.discipline,
@@ -164,12 +139,10 @@
       organisation: quoteForm.organisation,
       contactName: quoteForm.contactName,
       email: quoteForm.email || undefined,
-      lineItems: validLineItems, // Already filtered
+      phoneNumber: quoteForm.phoneNumber || undefined,
+      lineItems: validLineItems,
       additionalNotes: quoteForm.additionalNotes || undefined,
       instructionStatus: quoteForm.instructionStatus,
-      status: quoteForm.status,
-      date: quoteForm.date || undefined,
-      // Add projectId only when creating a new quote
       ...( !isEditing && { projectId: projectId } )
     };
 
@@ -233,27 +206,23 @@
                  <input type="email" id="email" bind:value={quoteForm.email}>
                </div>
                <div class="form-row">
-                 <label for="date">Date</label>
-                 <input type="date" id="date" bind:value={quoteForm.date}>
-               </div>
-               <div class="form-row">
-                 <label for="instructionStatus">Instruction Status</label>
-                 <select id="instructionStatus" bind:value={quoteForm.instructionStatus}>
-                     {#each instructionStatuses as status} <option value={status}>{status}</option> {/each}
-                 </select>
-               </div>
-               <div class="form-row">
-                 <label for="status">Internal Status</label>
-                 <input type="text" id="status" bind:value={quoteForm.status} placeholder="e.g., Draft, Sent">
+                 <label for="phoneNumber">Phone Number</label>
+                 <input type="tel" id="phoneNumber" bind:value={quoteForm.phoneNumber}>
                </div>
           </div>
 
           <!-- Line Items Section -->
-          <h4>Line Items*</h4>
+          <h4>Line Items</h4>
+          <div class="line-item-headers">
+             <span>Item</span>
+             <span>Description</span>
+             <span>£ excl. VAT</span>
+          </div>
           {#each quoteForm.lineItems as item, index}
              <div class="line-item-row">
-                <input type="text" placeholder="Description" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
-                <input type="number" placeholder="Cost" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <input type="text" bind:value={item.item} required maxlength="100">
+                <input type="text" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <input type="number" placeholder="0.00" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
                 <button type="button" on:click={() => removeLineItem(index)} disabled={quoteForm.lineItems.length <= 1} title="Remove Line Item">-</button>
              </div>
           {/each}
@@ -263,8 +232,7 @@
           <!-- Notes Section -->
           <div class="form-row notes-row">
              <label>Additional Notes</label>
-             <textarea rows="3" readonly bind:value={quoteForm.additionalNotes} placeholder="Click button to add/edit notes"></textarea>
-             <button type="button" on:click={openAddNotesModal}>Add/Edit Notes</button>
+             <textarea rows="4" bind:value={quoteForm.additionalNotes}></textarea>
           </div>
 
           <!-- Optional File Upload Placeholder -->
@@ -277,23 +245,13 @@
 
           <!-- Modal Actions -->
           <div class="modal-actions">
-            <button type="submit" class="submit-btn">{isEditing ? 'Update Quote' : 'Add Quote'}</button>
+            <button type="submit" class="save-btn">{isEditing ? 'Save Changes' : 'Add Quote'}</button>
             <button type="button" on:click={closeModal} class="cancel-btn">Cancel</button>
           </div>
       </form>
     </div>
   </div>
 {/if}
-
-<!-- Add/Edit Notes Modal (Nested within this component's scope) -->
-{#if showAddNotesModal}
-    <NotesModal
-        initialNotes={currentNotesForModal}
-        on:save={handleSaveAddNotes}
-        on:close={closeAddNotesModal}
-    />
-{/if}
-
 
 <style>
   .modal-backdrop {
@@ -322,7 +280,7 @@
   .modal form label { margin-bottom: 5px; font-weight: 600; font-size: 0.9em; }
   .modal form input[type="text"],
   .modal form input[type="email"],
-  .modal form input[type="date"],
+  .modal form input[type="tel"],
   .modal form input[type="number"],
   .modal form select,
   .modal form textarea {
@@ -337,28 +295,80 @@
 
   h4 { margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
 
-  .line-item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-  .line-item-row input[type="text"] { flex-grow: 1; }
-  .line-item-row input[type="number"] { width: 110px; }
-  .line-item-row button {
-      padding: 5px 9px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; line-height: 1;
+  .line-item-row {
+    display: flex;
+    gap: 0.5rem; /* spacing between elements */
+    align-items: center;
+    margin-bottom: 0.5rem;
   }
-  .line-item-row button:disabled { background-color: #f8d7da; cursor: not-allowed; }
+
+  .line-item-row input {
+    flex: 1; /* a little more space for text */
+    min-width: 0;
+  }
+
+  .line-item-row input[type="number"] {
+    flex: 0.5; /* less space for cost */
+  }
+
+  .line-item-row button {
+    flex-shrink: 0; /* prevent button from shrinking */
+    padding: 5px 9px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; line-height: 1;
+  }
+  .line-item-row button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+  /* Hide arrows from number input */
+  .line-item-row input[type=number] {
+    -moz-appearance: textfield;
+  }
+  .line-item-row input[type=number]::-webkit-outer-spin-button,
+  .line-item-row input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   .add-line-item-btn {
-      margin-top: 5px; background-color: #17a2b8; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; align-self: flex-start;
+      margin-top: 5px;
+      background-color: #007bff;
+      color: white;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      align-self: flex-start;
   }
 
   .modal-total { font-weight: bold; margin: 15px 0; text-align: right; font-size: 1.1em; }
 
-  .notes-row { display: flex; flex-direction: column; margin-top: 15px; }
-  .notes-row textarea { margin-bottom: 5px; background-color: #f8f9fa; min-height: 60px; }
-  .notes-row button { align-self: flex-start; background-color: #6c757d; }
+  .notes-row {
+    grid-column: 1 / -1; /* Make notes span full width */
+  }
+  .notes-row textarea {
+    width: 100%;
+    resize: vertical;
+  }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; }
   .modal-actions button { padding: 10px 18px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; }
-  .submit-btn { background-color: #28a745; color: white; }
+  .save-btn { background-color: #007bff; color: white; }
   .cancel-btn { background-color: #6c757d; color: white; }
-  .submit-btn:hover { background-color: #218838; }
+  .save-btn:hover { background-color: #0069d9; }
   .cancel-btn:hover { background-color: #5a6268; }
+
+  .line-item-headers {
+    display: flex;
+    gap: 0.5rem;
+    padding-right: 40px; /* Space for the remove button to align columns */
+    margin-bottom: 4px;
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #333;
+  }
+  .line-item-headers span {
+    flex: 1;
+  }
+  .line-item-headers span:last-child {
+    flex: 0.5;
+  }
 
 </style> 

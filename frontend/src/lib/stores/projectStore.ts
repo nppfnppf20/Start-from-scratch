@@ -341,8 +341,9 @@ export async function deleteProject(projectId: string) {
 
 // --- Quote Interface and Store ---
 export interface LineItem {
-  description: string;
-  cost: number;
+	item?: string;
+	description: string;
+	cost: number;
 }
 
 export type InstructionStatus = 'pending' | 'will not be instructed' | 'partially instructed' | 'instructed';
@@ -355,13 +356,12 @@ export interface Quote {
   organisation: string;
   contactName: string;
   email?: string;
+  phoneNumber?: string;
   lineItems: LineItem[];
   total: number;
   instructionStatus: InstructionStatus;
   partiallyInstructedTotal?: number;
   additionalNotes?: string;
-  status?: string;
-  date?: string;
   createdAt?: string;
   updatedAt?: string;
 }
