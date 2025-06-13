@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment'; // Import browser check
 import { getAuthHeader } from './authStore';
 
@@ -96,6 +96,7 @@ interface Project {
 // Initialize stores with empty/null values initially
 export const projects = writable<Project[]>([]);
 export const selectedProject = writable<Project | null>(null);
+export const allQuotes = writable<Quote[]>([]); // New master quote store
 
 // Function to load projects from the API
 export async function loadProjects() {
@@ -118,6 +119,9 @@ export async function loadProjects() {
     console.log('Projects fetched:', fetchedProjects);
     projects.set(fetchedProjects);
 
+    // New call to load all quotes
+    await loadAllQuotes();
+
     // Optionally, automatically select the first project if the list isn't empty
     // But only if no project is currently selected
     const currentSelectedProject = get(selectedProject); // Need to get current value
@@ -133,6 +137,21 @@ export async function loadProjects() {
     // Handle error appropriately in the UI if needed
     projects.set([]); // Reset projects on error
     selectedProject.set(null); // Clear selection on error
+    allQuotes.set([]); // Clear all quotes on error
+  }
+}
+
+// New function to fetch all quotes
+export async function loadAllQuotes() {
+  if (!browser) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/quotes`, { headers: getAuthHeader() });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const quotes = await response.json();
+    allQuotes.set(quotes.map(mapMongoId));
+  } catch (error) {
+    console.error("Failed to load all quotes:", error);
+    allQuotes.set([]);
   }
 }
 
@@ -369,6 +388,43 @@ export interface Quote {
 // --- Quote Store --- 
 // Store quotes only for the *currently selected* project
 export const currentProjectQuotes = writable<Quote[]>([]);
+
+// --- Derived Stores for Dropdown Options ---
+export const uniqueDisciplines = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allDisciplines = $allQuotes.map(q => q.discipline);
+    return [...new Set(allDisciplines)].sort();
+  }
+);
+
+export const uniqueSurveyTypes = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allSurveyTypes = $allQuotes.map(q => q.surveyType).filter(st => st); // Filter out empty/null values
+    return [...new Set(allSurveyTypes as string[])].sort();
+  }
+);
+
+export const uniqueOrganisations = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allOrganisations = $allQuotes.map(q => q.organisation);
+    return [...new Set(allOrganisations)].sort();
+  }
+);
+
+export const uniqueLineItemItems = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allItems = $allQuotes
+      .flatMap(q => q.lineItems) // Get all line items from all quotes
+      .map(li => li.item)       // Get the 'item' from each line item
+      .filter(item => item);     // Filter out any null/undefined/empty strings
+    
+    return [...new Set(allItems as string[])].sort(); // Create a unique, sorted list
+  }
+);
 
 // --- Quote Functions --- 
 

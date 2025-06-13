@@ -5,7 +5,11 @@
     updateQuote,
     type InstructionStatus,
     type Quote,
-    type LineItem
+    type LineItem,
+    uniqueDisciplines,
+    uniqueSurveyTypes,
+    uniqueOrganisations,
+    uniqueLineItemItems
   } from "$lib/stores/projectStore"; // Import only necessary store functions
 
   // --- Props ---
@@ -19,6 +23,21 @@
   // --- Internal State ---
   let isEditing = false;
   let quoteToEditId: string | null = null;
+
+  // --- New State for Custom Dropdowns ---
+  let selectedDiscipline: string = '';
+  let showNewDisciplineInput: boolean = false;
+  let selectedSurveyType: string = '';
+  let showNewSurveyTypeInput: boolean = false;
+
+  // --- New State for Organisation Autocomplete ---
+  let organisationSuggestions: string[] = [];
+  let showOrgSuggestions: boolean = false;
+
+  // --- New State for Line Item Autocomplete ---
+  let lineItemSuggestions: string[] = [];
+  let showLineItemSuggestions: boolean = false;
+  let activeLineItemIndex: number | null = null;
 
   // --- Utility Functions ---
   function createNewLineItem(): LineItem {
@@ -41,8 +60,7 @@
 
   // Form state
   let quoteForm = createInitialFormState();
-  // let quoteFileInput: HTMLInputElement; // Removed
-
+  
   // Reactive statement to update form when props change (modal opens/quoteToEdit changes)
   $: if (isOpen) {
       initializeForm();
@@ -65,16 +83,68 @@
               additionalNotes: quoteToEdit.additionalNotes || '',
               instructionStatus: quoteToEdit.instructionStatus,
           };
+          // --- New: Set dropdown state for editing ---
+          selectedDiscipline = quoteToEdit.discipline;
+          showNewDisciplineInput = !$uniqueDisciplines.includes(quoteToEdit.discipline) && quoteToEdit.discipline !== 'n/a';
+          selectedSurveyType = quoteToEdit.surveyType || '';
+          if (quoteToEdit.surveyType) {
+            showNewSurveyTypeInput = !$uniqueSurveyTypes.includes(quoteToEdit.surveyType) && quoteToEdit.surveyType !== 'n/a';
+          } else {
+            showNewSurveyTypeInput = false;
+          }
       } else {
           console.log("Initializing modal form for new quote");
           isEditing = false;
           quoteToEditId = null;
           quoteForm = createInitialFormState(); // Reset to blank for new quote
+          // --- New: Reset dropdown state for new quote ---
+          selectedDiscipline = '';
+          showNewDisciplineInput = false;
+          selectedSurveyType = '';
+          showNewSurveyTypeInput = false;
       }
       // Reset file input visually if it existed
       // if (quoteFileInput) quoteFileInput.value = '';
   }
 
+  // --- Autocomplete Functions ---
+  function handleOrganisationInput(event: Event) {
+    const input = (event.target as HTMLInputElement).value;
+    if (input.length > 0) {
+      organisationSuggestions = $uniqueOrganisations.filter(org => 
+        org.toLowerCase().includes(input.toLowerCase())
+      );
+      showOrgSuggestions = organisationSuggestions.length > 0;
+    } else {
+      showOrgSuggestions = false;
+    }
+  }
+
+  function selectOrganisation(org: string) {
+    quoteForm.organisation = org;
+    showOrgSuggestions = false;
+  }
+
+  function handleLineItemInput(event: Event, index: number) {
+    const input = (event.target as HTMLInputElement).value;
+    activeLineItemIndex = index;
+    if (input.length > 0) {
+      lineItemSuggestions = $uniqueLineItemItems.filter(item => 
+        item.toLowerCase().includes(input.toLowerCase())
+      );
+      showLineItemSuggestions = lineItemSuggestions.length > 0;
+    } else {
+      showLineItemSuggestions = false;
+    }
+  }
+
+  function selectLineItem(item: string, index: number) {
+    quoteForm.lineItems[index].item = item;
+    showLineItemSuggestions = false;
+    activeLineItemIndex = null;
+    // We need to re-assign to trigger Svelte's reactivity
+    quoteForm.lineItems = [...quoteForm.lineItems];
+  }
 
   // --- Modal Functions ---
   function closeModal() {
@@ -108,6 +178,14 @@
 
   // --- Form Submission ---
   async function submitQuote() {
+    // --- New: Consolidate discipline value before validation ---
+    const finalDiscipline = showNewDisciplineInput ? quoteForm.discipline : selectedDiscipline;
+    const finalSurveyType = showNewSurveyTypeInput ? quoteForm.surveyType : selectedSurveyType;
+    if (!finalDiscipline || !quoteForm.organisation || !quoteForm.contactName) {
+      alert('Please fill in all required fields (Discipline, Organisation, Contact Name).');
+      return;
+    }
+
     if (!isEditing && !projectId) {
       alert('Error: Project ID is missing. Cannot add quote.');
       console.error("Attempted to add quote without projectId prop.");
@@ -115,10 +193,6 @@
     }
 
     // Basic form validation
-    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName) {
-      alert('Please fill in all required fields (Discipline, Organisation, Contact Name).');
-      return;
-    }
     const validLineItems = quoteForm.lineItems.filter(item => item.description.trim() !== '');
     if (validLineItems.length === 0) {
       alert('Please add at least one valid line item with a description.');
@@ -134,8 +208,8 @@
 
     // Prepare data for the store/API call
     const quoteDataForStore: Partial<Omit<Quote, 'id' | 'total'>> = {
-      discipline: quoteForm.discipline,
-      surveyType: quoteForm.surveyType || undefined,
+      discipline: finalDiscipline,
+      surveyType: finalSurveyType || undefined,
       organisation: quoteForm.organisation,
       contactName: quoteForm.contactName,
       email: quoteForm.email || undefined,
@@ -187,15 +261,57 @@
           <div class="form-grid-modal"> <!-- Use grid for better layout -->
               <div class="form-row">
                 <label for="discipline">Discipline*</label>
-                <input type="text" id="discipline" bind:value={quoteForm.discipline} required>
+                <div class="select-wrapper">
+                    <select id="discipline" bind:value={selectedDiscipline} on:change={() => showNewDisciplineInput = selectedDiscipline === 'add_new'}>
+                        <option value="" disabled>Select a discipline...</option>
+                        <option value="add_new">+ Add a new discipline</option>
+                        <option value="n/a">n/a</option>
+                        {#each $uniqueDisciplines as discipline}
+                            <option value={discipline}>{discipline}</option>
+                        {/each}
+                    </select>
+                </div>
+                {#if showNewDisciplineInput}
+                    <input type="text" bind:value={quoteForm.discipline} placeholder="Enter new discipline" class="new-value-input" required>
+                {/if}
               </div>
               <div class="form-row">
                  <label for="surveyType">Survey Type</label>
-                 <input type="text" id="surveyType" bind:value={quoteForm.surveyType}>
+                 <div class="select-wrapper">
+                     <select id="surveyType" bind:value={selectedSurveyType} on:change={() => showNewSurveyTypeInput = selectedSurveyType === 'add_new'}>
+                        <option value="" disabled>Select a survey type...</option>
+                        <option value="add_new">+ Add a new survey type</option>
+                        <option value="n/a">n/a</option>
+                        {#each $uniqueSurveyTypes as surveyType}
+                            <option value={surveyType}>{surveyType}</option>
+                        {/each}
+                    </select>
+                 </div>
+                {#if showNewSurveyTypeInput}
+                    <input type="text" bind:value={quoteForm.surveyType} placeholder="Enter new survey type" class="new-value-input">
+                {/if}
               </div>
-               <div class="form-row">
+               <div class="form-row" style="position: relative;">
                  <label for="organisation">Organisation*</label>
-                 <input type="text" id="organisation" bind:value={quoteForm.organisation} required>
+                 <input 
+                   type="text" 
+                   id="organisation" 
+                   bind:value={quoteForm.organisation} 
+                   required 
+                   on:input={handleOrganisationInput}
+                   on:focus={() => quoteForm.organisation && organisationSuggestions.length > 0 && (showOrgSuggestions = true)}
+                   on:blur={() => setTimeout(() => showOrgSuggestions = false, 150)}
+                   autocomplete="off"
+                 >
+                 {#if showOrgSuggestions}
+                   <div class="suggestions-list">
+                     {#each organisationSuggestions as org}
+                       <div class="suggestion-item" on:mousedown={() => selectOrganisation(org)}>
+                         {org}
+                       </div>
+                     {/each}
+                   </div>
+                 {/if}
                </div>
                <div class="form-row">
                  <label for="contactName">Contact Name*</label>
@@ -220,8 +336,28 @@
           </div>
           {#each quoteForm.lineItems as item, index}
              <div class="line-item-row">
-                <input type="text" bind:value={item.item} required maxlength="100">
-                <input type="text" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <div class="autocomplete-wrapper">
+                  <input 
+                    type="text" 
+                    bind:value={item.item} 
+                    required 
+                    maxlength="100" 
+                    on:input={(e) => handleLineItemInput(e, index)}
+                    on:focus={(e) => handleLineItemInput(e, index)}
+                    on:blur={() => setTimeout(() => { if (activeLineItemIndex === index) showLineItemSuggestions = false }, 150)}
+                    autocomplete="off"
+                  >
+                  {#if showLineItemSuggestions && activeLineItemIndex === index}
+                    <div class="suggestions-list">
+                      {#each lineItemSuggestions as suggestion}
+                        <div class="suggestion-item" on:mousedown={() => selectLineItem(suggestion, index)}>
+                          {suggestion}
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+                <input class="line-item-description" type="text" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
                 <input type="number" placeholder="0.00" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
                 <button type="button" on:click={() => removeLineItem(index)} disabled={quoteForm.lineItems.length <= 1} title="Remove Line Item">-</button>
              </div>
@@ -307,6 +443,21 @@
     min-width: 0;
   }
 
+  .autocomplete-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .autocomplete-wrapper input {
+    width: 100%;
+  }
+
+  .line-item-row .line-item-description {
+    flex: 1;
+    min-width: 0;
+  }
+
   .line-item-row input[type="number"] {
     flex: 0.5; /* less space for cost */
   }
@@ -369,6 +520,49 @@
   }
   .line-item-headers span:last-child {
     flex: 0.5;
+  }
+
+  .new-value-input {
+    margin-top: 8px;
+  }
+
+  .select-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  /* This rule targets the select elements themselves */
+  .select-wrapper select {
+    -webkit-appearance: none; /* Hide default arrow on Safari/Chrome */
+    -moz-appearance: none;    /* Hide default arrow on Firefox */
+    appearance: none;
+    width: 100%; /* Make sure select fills the wrapper */
+    padding-right: 2.5rem; /* Add space for our custom arrow */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+  }
+
+  .suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 101; /* Needs to be above other modal content */
+  }
+  .suggestion-item {
+    padding: 9px;
+    cursor: pointer;
+  }
+  .suggestion-item:hover {
+    background-color: #f0f0f0;
   }
 
 </style> 
