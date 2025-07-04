@@ -1,15 +1,23 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { authStore } from '$lib/stores/authStore';
   
-  // Define our tabs in the desired order
-  const tabs = [
-    { id: 'general', label: 'General Project Information', path: '/' },
-    { id: 'documents', label: 'Relevant Documents', path: '/documents' },
-    { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes' },
-    { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed' },
-    { id: 'programme', label: 'Programme', path: '/programme' },
-    { id: 'reviews', label: 'Surveyor Reviews', path: '/reviews' },
+  // Define all available tabs
+  const allTabs = [
+    { id: 'general', label: 'General Project Information', path: '/', roles: ['admin', 'surveyor'] },
+    { id: 'documents', label: 'Relevant Documents', path: '/documents', roles: ['admin', 'surveyor'] },
+    { id: 'fee-submission', label: 'Fee Quote Submission', path: '/fee-quote-submission', roles: ['surveyor'] },
+    { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes', roles: ['admin'] },
+    { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed', roles: ['admin'] },
+    { id: 'programme', label: 'Programme', path: '/programme', roles: ['admin'] },
+    { id: 'reviews', label: 'Surveyor Reviews', path: '/reviews', roles: ['admin'] },
   ];
+
+  // Filter tabs based on user role
+  $: tabs = allTabs.filter(tab => {
+    const userRole = $authStore.user?.role;
+    return userRole && tab.roles.includes(userRole);
+  });
 </script>
 
 <nav class="tab-navigation">
