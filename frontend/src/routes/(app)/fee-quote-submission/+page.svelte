@@ -1,15 +1,14 @@
 <script lang="ts">
   import { projects } from '$lib/stores/projectStore';
-  // We'll need a modal component later for the quote submission
-  // import QuoteModal from '$lib/components/QuoteModal.svelte';
+  import QuoteModal from '$lib/components/QuoteModal.svelte';
 
-  // let isModalOpen = false;
-  // let selectedProjectIdForQuote: string | null = null;
+  let isModalOpen = false;
+  let selectedProjectIdForQuote: string | null = null;
 
-  // function openQuoteModal(projectId: string) {
-  //   selectedProjectIdForQuote = projectId;
-  //   isModalOpen = true;
-  // }
+  function openQuoteModal(projectId: string) {
+    selectedProjectIdForQuote = projectId;
+    isModalOpen = true;
+  }
 </script>
 
 <div class="fee-quote-submission-container">
@@ -27,7 +26,7 @@
             <p class="client-name">{project.clientOrSpvName || project.client || 'N/A'}</p>
           </div>
           <div class="project-actions">
-            <button class="submit-button" on:click={() => alert('Quote submission modal will open here.')}>
+            <button class="submit-button" on:click={() => openQuoteModal(project.id)}>
               Submit Quote
             </button>
           </div>
@@ -39,13 +38,17 @@
   </div>
 </div>
 
-<!-- Placeholder for the modal -->
-<!-- {#if isModalOpen && selectedProjectIdForQuote}
+{#if isModalOpen && selectedProjectIdForQuote}
   <QuoteModal 
+    isOpen={isModalOpen}
     projectId={selectedProjectIdForQuote} 
-    on:close={() => isModalOpen = false} 
+    quoteToEdit={null}
+    on:close={() => {
+      isModalOpen = false;
+      selectedProjectIdForQuote = null;
+    }}
   />
-{/if} -->
+{/if}
 
 <style>
   .fee-quote-submission-container {

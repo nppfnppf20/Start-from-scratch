@@ -1,5 +1,6 @@
 <script lang="ts">
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
+  import { authStore } from "$lib/stores/authStore";
   import { get } from 'svelte/store';
   import { onMount, onDestroy } from 'svelte';
   import { beforeNavigate } from '$app/navigation';
@@ -7,6 +8,9 @@
   let initialProjectData: typeof $selectedProject = null;
   let hasUnsavedChanges = false;
   let currentInitialDataProjectId: string | null = null;
+
+  // Check if user is a surveyor (read-only access)
+  $: isSurveyor = $authStore.user?.role === 'surveyor';
 
   function deepEqual(obj1: any, obj2: any) {
     if (obj1 === null || obj2 === null) {
@@ -195,6 +199,12 @@
 <div class="general-info">
   <h1>General Project Information</h1>
   
+  {#if isSurveyor}
+    <div class="read-only-notice">
+      <p>Read only</p>
+    </div>
+  {/if}
+  
   {#if $selectedProject}
     <form class="project-form" on:submit={handleSubmit}>
       <!-- Section: Basic Information -->
@@ -203,60 +213,60 @@
         <div class="form-grid">
           <div class="form-group">
               <label for="clientOrSpvName">Client (or SPV) Name</label>
-            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientOrSpvName} />
+            <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientOrSpvName} readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="detailedDescription">Detailed Description of Development</label>
-            <textarea id="detailedDescription" name="detailedDescription" rows="4" bind:value={$selectedProject.detailedDescription}></textarea>
+            <textarea id="detailedDescription" name="detailedDescription" rows="4" bind:value={$selectedProject.detailedDescription} readonly={isSurveyor}></textarea>
           </div>
           
           <div class="form-group">
               <label for="proposedUseDuration">Proposed Use Duration (years)</label>
-            <input type="number" id="proposedUseDuration" name="proposedUseDuration" min="0" bind:value={$selectedProject.proposedUseDuration} use:numbersOnly />
+            <input type="number" id="proposedUseDuration" name="proposedUseDuration" min="0" bind:value={$selectedProject.proposedUseDuration} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label>Project Type</label>
             <div class="radio-group">
               <label class="radio-label">
-                <input type="radio" name="projectType" value="solar" bind:group={$selectedProject.projectType} /> Solar
+                <input type="radio" name="projectType" value="solar" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> Solar
               </label>
               <label class="radio-label">
-                <input type="radio" name="projectType" value="bess" bind:group={$selectedProject.projectType} /> BESS
+                <input type="radio" name="projectType" value="bess" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> BESS
               </label>
               <label class="radio-label">
-                <input type="radio" name="projectType" value="solarBess" bind:group={$selectedProject.projectType} /> Solar & BESS
+                <input type="radio" name="projectType" value="solarBess" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> Solar & BESS
               </label>
               <label class="radio-label">
-                <input type="radio" name="projectType" value="other" bind:group={$selectedProject.projectType} /> Other
+                <input type="radio" name="projectType" value="other" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> Other
               </label>
             </div>
           </div>
           
           <div class="form-group">
               <label for="address">Address</label>
-            <textarea id="address" name="address" rows="3" bind:value={$selectedProject.address}></textarea>
+            <textarea id="address" name="address" rows="3" bind:value={$selectedProject.address} readonly={isSurveyor}></textarea>
           </div>
           
           <div class="form-group">
               <label for="area">Area (ha)</label>
-            <input type="number" id="area" name="area" step="0.01" min="0" bind:value={$selectedProject.area} use:numbersOnly />
+            <input type="number" id="area" name="area" step="0.01" min="0" bind:value={$selectedProject.area} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="localPlanningAuthority">Local Planning Authority</label>
-            <input type="text" id="localPlanningAuthority" name="localPlanningAuthority" bind:value={$selectedProject.localPlanningAuthority} />
+            <input type="text" id="localPlanningAuthority" name="localPlanningAuthority" bind:value={$selectedProject.localPlanningAuthority} readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="distributionNetwork">Distribution Network (DNO)</label>
-            <input type="text" id="distributionNetwork" name="distributionNetwork" bind:value={$selectedProject.distributionNetwork} />
+            <input type="text" id="distributionNetwork" name="distributionNetwork" bind:value={$selectedProject.distributionNetwork} readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="siteDesignations">Site Designations</label>
-            <textarea id="siteDesignations" name="siteDesignations" rows="3" bind:value={$selectedProject.siteDesignations}></textarea>
+            <textarea id="siteDesignations" name="siteDesignations" rows="3" bind:value={$selectedProject.siteDesignations} readonly={isSurveyor}></textarea>
           </div>
         </div>
       </section>
@@ -267,37 +277,37 @@
         <div class="form-grid">
           <div class="form-group">
               <label for="solarExportCapacity">Solar Export Capacity (MWh)</label>
-            <input type="number" id="solarExportCapacity" name="solarExportCapacity" step="0.1" min="0" bind:value={$selectedProject.solarExportCapacity} use:numbersOnly />
+            <input type="number" id="solarExportCapacity" name="solarExportCapacity" step="0.1" min="0" bind:value={$selectedProject.solarExportCapacity} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="pvMaxPanelHeight">PV Max Panel Height (m)</label>
-            <input type="number" id="pvMaxPanelHeight" name="pvMaxPanelHeight" step="0.01" min="0" bind:value={$selectedProject.pvMaxPanelHeight} use:numbersOnly />
+            <input type="number" id="pvMaxPanelHeight" name="pvMaxPanelHeight" step="0.01" min="0" bind:value={$selectedProject.pvMaxPanelHeight} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="fenceHeight">Fence Height (m)</label>
-            <input type="number" id="fenceHeight" name="fenceHeight" step="0.01" min="0" bind:value={$selectedProject.fenceHeight} use:numbersOnly />
+            <input type="number" id="fenceHeight" name="fenceHeight" step="0.01" min="0" bind:value={$selectedProject.fenceHeight} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="pvClearanceFromGround">PV Clearance from Ground (m)</label>
-            <input type="number" id="pvClearanceFromGround" name="pvClearanceFromGround" step="0.01" min="0" bind:value={$selectedProject.pvClearanceFromGround} use:numbersOnly />
+            <input type="number" id="pvClearanceFromGround" name="pvClearanceFromGround" step="0.01" min="0" bind:value={$selectedProject.pvClearanceFromGround} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="numberOfSolarPanels">Number of Solar Panels</label>
-            <input type="number" id="numberOfSolarPanels" name="numberOfSolarPanels" min="0" bind:value={$selectedProject.numberOfSolarPanels} use:numbersOnly />
+            <input type="number" id="numberOfSolarPanels" name="numberOfSolarPanels" min="0" bind:value={$selectedProject.numberOfSolarPanels} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="panelTilt">Panel Tilt (degrees from horizontal)</label>
-            <input type="number" id="panelTilt" name="panelTilt" step="0.1" min="0" max="90" bind:value={$selectedProject.panelTilt} use:numbersOnly />
+            <input type="number" id="panelTilt" name="panelTilt" step="0.1" min="0" max="90" bind:value={$selectedProject.panelTilt} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="panelTiltDirection">Panel Tilt Direction</label>
-            <select id="panelTiltDirection" name="panelTiltDirection" bind:value={$selectedProject.panelTiltDirection}>
+            <select id="panelTiltDirection" name="panelTiltDirection" bind:value={$selectedProject.panelTiltDirection} disabled={isSurveyor}>
               <option value="">Select direction</option>
               <option value="N">North</option>
               <option value="NE">North East</option>
@@ -318,12 +328,12 @@
         <div class="form-grid">
           <div class="form-group">
               <label for="bessExportCapacity">BESS Export Capacity</label>
-            <input type="number" id="bessExportCapacity" name="bessExportCapacity" step="0.1" min="0" bind:value={$selectedProject.bessExportCapacity} use:numbersOnly />
+            <input type="number" id="bessExportCapacity" name="bessExportCapacity" step="0.1" min="0" bind:value={$selectedProject.bessExportCapacity} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="bessContainers">BESS No. of Containers</label>
-            <input type="number" id="bessContainers" name="bessContainers" min="0" bind:value={$selectedProject.bessContainers} use:numbersOnly />
+            <input type="number" id="bessContainers" name="bessContainers" min="0" bind:value={$selectedProject.bessContainers} use:numbersOnly readonly={isSurveyor} />
           </div>
         </div>
       </section>
@@ -334,22 +344,22 @@
         <div class="form-grid">
           <div class="form-group">
               <label for="gwhPerYear">GWh per year</label>
-            <input type="number" id="gwhPerYear" name="gwhPerYear" step="0.1" min="0" bind:value={$selectedProject.gwhPerYear} use:numbersOnly />
+            <input type="number" id="gwhPerYear" name="gwhPerYear" step="0.1" min="0" bind:value={$selectedProject.gwhPerYear} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="homesPowered">Homes powered per year</label>
-            <input type="number" id="homesPowered" name="homesPowered" min="0" bind:value={$selectedProject.homesPowered} use:numbersOnly />
+            <input type="number" id="homesPowered" name="homesPowered" min="0" bind:value={$selectedProject.homesPowered} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="co2Offset">CO2 tonnes offset per year</label>
-            <input type="number" id="co2Offset" name="co2Offset" step="0.1" min="0" bind:value={$selectedProject.co2Offset} use:numbersOnly />
+            <input type="number" id="co2Offset" name="co2Offset" step="0.1" min="0" bind:value={$selectedProject.co2Offset} use:numbersOnly readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="equivalentCars">Equivalent no. of cars per year</label>
-            <input type="number" id="equivalentCars" name="equivalentCars" min="0" bind:value={$selectedProject.equivalentCars} use:numbersOnly />
+            <input type="number" id="equivalentCars" name="equivalentCars" min="0" bind:value={$selectedProject.equivalentCars} use:numbersOnly readonly={isSurveyor} />
           </div>
         </div>
       </section>
@@ -360,44 +370,46 @@
         <div class="form-grid">
           <div class="form-group">
               <label for="accessArrangements">Access Arrangements</label>
-            <textarea id="accessArrangements" name="accessArrangements" rows="3" bind:value={$selectedProject.accessArrangements}></textarea>
+            <textarea id="accessArrangements" name="accessArrangements" rows="3" bind:value={$selectedProject.accessArrangements} readonly={isSurveyor}></textarea>
           </div>
           
           <div class="form-group">
               <label for="accessContact">Access Contact</label>
-            <input type="text" id="accessContact" name="accessContact" bind:value={$selectedProject.accessContact} />
+            <input type="text" id="accessContact" name="accessContact" bind:value={$selectedProject.accessContact} readonly={isSurveyor} />
           </div>
           
           <div class="form-group">
               <label for="parkingDetails">Parking Details</label>
-            <textarea id="parkingDetails" name="parkingDetails" rows="2" bind:value={$selectedProject.parkingDetails}></textarea>
+            <textarea id="parkingDetails" name="parkingDetails" rows="2" bind:value={$selectedProject.parkingDetails} readonly={isSurveyor}></textarea>
           </div>
           
           <div class="form-group">
               <label>ATV Use?</label>
             <div class="radio-group">
               <label class="radio-label">
-                <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} /> Yes
+                <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} disabled={isSurveyor} /> Yes
               </label>
               <label class="radio-label">
-                <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} /> No
+                <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} disabled={isSurveyor} /> No
               </label>
             </div>
           </div>
           
           <div class="form-group">
               <label for="additionalNotes">Additional Notes</label>
-            <textarea id="additionalNotes" name="additionalNotes" rows="3" bind:value={$selectedProject.additionalNotes}></textarea>
+            <textarea id="additionalNotes" name="additionalNotes" rows="3" bind:value={$selectedProject.additionalNotes} readonly={isSurveyor}></textarea>
           </div>
           
           <div class="form-group">
               <label for="invoicingDetails">Invoicing Details</label>
-            <textarea id="invoicingDetails" name="invoicingDetails" rows="3" bind:value={$selectedProject.invoicingDetails}></textarea>
+            <textarea id="invoicingDetails" name="invoicingDetails" rows="3" bind:value={$selectedProject.invoicingDetails} readonly={isSurveyor}></textarea>
           </div>
         </div>
       </section>
       
-      <button type="submit" class="save-button">Save Project Information</button>
+      {#if !isSurveyor}
+        <button type="submit" class="save-button">Save Project Information</button>
+      {/if}
     </form>
   {:else}
     <div class="no-project-selected">
@@ -611,5 +623,19 @@
   .save-button:focus {
       outline: none;
       box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); /* Focus ring like inputs */
+  }
+
+  .read-only-notice {
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    color: #1565c0;
+  }
+
+  .read-only-notice p {
+    margin: 0;
+    font-size: 0.95rem;
   }
 </style>
