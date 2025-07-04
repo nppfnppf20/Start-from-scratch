@@ -504,6 +504,14 @@
       box-shadow: 0 0 0 1px #4299e1; /* Subtle blue glow */
       outline: none; /* Remove default outline */
   }
+
+  /* Readonly styling to match documents page */
+  input[type="text"][readonly],
+  input[type="number"][readonly],
+  textarea[readonly] {
+    background-color: #f9fafb;
+    color: #6b7280;
+  }
   
   .radio-group {
     display: flex;
@@ -626,16 +634,16 @@
   }
 
   .read-only-notice {
-    background-color: #e3f2fd;
-    border: 1px solid #2196f3;
+    background-color: #fed7d7;
+    color: #c53030;
+    padding: 0.5rem 1rem;
     border-radius: 6px;
-    padding: 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
     margin-bottom: 1.5rem;
-    color: #1565c0;
   }
 
   .read-only-notice p {
     margin: 0;
-    font-size: 0.95rem;
   }
 </style>

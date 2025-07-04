@@ -70,7 +70,9 @@ const ProjectSchema = new mongoose.Schema({
     parkingDetails: { type: String, trim: true },
     atvUse: { type: String, enum: ['yes', 'no', null] },
     additionalNotes: { type: String, trim: true },
-    invoicingDetails: { type: String, trim: true }
+    invoicingDetails: { type: String, trim: true },
+    // --- SharePoint Document Link ---
+    sharepointLink: { type: String, trim: true }
 }, {
     timestamps: true // Automatically add createdAt and updatedAt fields
 });

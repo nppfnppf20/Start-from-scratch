@@ -88,6 +88,10 @@ interface Project {
   atvUse?: 'yes' | 'no';
   additionalNotes?: string;
   invoicingDetails?: string;
+  
+  // SharePoint Document Link
+  sharepointLink?: string;
+  
   createdAt?: string; // From timestamps
   updatedAt?: string; // From timestamps
 }
