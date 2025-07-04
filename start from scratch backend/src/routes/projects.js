@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Project = require('../models/Project');
+const { authorize } = require('../middleware/authMiddleware'); // Import authorize
 
 // @route   GET /api/projects
 // @desc    Get all projects (fetching selected fields)
@@ -86,8 +87,8 @@ router.put('/:id', async (req, res) => {
 
 // @route   DELETE /api/projects/:id
 // @desc    Delete a project by ID
-// @access  Public
-router.delete('/:id', async (req, res) => {
+// @access  Admin only
+router.delete('/:id', authorize('admin'), async (req, res) => {
     try {
         const project = await Project.findById(req.params.id);
         if (!project) {

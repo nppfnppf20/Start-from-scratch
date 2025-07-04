@@ -1,74 +1,138 @@
     // File: frontend/src/lib/stores/authStore.ts
-    import { writable, derived } from 'svelte/store';
+import { writable, get } from 'svelte/store';
     import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-    // --- Private writable store for the password ---
-    // We initialize it from localStorage so the session can persist across page reloads.
-    const storedPassword = browser ? window.localStorage.getItem('site_password') : null;
-    const password = writable<string | null>(storedPassword);
+// Define the shape of the user object we'll get from the JWT
+interface User {
+  id: string;
+  role: string;
+}
 
-    // --- Public derived store for authentication status ---
-    // Anyone can subscribe to this to know if the user is logged in.
-    export const isAuthenticated = derived(
-      password,
-      $password => !!$password
-    );
+// Define the shape of the auth store's state
+interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+  token: string | null;
+}
 
-    // --- Function to verify and set the password ---
-    export async function verifyAndSetPassword(pw: string): Promise<boolean> {
-      if (!browser) return false;
+// Helper function to decode a JWT.
+// This is a simple, lightweight way to get the payload without a heavy library.
+function decodeJwt(token: string): User | null {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pw }),
+    const decoded = JSON.parse(jsonPayload);
+    // The payload from our backend has a 'user' object inside it
+    return decoded.user as User;
+  } catch (e) {
+    console.error("Failed to decode JWT:", e);
+    return null;
+  }
+}
+
+
+// --- The Main Auth Store ---
+function createAuthStore() {
+  const { subscribe, set } = writable<AuthState>({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+  });
+
+  // This function runs when the store is first created.
+  // It checks localStorage for a token to keep the user logged in.
+  function initialize() {
+    if (!browser) return;
+
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      const user = decodeJwt(token);
+      if (user) {
+        set({
+          isAuthenticated: true,
+          user: user,
+          token: token,
         });
+      } else {
+        // The token was invalid or expired, so clean up.
+        localStorage.removeItem('jwt_token');
+      }
+    }
+  }
+
+     // --- Login Function ---
+   async function login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+     if (!browser) return { success: false, error: 'Browser not available' };
+
+     try {
+       const response = await fetch(`${API_BASE_URL}/auth/login`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ email, password }),
+       });
 
         if (response.ok) {
-          // Password is correct. Save it to the store and localStorage.
-          password.set(pw);
-          window.localStorage.setItem('site_password', pw);
-          console.log('Authentication successful.');
-          return true;
-        } else {
-          // Password is incorrect. Clear any stored password.
-          password.set(null);
-          window.localStorage.removeItem('site_password');
-          console.error('Authentication failed: Incorrect password.');
-          return false;
+        const data = await response.json();
+        const token = data.token;
+        const user = decodeJwt(token);
+
+        if (token && user) {
+          localStorage.setItem('jwt_token', token);
+          set({ isAuthenticated: true, user, token });
+          return { success: true };
         }
-      } catch (error) {
-        console.error('Error during password verification:', error);
-        password.set(null);
-        window.localStorage.removeItem('site_password');
-        return false;
+        return { success: false, error: 'Invalid token received.' };
+      } else {
+        const errorData = await response.json();
+        return { success: false, error: errorData.msg || 'Invalid credentials.' };
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'A network or server error occurred.' };
     }
+  }
 
-    // --- Function to get the current password for API calls ---
-    // This is not a store, but a simple getter function.
-    export function getAuthHeader(): { Authorization?: string } {
-      let currentPassword = null;
-      // We use a temporary subscriber to get the current value from the store.
-      const unsubscribe = password.subscribe(value => {
-        currentPassword = value;
-      });
-      unsubscribe(); // Immediately unsubscribe
+  // --- Logout Function ---
+  async function logout() {
+    if (!browser) return;
+    localStorage.removeItem('jwt_token');
+    set({
+      isAuthenticated: false,
+      user: null,
+      token: null,
+    });
+    // Redirect to login page to ensure a clean state
+    await goto('/login');
+  }
 
-      if (currentPassword) {
-        return { 'Authorization': currentPassword };
+  // Initialize the store on creation
+  initialize();
+
+  return {
+    subscribe,
+    login,
+    logout,
+  };
+}
+
+export const authStore = createAuthStore();
+
+
+// --- Helper function to get the auth header for API calls ---
+export function getAuthTokenHeader(): { Authorization?: string } {
+    if (!browser) return {};
+
+    const token = get(authStore).token;
+
+    if (token) {
+        return { 'Authorization': `Bearer ${token}` };
       }
       return {};
-    }
-
-    // --- Logout function ---
-    export function logout() {
-      if (!browser) return;
-      password.set(null);
-      window.localStorage.removeItem('site_password');
-      // Optional: redirect to login page after logout
-      // window.location.href = '/login'; 
     }

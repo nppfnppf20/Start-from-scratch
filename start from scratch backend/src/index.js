@@ -16,6 +16,9 @@ const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD 
 const uploadRoutes = require('./routes/uploads');
 const documentRoutes = require('./routes/documents');
 const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
+const authRoutes = require('./routes/auth');
+const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
+const User = require('./models/User'); // Import User model for seeding
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -33,12 +36,37 @@ const connectDB = async () => {
       // Mongoose 6+ no longer needs useNewUrlParser/useUnifiedTopology
     });
     console.log('MongoDB Connected...');
+    
+    // Seed initial admin users
+    await seedAdminUsers();
   } catch (err) {
     // +++ Add more specific error message +++
     console.error('MongoDB Connection Error:', err.message);
     process.exit(1);
   }
 };
+
+// Function to create initial admin users
+const seedAdminUsers = async () => {
+  try {
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
+    
+    for (const email of adminEmails) {
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (!existingUser) {
+        const adminUser = new User({
+          email: email.toLowerCase(),
+          role: 'admin'
+        });
+        await adminUser.save();
+        console.log(`Created admin user: ${email}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error seeding admin users:', error);
+  }
+};
+
 connectDB();
 
 // --- CORS Configuration ---
@@ -75,36 +103,7 @@ app.use(cors(corsOptions));
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-    // --- Simple Password Authentication Middleware ---
-    const requireAuth = (req, res, next) => {
-      // This is a special, unprotected route the frontend can use to verify a password.
-      if (req.path === '/api/auth/verify') {
-        const { password } = req.body;
-        if (password && password === process.env.SITE_PASSWORD) {
-          return res.status(200).json({ msg: 'Password is correct.' });
-        } else {
-          return res.status(401).json({ msg: 'Incorrect password.' });
-        }
-      }
 
-      // For all other API routes, check for the authorization header.
-      const providedPassword = req.headers.authorization;
-      const secretPassword = process.env.SITE_PASSWORD;
-
-      if (!secretPassword) {
-        console.error('FATAL: SITE_PASSWORD is not set in the .env file.');
-        return res.status(500).json({ msg: 'Server configuration error.' });
-      }
-
-      if (providedPassword && providedPassword === secretPassword) {
-        next(); // Password is correct, proceed to the actual route.
-      } else {
-        res.status(401).json({ msg: 'Unauthorized' }); // Block the request.
-      }
-    };
-
-    // Apply the authentication middleware to all /api routes.
-    app.use('/api', requireAuth);
 
 // +++ Statically serve the uploads directory +++
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -114,17 +113,18 @@ app.get('/api', (req, res) => {
   res.send('API is running...');
 });
 
-// +++ Use Project routes +++
-app.use('/api/projects', projectRoutes);
-// +++ Use Quote routes +++
-app.use('/api/quotes', quoteRoutes);
-// +++ Use InstructionLog routes +++
-app.use('/api/instruction-logs', instructionLogRoutes);
-// +++ Use SurveyorFeedback routes +++
-app.use('/api/surveyor-feedback', surveyorFeedbackRoutes); // *** ADD THIS LINE ***
+// Apply JWT protection to all data-related routes
+app.use('/api/projects', protect, projectRoutes);
+app.use('/api/quotes', protect, quoteRoutes);
+app.use('/api/instruction-logs', protect, instructionLogRoutes);
+app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
+app.use('/api/documents', protect, documentRoutes);
+app.use('/api/programme-events', protect, programmeEventRoutes);
+
+// Public routes
 app.use('/api/uploads', uploadRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/programme-events', programmeEventRoutes);
+app.use('/api/auth', authRoutes);
+
 
 // --- Start Server ---\n
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

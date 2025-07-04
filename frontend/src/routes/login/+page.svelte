@@ -1,54 +1,118 @@
 <script lang="ts">
-  import { verifyAndSetPassword } from '$lib/stores/authStore';
+  import { authStore } from '$lib/stores/authStore';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
 
+  let email = '';
   let password = '';
   let errorMessage = '';
   let isLoading = false;
-  let isCheckingAuth = true; // Start in a checking state to prevent content flash
+  let isRegistering = false; // Toggle between login and register
 
-  onMount(async () => {
-    // Check if the user is already authenticated from a previous session
-    const storedPassword = localStorage.getItem('site_password');
-    if (storedPassword) {
-      const success = await verifyAndSetPassword(storedPassword);
-      if (success) {
-        // If the stored password is valid, redirect to the main app.
-        // `replaceState` prevents the user from using the back button to get to the login page.
-        goto('/', { replaceState: true }); 
-      } else {
-        // Stored password was wrong (e.g., changed on backend), so allow user to try again.
-        isCheckingAuth = false; 
+  // If a user who is already logged in navigates to this page,
+  // redirect them to the main application.
+  onMount(() => {
+    const unsubscribe = authStore.subscribe(state => {
+      if (state.isAuthenticated) {
+        goto('/', { replaceState: true });
       }
-    } else {
-      // No stored password, so show the login form.
-      isCheckingAuth = false;
-    }
+    });
+
+    // Clean up the subscription when the component is destroyed.
+    return unsubscribe;
   });
 
   async function handleLogin() {
     isLoading = true;
     errorMessage = '';
-    const success = await verifyAndSetPassword(password);
+    
+    const result = await authStore.login(email, password);
+    
     isLoading = false;
 
-    if (success) {
-      // On successful login, redirect to the homepage.
-      goto('/');
+    if (result.success) {
+      goto('/'); // On success, redirect to the homepage.
     } else {
-      errorMessage = 'The password provided was incorrect. Please try again.';
+      errorMessage = result.error || 'An unknown error occurred.';
+    }
+  }
+
+  async function handleRegister() {
+    isLoading = true;
+    errorMessage = '';
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Registration successful, now login automatically
+        const loginResult = await authStore.login(email, password);
+        if (loginResult.success) {
+          goto('/');
+        } else {
+          errorMessage = 'Registration successful, but login failed. Please try logging in.';
+        }
+      } else {
+        errorMessage = data.msg || 'Registration failed.';
+      }
+    } catch (error) {
+      errorMessage = 'Network error occurred.';
+    }
+    
+    isLoading = false;
+  }
+
+  async function handleSubmit() {
+    if (isRegistering) {
+      await handleRegister();
+    } else {
+      await handleLogin();
     }
   }
 </script>
 
-<!-- Only show the login form if we are NOT in the middle of an auth check -->
-{#if !isCheckingAuth}
 <div class="login-container">
   <div class="login-box">
-    <h1>Enter Password</h1>
-    <p>Please enter the site password to continue.</p>
-    <form on:submit|preventDefault={handleLogin}>
+    <h1>{isRegistering ? 'Create Account' : 'Login'}</h1>
+    <p>{isRegistering ? 'Create your account to access the system.' : 'Please enter your credentials to continue.'}</p>
+    
+    <div class="toggle-buttons">
+      <button 
+        type="button" 
+        class="toggle-btn {!isRegistering ? 'active' : ''}"
+        on:click={() => { isRegistering = false; errorMessage = ''; }}
+        disabled={isLoading}
+      >
+        Login
+      </button>
+      <button 
+        type="button" 
+        class="toggle-btn {isRegistering ? 'active' : ''}"
+        on:click={() => { isRegistering = true; errorMessage = ''; }}
+        disabled={isLoading}
+      >
+        Create Account
+      </button>
+    </div>
+
+    <form on:submit|preventDefault={handleSubmit}>
+      <div class="input-group">
+        <label for="email">Email</label>
+        <input 
+          type="email" 
+          id="email"
+          bind:value={email}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
       <div class="input-group">
         <label for="password">Password</label>
         <input 
@@ -57,6 +121,7 @@
           bind:value={password}
           required
           disabled={isLoading}
+          placeholder={isRegistering ? 'Use your role-specific password' : ''}
         />
       </div>
       
@@ -66,15 +131,14 @@
 
       <button type="submit" class="login-button" disabled={isLoading}>
         {#if isLoading}
-          <span>Verifying...</span>
+          <span>{isRegistering ? 'Creating Account...' : 'Logging In...'}</span>
         {:else}
-          <span>Unlock</span>
+          <span>{isRegistering ? 'Create Account' : 'Login'}</span>
         {/if}
       </button>
     </form>
   </div>
 </div>
-{/if}
 
 <style>
   .login-container {
@@ -154,5 +218,38 @@
     color: #d93025;
     margin-bottom: 1rem;
     font-size: 0.9rem;
+  }
+
+  .toggle-buttons {
+    display: flex;
+    margin-bottom: 2rem;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    background-color: #f8f9fa;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+
+  .toggle-btn:hover:not(:disabled) {
+    background-color: #e9ecef;
+  }
+
+  .toggle-btn.active {
+    background-color: #007bff;
+    color: white;
+  }
+
+  .toggle-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 </style>

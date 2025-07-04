@@ -22,6 +22,11 @@ const QuoteSchema = new Schema({
         required: [true, 'Project ID is required'],
         index: true // Index for faster lookups by project
     },
+    surveyor: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     discipline: {
         type: String,
         required: [true, 'Discipline is required'],

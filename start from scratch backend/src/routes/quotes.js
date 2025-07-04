@@ -17,6 +17,13 @@ router.get('/', async (req, res) => {
             filter.projectId = req.query.projectId;
         }
 
+        // --- Role-based filtering ---
+        // If the user is a surveyor, only show them their own quotes.
+        // Admins can see all quotes.
+        if (req.user.role === 'surveyor') {
+            filter.surveyor = req.user.id;
+        }
+
         // Consider adding sorting, e.g., .sort({ date: -1 })
         const quotes = await Quote.find(filter);
         res.json(quotes);
@@ -48,13 +55,8 @@ router.post('/', async (req, res) => {
         }
 
         const newQuote = new Quote({
-            projectId,
-            discipline,
-            organisation,
-            contactName,
-            lineItems,
-            instructionStatus,
-            ...rest // Add other optional fields from request body
+            ...req.body,
+            surveyor: req.user.id // Stamp the quote with the logged-in user's ID
         });
 
         // Total is calculated by pre-validate hook
