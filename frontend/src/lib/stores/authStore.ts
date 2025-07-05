@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 // Define the shape of the user object we'll get from the JWT
 interface User {
   id: string;
+  email: string;
   role: string;
 }
 
