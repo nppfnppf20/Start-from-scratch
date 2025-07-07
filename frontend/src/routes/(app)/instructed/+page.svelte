@@ -663,6 +663,7 @@
   /* Notes Button Styling */
   .notes-button {
     width: 100%;
+    max-width: 200px; /* Limit maximum width */
     padding: 10px;
     background-color: #f1f1f1;
     border: 1px solid #ddd;
@@ -671,8 +672,16 @@
     cursor: pointer;
     font-style: italic;
     color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Prevent wrapping */
+    min-height: 40px; /* Ensure consistent button height */
   }
 
+  .notes-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+  }
   /* Works Upload Button Styling (Button style) */
   .upload-button { /* Renamed from .works-upload-button for consistency? No, keep class, just change style */
     background-color: #3182ce; /* Blue background */
@@ -950,17 +959,6 @@
   }
 
   /* Notes & Works Section */
-  .notes-button {
-    width: 100%;
-    padding: 10px;
-    background-color: #f1f1f1;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    text-align: left;
-    cursor: pointer;
-    font-style: italic;
-    color: #555;
-  }
   .works-cell {
     display: flex;
     flex-direction: column;
