@@ -187,26 +187,29 @@
   // Reactive calculation for dates and weeks
   $: {
     const today = new Date();
-    // let earliestEventDate: Date | null = null; // No longer needed for start date
-
-    // Keep this logic if needed elsewhere, but not for start date calculation
-    /*
-    if ($currentProjectEvents.length > 0) {
-      const eventDates = $currentProjectEvents.map(event => parseISO(event.date));
-      earliestEventDate = min(eventDates);
-    }
-    */
-
-    // Determine start date: Always use today's date
-    // const potentialStartDate = earliestEventDate ? min([today, earliestEventDate]) : today; // Old logic
-    const potentialStartDate = today; // New logic: always start from today
     
-    // Ensure start date isn't recalculated when extending range, only on project/event changes
-    // We only calculate the *initial* start date reactively based on events/today.
-    // If timelineStartDate is already set (e.g., by initial load), don't change it unless project changes.
-    if (weeks.length === 0 || !$selectedProject) { // Initialize or reset on project change
+    // Determine start date: Always use today's date
+    const potentialStartDate = today;
+    
+    // Initialize or reset on project change
+    if (weeks.length === 0 || !$selectedProject) {
          timelineStartDate = startOfWeek(potentialStartDate, { weekStartsOn: 1 }); 
-         timelineEndDate = addMonths(timelineStartDate, 4); // Reset range on project change
+         timelineEndDate = addMonths(timelineStartDate, 4); // Default 4 months
+    }
+
+    // Auto-extend timeline based on manual programme events
+    if ($currentProjectManualEvents.length > 0) {
+      // Find the latest manual event date
+      const eventDates = $currentProjectManualEvents.map(event => parseISO(event.date));
+      const latestEventDate = eventDates.reduce((latest, current) => 
+        current > latest ? current : latest
+      );
+      
+      // If latest event is beyond current timeline end, extend timeline
+      if (latestEventDate > timelineEndDate) {
+        // Add 2 weeks buffer past the latest event
+        timelineEndDate = addWeeks(latestEventDate, 2);
+      }
     }
 
     // Generate weeks based on current timelineStartDate and timelineEndDate
