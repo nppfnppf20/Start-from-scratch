@@ -270,7 +270,44 @@
           </div>
         </div>
       </section>
-      
+
+      <!-- Section: Relevant Documents -->
+      <section class="form-section">
+        <h2>Relevant Documents</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="sharepointLink">SharePoint Link:</label>
+            {#if isSurveyor && $selectedProject.sharepointLink}
+              <!-- Show clickable link for surveyors when link exists -->
+              <div class="sharepoint-link-container">
+                <span 
+                  class="sharepoint-link-text"
+                  on:click={() => window.open($selectedProject.sharepointLink, '_blank')}
+                  title="Click to open SharePoint link"
+                >
+                  {$selectedProject.sharepointLink}
+                </span>
+              </div>
+            {:else if isSurveyor}
+              <!-- Show no link message for surveyors when no link -->
+              <div class="sharepoint-link-container">
+                <span class="no-link-text">No upload link configured</span>
+              </div>
+            {:else}
+              <!-- Show editable input for admins -->
+              <input 
+                type="url" 
+                id="sharepointLink" 
+                name="sharepointLink" 
+                bind:value={$selectedProject.sharepointLink} 
+                placeholder="https://example.sharepoint.com/..."
+                readonly={isSurveyor}
+              />
+            {/if}
+          </div>
+        </div>
+      </section>
+
       <!-- Section: Equipment Specification (Solar) -->
       <section class="form-section">
         <h2>Equipment Specification (Solar)</h2>
@@ -407,9 +444,9 @@
         </div>
       </section>
       
-      {#if !isSurveyor}
-        <button type="submit" class="save-button">Save Project Information</button>
-      {/if}
+      <div class="form-actions">
+        <button type="submit" class="save-button" disabled={isSurveyor}>Save Changes</button>
+      </div>
     </form>
   {:else}
     <div class="no-project-selected">
@@ -645,5 +682,52 @@
 
   .read-only-notice p {
     margin: 0;
+  }
+
+  /* SharePoint Link Styling */
+  .sharepoint-link-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .sharepoint-link-text {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .sharepoint-link-text:hover {
+    text-decoration: underline;
+  }
+
+  .no-link-text {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.9rem;
+  }
+
+  /* URL input styling */
+  input[type="url"] {
+    padding: 0.75rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 1rem;
+    width: 100%;
+    font-family: inherit;
+    background-color: #fff;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+
+  input[type="url"]:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 1px #4299e1;
+    outline: none;
+  }
+
+  input[type="url"][readonly] {
+    background-color: #f9fafb;
+    color: #6b7280;
   }
 </style>

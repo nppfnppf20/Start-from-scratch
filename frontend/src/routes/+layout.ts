@@ -21,8 +21,8 @@ export const load: LayoutLoad = async ({ url }) => {
     if (!isAuthenticated && !isLoginPage) {
         // If the user is not logged in and not trying to access the login page,
         // send them to the login page.
-        throw redirect(307, '/login');
-    }
+            throw redirect(307, '/login');
+        }
 
     if (isAuthenticated && isLoginPage) {
         // If a logged-in user tries to visit the login page,
@@ -44,6 +44,6 @@ export const load: LayoutLoad = async ({ url }) => {
             // For now, we'll allow the app to load so we can see other UI.
         }
     }
-
+    
     return {}; // Return an empty object as we are managing state via stores.
 }; 

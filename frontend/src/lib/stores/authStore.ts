@@ -72,12 +72,12 @@ function createAuthStore() {
    async function login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
      if (!browser) return { success: false, error: 'Browser not available' };
 
-     try {
+      try {
        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ email, password }),
-       });
+        });
 
         if (response.ok) {
         const data = await response.json();
@@ -90,11 +90,11 @@ function createAuthStore() {
           return { success: true };
         }
         return { success: false, error: 'Invalid token received.' };
-      } else {
+        } else {
         const errorData = await response.json();
         return { success: false, error: errorData.msg || 'Invalid credentials.' };
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error('Login error:', error);
       return { success: false, error: 'A network or server error occurred.' };
     }

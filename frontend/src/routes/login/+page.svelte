@@ -14,7 +14,7 @@
   onMount(() => {
     const unsubscribe = authStore.subscribe(state => {
       if (state.isAuthenticated) {
-        goto('/', { replaceState: true });
+        goto('/', { replaceState: true }); 
       }
     });
 
@@ -54,7 +54,7 @@
         // Registration successful, now login automatically
         const loginResult = await authStore.login(email, password);
         if (loginResult.success) {
-          goto('/');
+      goto('/');
         } else {
           errorMessage = 'Registration successful, but login failed. Please try logging in.';
         }
