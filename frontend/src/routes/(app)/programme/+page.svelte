@@ -22,7 +22,7 @@
   import { derived } from 'svelte/store';
   import { startOfWeek, addMonths, addWeeks, format, isBefore, min, parseISO, isWithinInterval, endOfWeek, compareAsc } from 'date-fns';
   import TimelineKeyDateModal from '$lib/components/TimelineKeyDateModal.svelte'; // Import the modal
-  import HoldUpNotesDisplayModal from '$lib/components/HoldUpNotesDisplayModal.svelte';
+  import NotesDisplayModal from '$lib/components/NotesDisplayModal.svelte';
   
   // CSS imports removed from here
 
@@ -257,8 +257,10 @@
 
   // State for the hold-up notes display modal
   let showHoldUpNotesDisplayModal = false;
+  let showSurveyorNotesDisplayModal = false; // New state for surveyor notes modal
   let notesToDisplay = '';
   let orgNameToDisplay = '';
+  let modalType: 'holdUp' | 'surveyor' = 'holdUp'; // New state to track modal type
 
   // --- Modal Handlers ---
   function handleOpenKeyDateModal(weekDate: Date) {
@@ -324,7 +326,16 @@
   function openHoldUpNotesDisplayModal(notes: string, orgName: string) {
     notesToDisplay = notes;
     orgNameToDisplay = orgName;
+    modalType = 'holdUp';
     showHoldUpNotesDisplayModal = true;
+  }
+
+  // Function to open the surveyor notes display modal
+  function openSurveyorNotesDisplayModal(notes: string, orgName: string) {
+    notesToDisplay = notes;
+    orgNameToDisplay = orgName;
+    modalType = 'surveyor';
+    showSurveyorNotesDisplayModal = true;
   }
 
   // Reactive calculation for quotes belonging to the selected project
@@ -411,6 +422,16 @@
                 <td class="sticky-col data-cell surveyor-name">
                     <div style="font-weight: bold; font-size: 0.9em; margin-bottom: 2px; display: flex; align-items: center;">
                       <span>{quote.discipline}</span>
+                      <!-- Surveyor Notes Icon -->
+                      {#if log && log.operationalNotes && log.operationalNotes.trim() !== ''}
+                        <svg on:click={() => openSurveyorNotesDisplayModal(log.operationalNotes || '', quote.organisation)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                          <title>Surveyor Notes: {log.operationalNotes}</title>
+                          <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z"/>
+                          <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V11h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
+                          <path d="M6 4h6v1H6V4zm0 3h6v1H6V7zm0 3h6v1H6v-1z"/>
+                        </svg>
+                      {/if}
+                      <!-- Hold-up Icon -->
                       {#if log && log.holdUpNotes && log.holdUpNotes.trim() !== ''}
                         <svg on:click={() => openHoldUpNotesDisplayModal(log.holdUpNotes || '', quote.organisation)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
                           <title>Hold Up: {log.holdUpNotes}</title>
@@ -475,10 +496,20 @@
   {/if}
 
   {#if showHoldUpNotesDisplayModal}
-    <HoldUpNotesDisplayModal 
+    <NotesDisplayModal 
       notes={notesToDisplay}
       organisationName={orgNameToDisplay}
       on:close={() => showHoldUpNotesDisplayModal = false}
+      modalType="holdUp"
+    />
+  {/if}
+
+  {#if showSurveyorNotesDisplayModal}
+    <NotesDisplayModal 
+      notes={notesToDisplay}
+      organisationName={orgNameToDisplay}
+      on:close={() => showSurveyorNotesDisplayModal = false}
+      modalType="surveyor"
     />
   {/if}
 </div>
@@ -800,6 +831,12 @@
   .hold-up-icon {
     flex-shrink: 0; /* Prevents the icon from shrinking */
     color: #f59e0b; /* A nice orange color */
+    cursor: pointer; /* Make it look clickable */
+  }
+
+  .notes-icon {
+    flex-shrink: 0; /* Prevents the icon from shrinking */
+    color: #007bff; /* A nice blue color for surveyor notes */
     cursor: pointer; /* Make it look clickable */
   }
 

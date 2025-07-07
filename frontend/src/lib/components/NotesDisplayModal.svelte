@@ -3,22 +3,27 @@
 
   export let notes = '';
   export let organisationName = 'Surveyor';
+  export let modalType: 'holdUp' | 'surveyor' = 'holdUp'; // New prop to determine modal type
 
   const dispatch = createEventDispatcher();
 
   function closeModal() {
     dispatch('close');
   }
+
+  // Dynamic title and prefix based on modal type
+  $: modalTitle = modalType === 'holdUp' ? `Hold Up Notes for ${organisationName}` : `Surveyor Notes for ${organisationName}`;
+  $: notesPrefix = modalType === 'holdUp' ? 'Hold Up:' : 'Surveyor Notes:';
 </script>
 
 <div class="modal-backdrop" on:click={closeModal}>
   <div class="modal-content" on:click|stopPropagation>
     <div class="modal-header">
-      <h2>Hold Up Notes for {organisationName}</h2>
+      <h2>{modalTitle}</h2>
       <button on:click={closeModal} class="close-button">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="hold-up-prefix">Hold Up:</p>
+      <p class="notes-prefix">{notesPrefix}</p>
       <div class="notes-display">
         {notes}
       </div>
@@ -84,7 +89,7 @@
     margin-bottom: 1.5rem;
   }
   
-  .hold-up-prefix {
+  .notes-prefix {
     font-weight: bold;
     font-size: 1.1rem;
     color: #374151;
