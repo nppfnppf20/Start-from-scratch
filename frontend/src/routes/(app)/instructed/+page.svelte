@@ -909,12 +909,7 @@
     color: #718096;
   }
 
-  /* --- Scroll Buttons CSS (Copied from quotes page) --- */
-  /* .table-scroll-wrapper { ... } */ 
-  /* .scroll-btn { ... } */
-  /* .scroll-btn-left { ... } */
-  /* .scroll-btn-right { ... } */
-  /* --- Keeping these commented out as HTML was not added --- */
+
 
   .date-input-group {
     display: flex;
@@ -1161,5 +1156,46 @@
     background-color: var(--status-client-reviewing-bg);
     color: var(--status-client-reviewing-color);
   }
+
+  /* --- Table Scroll Wrapper and Buttons --- */
+  .table-scroll-wrapper {
+    position: relative; /* Context for absolute positioning of buttons */
+    margin-bottom: 2rem; /* Keep space below */
+  }
+
+  .scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
+    border: 1px solid #cbd5e0;
+    border-radius: 50%; /* Circle */
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
+    cursor: pointer;
+    color: #4a5568;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: inline-flex; /* Use inline-flex */
+    align-items: center;    /* Flexbox: Vertically center content */
+    justify-content: center; /* Flexbox: Horizontally center content */
+    padding: 0; /* Remove padding if flex is centering */
+  }
+
+  .scroll-btn:hover {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  }
+
+  .scroll-btn-left {
+    left: -18px; /* Position halfway outside the container */
+  }
+
+  .scroll-btn-right {
+    right: -18px; /* Position halfway outside the container */
+  }
+  /* ------------------------------------------- */
 
 </style> 
