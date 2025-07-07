@@ -344,7 +344,8 @@
     
     <div class="programme-content timeline-view">
       {#if $instructedSurveyors.length > 0 || $currentProjectManualEvents.length > 0}
-        <table class="timeline-table">
+        <div class="table-scroll-container">
+          <table class="timeline-table">
           <thead>
              <!-- Week Header Row -->
              <tr>
@@ -446,6 +447,7 @@
             {/each}
           </tbody>
         </table>
+        </div>
       {:else}
          <p>No instructed surveyors or key dates found for this project.</p>
       {/if}
@@ -508,20 +510,33 @@
     background-color: #fff;
     border-radius: 5px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    overflow: auto; /* Allow scrolling for the table */
+    overflow: hidden; /* Change from 'auto' to 'hidden' */
     min-height: 0; 
     padding: 0; /* Remove padding here, add to inner elements if needed */
   }
 
   .timeline-view {
      padding: 1rem; /* Add padding back */
+     height: 100%; /* Make it fill the container */
+     display: flex;
+     flex-direction: column;
+  }
+
+  /* Add the new table scroll container */
+  .table-scroll-container {
+    overflow: auto; /* This becomes the scrolling element */
+    flex-grow: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    min-height: 300px; /* Ensure container has minimum height */
   }
 
   .timeline-table {
-    width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Helps with column widths */
-    margin-bottom: 1rem;
+    table-layout: auto; /* Change from fixed to auto for flexible columns */
+    margin-bottom: 0; /* Remove margin since container handles spacing */
+    min-width: 800px; /* Ensure table has minimum width for columns to be visible */
+    width: max-content; /* Let table size to its content */
   }
 
   .timeline-table th, .timeline-table td {
@@ -586,6 +601,7 @@
   }
 
   .week-col {
+     min-width: 100px; /* Ensure minimum width */
      width: 100px; 
   }
 
