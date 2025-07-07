@@ -171,8 +171,6 @@
               <th>Total (excl. VAT)</th>
               <th>Instruction Status</th>
               <th>Actions</th>
-              <th>Quotes</th>
-              <th>Instruction</th>
             </tr>
           </thead>
           <tbody>
@@ -223,20 +221,6 @@
                     title="Edit Quote"
                     on:click={() => openEditQuoteModal(quote)} 
                   >Edit</button>
-                </td>
-                <td class="action-cell icon-cell">
-                  <button 
-                    class="action-btn icon-btn" 
-                    title="Manage Quote Documents"
-                    on:click={() => openDocumentUploadModal(quote, 'quote')}
-                  >📎</button>
-                </td>
-                <td class="action-cell icon-cell">
-                  <button 
-                    class="action-btn icon-btn" 
-                    title="Manage Instruction Documents"
-                    on:click={() => openDocumentUploadModal(quote, 'instruction')}
-                  >📎</button>
                 </td>
               </tr>
             {/each}

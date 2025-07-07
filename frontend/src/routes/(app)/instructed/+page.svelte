@@ -218,20 +218,28 @@
 }
 
   async function handleDeleteCustomDate(quoteId: string, customDateId: string) {
-    if (!browser) return;
-
-    const existingLog = findLog(quoteId);
-    if (!existingLog || !existingLog.customDates) return;
-
-    // Optional: Add confirmation dialog here
-    if (!confirm('Are you sure you want to delete this custom date?')) {
+    console.log('X button clicked! Attempting to delete custom date:', { quoteId, customDateId });
+    
+    if (!browser) {
+      console.log('Browser check failed');
       return;
     }
+
+    const existingLog = findLog(quoteId);
+    if (!existingLog || !existingLog.customDates) {
+      console.log('No log or custom dates found');
+      return;
+    }
+
     console.log(`Deleting custom date ${customDateId} for quote ${quoteId}`);
 
+    try {
     const updatedDatesArray = existingLog.customDates.filter(date => date.id !== customDateId);
-
     await upsertInstructionLog(quoteId, { customDates: updatedDatesArray });
+      console.log(`Successfully deleted custom date ${customDateId}`);
+    } catch (error) {
+      console.error(`Error deleting custom date ${customDateId}:`, error);
+    }
   }
 
   // Helper to safely format date strings (YYYY-MM-DD)
@@ -275,8 +283,6 @@
               <th>Dates</th>
               <th>Hold Ups</th>
               <th>Notes</th>
-              <th>Works</th>
-              <th>Custom Dates</th>
             </tr>
           </thead>
           <tbody>
@@ -340,50 +346,11 @@
                         title="Set report draft date"
                     />
                   </div>
-                </td>
-                <td>
-                  <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)} title="Edit hold up notes">
-                    {getNotesPreview(log?.holdUpNotes)}
-                  </button>
-                </td>
-                <td>
-                   <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit operational notes">
-                        {getNotesPreview(log?.operationalNotes)}
-                   </button>
-                </td>
-                <td>
-                    <button class="upload-button" on:click={() => openDocumentUploadModal(quote)} title="Manage uploaded documents">
-                        Manage Uploads ({log?.uploadedWorks?.length || 0})
-                    </button>
-                    {#if log?.uploadedWorks && log.uploadedWorks.length > 0}
-                      <ul class="uploaded-works-preview">
-                        {#each log.uploadedWorks as work (work.fileName + work.dateUploaded + work.version)}
-                          <li>
-                            <span class="work-title">{work.title || work.fileName}</span> 
-                            <span class="work-version">(v{work.version || 'N/A'})</span>
-                            {#if work.description}
-                              <span class="work-description"> - {work.description}</span>
-                            {/if}
-                            {#if work.url}
-                                <a href={work.url} target="_blank" rel="noopener noreferrer" title="Open file" class="work-link">🔗</a>
-                            {/if}
-                            <button 
-                              class="delete-work-btn" 
-                              title="Delete this upload"
-                              on:click={() => { /* TODO: Implement delete logic */ console.warn('Delete button clicked for:', work); }}
-                            >
-                              🗑️
-                            </button>
-                          </li>
-                        {/each}
-                      </ul>
-                    {/if}
-                </td>
-                 <td>
-                   <div class="custom-dates-cell">
-                     {#if log?.customDates && log.customDates.length > 0}
-                       {#each log.customDates as customDate (customDate.id)}
-                         <div class="custom-date-entry">
+                  <!-- Show new custom date inputs when adding -->
+                  {#if log?.customDates && log.customDates.length > 0}
+                    {#each log.customDates as customDate (customDate.id)}
+                                             <div class="date-cell-group custom-date-group">
+                         <div class="custom-date-title-row">
                            <input
                              type="text"
                              placeholder="Date Title"
@@ -392,9 +359,11 @@
                              on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'title', e.currentTarget.value)}
                              title="Edit custom date title"
                            />
+                         </div>
+                         <div class="custom-date-input-row">
                            <input
                              type="date"
-                             class="custom-date-input"
+                             class="date-input"
                              value={formatDateForInput(customDate.date)}
                              on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'date', e.currentTarget.value)}
                              title="Edit custom date"
@@ -407,16 +376,27 @@
                              &times;
                            </button>
                          </div>
-                       {/each}
-                    {/if}
-                    <button 
-                        class="add-custom-date-button"
-                        on:click={() => handleAddCustomDate(quote.id)}
-                        title="Add a new custom date entry"
-                     >
-                       + Add Date
-                    </button>
-                  </div>
+                       </div>
+                    {/each}
+                  {/if}
+                  
+                  <button 
+                      class="add-custom-date-button"
+                      on:click={() => handleAddCustomDate(quote.id)}
+                      title="Add a new custom date entry"
+                   >
+                     + Add Date
+                  </button>
+                </td>
+                <td>
+                  <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)} title="Edit hold up notes">
+                    {getNotesPreview(log?.holdUpNotes)}
+                  </button>
+                </td>
+                <td>
+                   <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit operational notes">
+                        {getNotesPreview(log?.operationalNotes)}
+                   </button>
                 </td>
               </tr>
             {/each}
@@ -838,6 +818,65 @@
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 
+  /* Custom Date Groups in Dates Column */
+  .custom-date-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.5rem;
+    background-color: #f8fafc;
+  }
+
+  .custom-date-title-row {
+    margin-bottom: 0.5rem;
+  }
+
+  .custom-date-title-input {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background-color: #fff;
+  }
+
+  .custom-date-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .custom-date-input-row .date-input {
+    flex-grow: 1;
+  }
+
+  .delete-custom-date-button {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .delete-custom-date-button:hover {
+    background: #fecaca;
+    color: #b91c1c;
+  }
+
+  /* Style for the info text in Custom Dates column */
+  .custom-dates-info {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.8rem;
+  }
+
   .delete-custom-date-btn {
       background: none;
       border: none;
@@ -891,17 +930,7 @@
     flex-grow: 1;
   }
   
-  .custom-date-group {
-    display: flex;
-    gap: 4px;
-  }
 
-  .custom-date-title-input {
-    flex-basis: 50%;
-  }
-  .custom-date-input {
-    flex-basis: 50%;
-  }
   .delete-custom-date-btn, .add-custom-date-btn {
     padding: 4px 8px;
     border: none;
