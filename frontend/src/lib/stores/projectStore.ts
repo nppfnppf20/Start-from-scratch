@@ -1,15 +1,59 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment'; // Import browser check
+import { getAuthTokenHeader } from './authStore';
 
 // Define the base URL for your API
-const API_BASE_URL = 'http://localhost:5000/api'; // Adjust if your backend runs elsewhere
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// --- Helper Function to map _id to id recursively ---
+function mapMongoId<T>(item: any): T {
+  if (!item || typeof item !== 'object') return item;
+
+  // Handle arrays
+  if (Array.isArray(item)) {
+    // Ensure we return an array of the correct mapped type
+    return item.map(mapMongoId) as unknown as T;
+  }
+
+  // Handle single objects
+  const newItem: any = {};
+  let idFieldSet = false;
+  for (const key in item) {
+      if (Object.prototype.hasOwnProperty.call(item, key)) { // Safer iteration
+          if (key === '_id' && item._id != null) { // Check for null/undefined _id
+              newItem['id'] = item._id.toString(); // Ensure it's a string if ObjectId
+              idFieldSet = true;
+          } else if (typeof item[key] === 'object' && item[key] !== null) {
+              // Recursively map nested objects/arrays
+              newItem[key] = mapMongoId(item[key]);
+          } else {
+              // Copy primitive values directly
+              newItem[key] = item[key];
+          }
+      }
+  }
+   // If the original object had _id but the 'id' key wasn't explicitly set above
+   // (e.g., if 'id' was already a property), ensure 'id' from '_id' takes precedence if needed,
+   // or simply ensure it's added if '_id' exists and 'id' wasn't processed.
+   if (item._id != null && !idFieldSet) {
+       newItem.id = item._id.toString();
+   } else if (item._id != null && newItem.id == null) {
+       // If _id existed and id is somehow null/undefined after loop, set it.
+       newItem.id = item._id.toString();
+   }
+
+
+  return newItem as T;
+}
 
 // --- Project Interface and Store ---
 interface Project {
   id: string;
   name: string;
   // Basic Project Information
-  clientName?: string;
+  client?: string; // Umbrella client name from the modal
+  teamMembers?: string[]; // TRP employee initials from the modal
+  clientOrSpvName?: string; // Specific client/SPV name from the main form
   detailedDescription?: string;
   proposedUseDuration?: number;
   projectType?: 'solar' | 'bess' | 'solarBess' | 'other';
@@ -45,6 +89,10 @@ interface Project {
   atvUse?: 'yes' | 'no';
   additionalNotes?: string;
   invoicingDetails?: string;
+  
+  // SharePoint Document Link
+  sharepointLink?: string;
+  
   createdAt?: string; // From timestamps
   updatedAt?: string; // From timestamps
 }
@@ -53,6 +101,7 @@ interface Project {
 // Initialize stores with empty/null values initially
 export const projects = writable<Project[]>([]);
 export const selectedProject = writable<Project | null>(null);
+export const allQuotes = writable<Quote[]>([]); // New master quote store
 
 // Function to load projects from the API
 export async function loadProjects() {
@@ -61,7 +110,9 @@ export async function loadProjects() {
 
   try {
     console.log('Fetching projects from API...');
-    const response = await fetch(`${API_BASE_URL}/projects`);
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: getAuthTokenHeader()
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -72,6 +123,9 @@ export async function loadProjects() {
 
     console.log('Projects fetched:', fetchedProjects);
     projects.set(fetchedProjects);
+
+    // New call to load all quotes
+    await loadAllQuotes();
 
     // Optionally, automatically select the first project if the list isn't empty
     // But only if no project is currently selected
@@ -88,6 +142,21 @@ export async function loadProjects() {
     // Handle error appropriately in the UI if needed
     projects.set([]); // Reset projects on error
     selectedProject.set(null); // Clear selection on error
+    allQuotes.set([]); // Clear all quotes on error
+  }
+}
+
+// New function to fetch all quotes
+export async function loadAllQuotes() {
+  if (!browser) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/quotes`, { headers: getAuthTokenHeader() });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const quotes = await response.json();
+    allQuotes.set(quotes.map(mapMongoId));
+  } catch (error) {
+    console.error("Failed to load all quotes:", error);
+    allQuotes.set([]);
   }
 }
 
@@ -105,6 +174,7 @@ export async function addProject(projectData: { name: string; client?: string; t
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
       },
       body: JSON.stringify(projectData),
     });
@@ -148,6 +218,7 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
       },
       body: JSON.stringify(dataToSend),
     });
@@ -178,40 +249,55 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
 }
 
 // Function to select a project - Fetches full details
-export async function selectProjectById(id: string | null) { // Allow null to clear selection
+export async function selectProjectById(id: string | null) {
    if (!browser) return false;
    if (!id) { // Handle explicit clearing of selection
         console.log('Clearing project selection.');
         selectedProject.set(null);
+        // Clear related data when project is deselected
+        currentProjectQuotes.set([]);
+        currentInstructionLogs.set([]);
+        surveyorFeedbacks.set([]); // Clear feedback too
+        allProgrammeEvents.set([]); // *** CLEAR PROGRAMME EVENTS ***
         return true;
    }
 
-
    console.log(`Selecting project by ID: ${id}`);
-   // Always fetch full details for the selected project to ensure consistency
    try {
-       const response = await fetch(`${API_BASE_URL}/projects/${id}`);
+       const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+        headers: getAuthTokenHeader()
+       });
        if (!response.ok) {
             const errorData = await response.json().catch(() => ({message: 'Failed to parse error response'}));
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || errorData.message || 'Failed to fetch project details'}`);
        }
        let projectDetails = await response.json();
+       projectDetails = mapMongoId<Project>(projectDetails); // Use helper here too for consistency
 
-       if (!projectDetails) { // Handle case where API returns 200 OK but null/empty body for some reason
+       if (!projectDetails) {
            throw new Error('API returned empty response for project details');
        }
 
-       projectDetails = { ...projectDetails, id: projectDetails._id }; // Map _id
        selectedProject.set(projectDetails);
        console.log('Full project details loaded and selected:', projectDetails);
 
-       // +++ Now, load the quotes for this newly selected project +++
-       await loadQuotesForProject(id);
+       // Load all related data in parallel for efficiency
+       await Promise.all([
+           loadQuotesForProject(id),
+           loadInstructionLogsForProject(id),
+           loadSurveyorFeedback(id),
+           loadProgrammeEvents(id) // Load programme events alongside other data
+       ]);
 
        return true;
    } catch (error) {
        console.error(`Failed to fetch details for project ${id}:`, error);
        selectedProject.set(null); // Clear selection on error
+       // Clear all related data on error
+       currentProjectQuotes.set([]);
+       currentInstructionLogs.set([]);
+       surveyorFeedbacks.set([]);
+       allProgrammeEvents.set([]); // Ensure programme events are cleared on error
        alert(`Error loading project details: ${error}`);
        return false;
    }
@@ -245,6 +331,7 @@ export async function deleteProject(projectId: string) {
   try {
       const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: 'DELETE',
+          headers: getAuthTokenHeader()
       });
 
       if (!response.ok) {
@@ -278,8 +365,9 @@ export async function deleteProject(projectId: string) {
 
 // --- Quote Interface and Store ---
 export interface LineItem {
-  description: string;
-  cost: number;
+	item?: string;
+	description: string;
+	cost: number;
 }
 
 export type InstructionStatus = 'pending' | 'will not be instructed' | 'partially instructed' | 'instructed';
@@ -292,13 +380,12 @@ export interface Quote {
   organisation: string;
   contactName: string;
   email?: string;
+  phoneNumber?: string;
   lineItems: LineItem[];
   total: number;
   instructionStatus: InstructionStatus;
   partiallyInstructedTotal?: number;
   additionalNotes?: string;
-  status?: string;
-  date?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -306,6 +393,43 @@ export interface Quote {
 // --- Quote Store --- 
 // Store quotes only for the *currently selected* project
 export const currentProjectQuotes = writable<Quote[]>([]);
+
+// --- Derived Stores for Dropdown Options ---
+export const uniqueDisciplines = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allDisciplines = $allQuotes.map(q => q.discipline);
+    return [...new Set(allDisciplines)].sort();
+  }
+);
+
+export const uniqueSurveyTypes = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allSurveyTypes = $allQuotes.map(q => q.surveyType).filter(st => st); // Filter out empty/null values
+    return [...new Set(allSurveyTypes as string[])].sort();
+  }
+);
+
+export const uniqueOrganisations = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allOrganisations = $allQuotes.map(q => q.organisation);
+    return [...new Set(allOrganisations)].sort();
+  }
+);
+
+export const uniqueLineItemItems = derived(
+  allQuotes,
+  ($allQuotes) => {
+    const allItems = $allQuotes
+      .flatMap(q => q.lineItems) // Get all line items from all quotes
+      .map(li => li.item)       // Get the 'item' from each line item
+      .filter(item => item);     // Filter out any null/undefined/empty strings
+    
+    return [...new Set(allItems as string[])].sort(); // Create a unique, sorted list
+  }
+);
 
 // --- Quote Functions --- 
 
@@ -318,7 +442,9 @@ async function loadQuotesForProject(projectId: string | null) {
 
   try {
     console.log(`Fetching quotes for project: ${projectId}`);
-    const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`);
+    const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`, {
+      headers: getAuthTokenHeader()
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -350,7 +476,10 @@ export async function addQuote(quoteData: Omit<Quote, 'id' | 'total' | 'createdA
   try {
     const response = await fetch(`${API_BASE_URL}/quotes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
+      },
       body: JSON.stringify(quoteData),
     });
 
@@ -381,7 +510,10 @@ export async function updateQuote(quoteId: string, updateData: Partial<Omit<Quot
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
+      },
       body: JSON.stringify(updateData),
     });
 
@@ -433,6 +565,7 @@ export async function deleteQuote(quoteId: string) {
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'DELETE',
+      headers: getAuthTokenHeader()
     });
 
     if (!response.ok) {
@@ -453,7 +586,7 @@ export async function deleteQuote(quoteId: string) {
 }
 
 // --- Review Interface and Store ---
-export type WorkStatus = 'in progress' | 'completed' | 'not started';
+export type WorkStatus = 'in progress' | 'completed' | 'not started' | 'TRP Reviewing' | 'Client reviewing';
 
 // New interface for uploaded work details
 export interface UploadedWork {
@@ -617,49 +750,217 @@ export interface ProgrammeEvent {
 }
 
 // Store for all programme events
-const initialProgrammeEvents: ProgrammeEvent[] = [
-    // Add initial dummy events if needed, linking to projectIds
-    {
-        id: 'evt1',
-        projectId: 'project-1',
-        title: 'Initial Site Assessment Due',
-        date: '2023-11-15', // Example date - adjust if needed
-        color: '#007bff' // Blue
-    },
-    {
-        id: 'evt2',
-        projectId: 'project-1',
-        title: 'Planning Submission Target',
-        date: '2023-11-30',
-        color: '#ffc107' // Yellow
-    },
-     {
-        id: 'evt3',
-        projectId: 'project-2',
-        title: 'Grid Connection Offer Deadline',
-        date: '2023-12-10',
-        color: '#dc3545' // Red
+// const initialProgrammeEvents: ProgrammeEvent[] = [
+//     // Add initial dummy events if needed, linking to projectIds
+//     {
+//         id: 'evt1',
+//         projectId: 'project-1',
+//         title: 'Initial Site Assessment Due',
+//         date: '2023-11-15', // Example date - adjust if needed
+//         color: '#007bff' // Blue
+//     },
+//     {
+//         id: 'evt2',
+//         projectId: 'project-1',
+//         title: 'Planning Submission Target',
+//         date: '2023-11-30',
+//         color: '#ffc107' // Yellow
+//     },
+//      {
+//         id: 'evt3',
+//         projectId: 'project-2',
+//         title: 'Grid Connection Offer Deadline',
+//         date: '2023-12-10',
+//         color: '#dc3545' // Red
+//     }
+// ];
+
+// Store for programme events for the *currently selected* project
+// Initialize as empty, will be loaded from API
+export const allProgrammeEvents = writable<ProgrammeEvent[]>([]);
+
+// --- Programme Event API Functions ---
+
+// Function to load Programme Events for a specific project
+async function loadProgrammeEvents(projectId: string | null) {
+  if (!browser || !projectId) {
+    allProgrammeEvents.set([]); // Clear events if no project selected or not in browser
+    return;
+  }
+
+  try {
+    console.log(`Fetching programme events for project: ${projectId}`);
+    // Use the backend route we defined: GET /api/programme-events/project/:projectId
+    const response = await fetch(`${API_BASE_URL}/programme-events/project/${projectId}`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to fetch programme events'}`);
     }
-];
+    let fetchedEvents: any[] = await response.json();
 
-export const allProgrammeEvents = writable<ProgrammeEvent[]>(initialProgrammeEvents);
+    // Map _id to id using the existing helper function
+    const mappedEvents = fetchedEvents.map(event => mapMongoId<ProgrammeEvent>(event));
 
-export function addProgrammeEvent(event: Omit<ProgrammeEvent, 'id'>) {
-  // Use a simple timestamp-based ID for now
-  const newEvent = { ...event, id: `evt-${Date.now()}` }; 
-  allProgrammeEvents.update(events => [...events, newEvent]);
+    console.log('Programme events fetched and mapped:', mappedEvents);
+    allProgrammeEvents.set(mappedEvents);
+
+  } catch (error) {
+    console.error(`Failed to load programme events for project ${projectId}:`, error);
+    allProgrammeEvents.set([]); // Reset on error
+    // Consider showing an error message to the user
+  }
 }
 
-// Function to update an existing programme event
-export function updateProgrammeEvent(updatedEvent: ProgrammeEvent) {
-  allProgrammeEvents.update(events => 
-    events.map(event => (event.id === updatedEvent.id ? updatedEvent : event))
-  );
+// Function to add a new programme event via API
+export async function addProgrammeEvent(eventData: Omit<ProgrammeEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProgrammeEvent | null> {
+  console.log('addProgrammeEvent CALLED in store. Data:', eventData);
+  if (!browser) {
+    console.log('addProgrammeEvent: Not in browser, returning.');
+    return null;
+  }
+
+
+  if (!eventData.projectId) {
+      console.error('addProgrammeEvent: Cannot add programme event without projectId. Data:', eventData);
+      alert('Error: Project ID is missing.');
+      return null;
+  }
+
+  try {
+    console.log('Attempting to POST /api/programme-events with:', eventData);
+    // Use the backend route: POST /api/programme-events
+    const response = await fetch(`${API_BASE_URL}/programme-events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
+      },
+      body: JSON.stringify(eventData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to add programme event'}`);
+    }
+
+    let newEvent = await response.json();
+    const mappedEvent = mapMongoId<ProgrammeEvent>(newEvent); // Map the response
+
+    // Add to the local store
+    allProgrammeEvents.update(existing => {
+        const updatedEvents = [...existing, mappedEvent];
+        // Optional: Sort events after adding
+        updatedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return updatedEvents;
+    });
+
+    console.log('Programme event added:', mappedEvent);
+    return mappedEvent; // Return the newly created event
+
+  } catch (error) {
+    console.error("Failed to add programme event:", error);
+    alert(`Error adding key date: ${error}`);
+    return null;
+  }
 }
 
-// Function to delete a programme event by ID
-export function deleteProgrammeEvent(eventId: string) {
-  allProgrammeEvents.update(events => events.filter(event => event.id !== eventId));
+// Function to update an existing programme event via API
+export async function updateProgrammeEvent(eventToUpdate: ProgrammeEvent): Promise<boolean> {
+  console.log('updateProgrammeEvent CALLED in store. Data:', eventToUpdate);
+  if (!browser || !eventToUpdate || !eventToUpdate.id) {
+      console.error('updateProgrammeEvent: Invalid data or not in browser. Data:', eventToUpdate);
+      return false;
+  };
+
+  const eventId = eventToUpdate.id;
+  // Prepare data payload - only send fields that should be updatable
+  const updateData = {
+      title: eventToUpdate.title,
+      date: eventToUpdate.date, // Ensure this is in a format the backend expects (e.g., ISO string)
+      color: eventToUpdate.color,
+      // Do NOT send id, projectId, createdAt, updatedAt in the body for a PUT by ID
+  };
+
+
+  try {
+    console.log(`Updating programme event ${eventId}:`, updateData);
+    // Use the backend route: PUT /api/programme-events/:eventId
+    const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Failed to update programme event'}`);
+    }
+
+    let updatedEventFromServer = await response.json();
+    const mappedEvent = mapMongoId<ProgrammeEvent>(updatedEventFromServer); // Map the response
+
+    // Update in the local store
+    allProgrammeEvents.update(existing => {
+        const updatedEvents = existing.map(event =>
+            event.id === eventId ? mappedEvent : event
+        );
+        // Optional: Re-sort if date could have changed
+        updatedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return updatedEvents;
+    });
+
+    console.log('Programme event updated:', mappedEvent);
+    return true;
+
+  } catch (error) {
+    console.error(`Failed to update programme event ${eventId}:`, error);
+    alert(`Error updating key date: ${error}`);
+    return false;
+  }
+}
+
+// Function to delete a programme event by ID via API
+export async function deleteProgrammeEvent(eventId: string): Promise<boolean> {
+  if (!browser || !eventId) {
+      console.error('Delete requires an event ID and browser environment.');
+      return false;
+  }
+
+  if (!confirm('Are you sure you want to delete this programme event? This cannot be undone.')) {
+      return false;
+  }
+
+  try {
+      const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
+          method: 'DELETE',
+          headers: getAuthTokenHeader()
+      });
+
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      }
+
+      // Successfully deleted on the server, now update the local store
+      allProgrammeEvents.update(events => {
+          const updatedEvents = events.filter(event => event.id !== eventId);
+          console.log(`[Store] Programme event for ${eventId} removed. New count: ${updatedEvents.length}`);
+          return updatedEvents;
+      });
+
+      console.log('Programme event deleted successfully for ID:', eventId);
+      return true;
+
+  } catch (error) {
+      console.error(`Failed to delete programme event ${eventId}:`, error);
+      alert(`Error deleting programme event: ${error}`);
+      return false;
+  }
 }
 
 // --- Helper function to generate unique IDs ---
@@ -728,3 +1029,263 @@ export function deleteCustomDateFromReview(quoteId: string, customDateId: string
         return reviews; // Return modified array
     });
 } 
+
+// +++ Add store for Instruction Logs +++
+export const currentInstructionLogs = writable<InstructionLog[]>([]);
+
+// --- Instruction Log Interface (Matches backend) ---
+export interface InstructionLog {
+  id: string; // Corresponds to _id from backend
+  projectId: string;
+  quoteId: string;
+  workStatus?: 'not started' | 'in progress' | 'completed' | 'TRP Reviewing' | 'Client reviewing';
+  siteVisitDate?: string; // ISO date string
+  reportDraftDate?: string; // ISO date string
+  operationalNotes?: string;
+  holdUpNotes?: string;
+  uploadedWorks?: UploadedWork[]; // Uses existing UploadedWork interface
+  customDates?: CustomDate[];   // Uses existing CustomDate interface
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// --- Instruction Log API Functions ---
+
+// Function to load Instruction Logs for a specific project
+async function loadInstructionLogsForProject(projectId: string | null) {
+  if (!browser || !projectId) {
+    currentInstructionLogs.set([]); // Clear if no project or SSR
+    return;
+  }
+
+  console.log(`Fetching instruction logs for project ID: ${projectId}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/instruction-logs?projectId=${projectId}`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch instruction logs'}`);
+    }
+    let logs: any[] = await response.json(); // Fetch as any[] initially
+
+    // Map _id to id deeply
+    const mappedLogs = logs.map(log => mapMongoId<InstructionLog>(log)); // USE HELPER HERE
+
+    currentInstructionLogs.set(mappedLogs); // Set the mapped logs
+    console.log('Instruction logs loaded:', mappedLogs);
+  } catch (error) {
+    console.error(`Failed to load instruction logs for project ${projectId}:`, error);
+    currentInstructionLogs.set([]); // Clear store on error
+    // Potentially show an error to the user
+  }
+}
+
+// Function to upsert (create or update) an Instruction Log
+export async function upsertInstructionLog(quoteId: string, logData: Partial<Omit<InstructionLog, 'id' | 'quoteId' | 'projectId' | 'createdAt' | 'updatedAt'>>) {
+    if (!browser) return null;
+
+    console.log(`Upserting instruction log for quote ID: ${quoteId}`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/instruction-logs/${quoteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthTokenHeader()
+            },
+            body: JSON.stringify(logData), // Send only the updatable fields
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to upsert instruction log'}`);
+        }
+
+        let upsertedLog: any = await response.json(); // Fetch as any
+        // Map _id to id deeply for the returned log and its subdocuments
+        const mappedUpsertedLog = mapMongoId<InstructionLog>(upsertedLog); // USE HELPER HERE
+
+        // Update the local store
+        currentInstructionLogs.update(logs => {
+            const index = logs.findIndex(log => log.quoteId === quoteId);
+            if (index !== -1) {
+                // Update existing log
+                logs[index] = mappedUpsertedLog; // Use the mapped log
+            } else {
+                // Add new log
+                logs.push(mappedUpsertedLog); // Use the mapped log
+            }
+            // Ensure reactivity by returning a new array reference if needed,
+            // though direct modification and returning logs often works in Svelte stores.
+            return [...logs]; // Safer for reactivity
+        });
+
+        console.log('Instruction log upserted:', mappedUpsertedLog);
+        return mappedUpsertedLog; // Return the mapped log
+
+    } catch (error) {
+        console.error(`Failed to upsert instruction log for quote ${quoteId}:`, error);
+        alert(`Error saving instruction details: ${error}`); // Basic user feedback
+        return null;
+    }
+}
+
+// --- Surveyor Feedback Interface and Store (Replaces SurveyorReview) ---
+export interface SurveyorFeedback {
+  id: string; // Mapped from _id
+  projectId: string;
+  quoteId: string;
+  // Rating fields
+  quality?: number; // 1-5
+  responsiveness?: number; // 1-5
+  deliveredOnTime?: number; // 0-5 
+  overallReview?: number; // 1-5 
+  // Comment field
+  notes?: string; // Review comments
+  // Metadata
+  reviewDate?: string; // ISO date string (set by backend)
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Renamed store for clarity
+export const surveyorFeedbacks = writable<SurveyorFeedback[]>([]); // *** ENSURE THIS LINE EXISTS AND IS CORRECT ***
+
+// --- Surveyor Feedback API Functions ---
+
+// Function to load Surveyor Feedback for a specific project
+async function loadSurveyorFeedback(projectId: string | null) {
+  if (!browser || !projectId) {
+    surveyorFeedbacks.set([]); // Clear if no project or SSR
+    return;
+  }
+
+  console.log(`Fetching surveyor feedback for project ID: ${projectId}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/surveyor-feedback?projectId=${projectId}`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch surveyor feedback'}`);
+    }
+    let feedbackList: any[] = await response.json();
+
+    // Map _id to id deeply
+    const mappedFeedbackList = feedbackList.map(fb => mapMongoId<SurveyorFeedback>(fb));
+
+    surveyorFeedbacks.set(mappedFeedbackList);
+    console.log('Surveyor feedback loaded:', mappedFeedbackList);
+  } catch (error) {
+    console.error(`Failed to load surveyor feedback for project ${projectId}:`, error);
+    surveyorFeedbacks.set([]); // Clear store on error
+  }
+}
+
+// Function to upsert (create or update) Surveyor Feedback
+// Replaces addOrUpdateReview logic
+export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<SurveyorFeedback, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>> & { quoteId: string }): Promise<SurveyorFeedback | null> {
+    if (!browser) return null;
+
+    const { quoteId, ...dataToUpdate } = feedbackData; // Separate quoteId from data
+
+    if (!quoteId) {
+        console.error('Upsert requires a quoteId');
+        alert('Error: Cannot save feedback without a valid quote reference.');
+        return null;
+    }
+
+    // Remove fields that shouldn't be sent directly if they somehow slipped in
+    delete (dataToUpdate as any).id;
+    delete (dataToUpdate as any).projectId;
+    delete (dataToUpdate as any).createdAt;
+    delete (dataToUpdate as any).updatedAt;
+    delete (dataToUpdate as any).reviewDate; // Let backend handle reviewDate default/update
+
+    console.log(`Upserting surveyor feedback for quote ID: ${quoteId}`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/surveyor-feedback/${quoteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthTokenHeader()
+            },
+            body: JSON.stringify(dataToUpdate),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessages = errorData.errors ? errorData.errors.join(', ') : (errorData.msg || 'Failed to save feedback');
+            throw new Error(`HTTP error! status: ${response.status} - ${errorMessages}`);
+        }
+
+        let upsertedFeedback: any = await response.json();
+        const mappedFeedback = mapMongoId<SurveyorFeedback>(upsertedFeedback);
+
+        console.log('[Store] Feedback received from API (mapped):', mappedFeedback);
+
+        // Update the local store
+        surveyorFeedbacks.update(feedbacks => {
+            const index = feedbacks.findIndex(fb => fb.quoteId === quoteId);
+            console.log(`[Store] Updating store. Found index for ${quoteId}: ${index}`);
+            if (index !== -1) {
+                feedbacks[index] = mappedFeedback;
+            } else {
+                feedbacks.push(mappedFeedback);
+            }
+             // Log the state right before returning it
+            console.log('[Store] Store state AFTER update:', feedbacks); 
+            return [...feedbacks]; // Return new array for reactivity
+        });
+
+        console.log('Surveyor feedback upserted:', mappedFeedback);
+        return mappedFeedback;
+
+    } catch (error) {
+        console.error(`Failed to save surveyor feedback for quote ${quoteId}:`, error);
+        alert(`Error saving feedback: ${error}`); // User feedback
+        return null;
+    }
+}
+
+// Function to delete Surveyor Feedback
+export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> {
+    if (!browser || !quoteId) {
+        console.error('Delete operation requires a quoteId and browser environment.');
+        return false;
+    }
+
+    console.log(`Deleting surveyor feedback for quote ID: ${quoteId}`);
+    try {
+        const response = await fetch(`${API_BASE_URL}/surveyor-feedback?quoteId=${quoteId}`, {
+            method: 'DELETE',
+            headers: getAuthTokenHeader(),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to delete feedback'}`);
+        }
+
+        // Successfully deleted on the server, now update the local store
+        surveyorFeedbacks.update(feedbacks => {
+            const updatedFeedbacks = feedbacks.filter(fb => fb.quoteId !== quoteId);
+            console.log(`[Store] Feedback for ${quoteId} removed. New count: ${updatedFeedbacks.length}`);
+            return updatedFeedbacks;
+        });
+
+        console.log('Surveyor feedback deleted successfully for quote ID:', quoteId);
+        return true;
+
+    } catch (error) {
+        console.error(`Failed to delete surveyor feedback for quote ${quoteId}:`, error);
+        alert(`Error deleting feedback: ${error}`); // User feedback
+        return false;
+    }
+}
+
+// Function to get feedback for a specific quote (replaces getReviewForQuote)
+export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
+    const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
+    return currentFeedback.find(fb => fb.quoteId === quoteId);
+}
