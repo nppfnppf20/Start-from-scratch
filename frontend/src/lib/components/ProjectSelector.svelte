@@ -311,9 +311,9 @@
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    line-height: 0;
     flex-shrink: 0;
-    transform: translateY(-1px);
+    background-color: #038998 !important;
+    padding-bottom: 3px;
   }
 
   button:last-of-type {

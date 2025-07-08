@@ -8,6 +8,7 @@
 
 <div class="top-bar">
   <div class="app-title">
+    <img src="/logo.png" alt="Logo" class="logo"/>
     <h1>TRP Project Management</h1>
   </div>
   
@@ -35,6 +36,17 @@
     background-color: #ffffff;
     border-bottom: 1px solid #e2e8f0;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .app-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .logo {
+    height: 32px;
+    width: 32px;
   }
 
   .app-title h1 {
