@@ -9,6 +9,7 @@
     type SurveyorFeedback   // Use new interface
   } from "$lib/stores/projectStore";
   import StarRating from "$lib/components/StarRating.svelte";
+  import NotesModal from "$lib/components/NotesModal.svelte";
   import { format, parseISO } from 'date-fns';
   // Removed getContext, setContext, writable as they are not directly used here now
 
@@ -39,6 +40,11 @@
   // Temporary storage for feedback being edited
   let editableFeedback: Partial<SurveyorFeedback> = {};
 
+  // --- Modal state for Notes ---
+  let showNotesModal = false;
+  let currentQuoteForNotes: Quote | null = null;
+  let currentNotes: string | undefined = '';
+
   // --- Edit/Save/Cancel Functions ---
   function startEditing(quote: Quote) {
     const quoteId = quote.id;
@@ -51,7 +57,6 @@
         responsiveness: currentFeedback?.responsiveness,
         deliveredOnTime: currentFeedback?.deliveredOnTime,
         overallReview: currentFeedback?.overallReview, // Required field - handle default/validation later if needed
-        notes: currentFeedback?.notes || '', // Default notes to empty string
     };
     editingQuoteId = quoteId;
     console.log('Started editing quote:', quoteId, 'Initial editable data:', editableFeedback);
@@ -80,14 +85,13 @@
         return;
     }
 
-    // Prepare data for upsert: only send fields relevant to feedback
+    // Prepare data for upsert: only send fields relevant to feedback (notes handled separately via modal)
     const dataToSend: Partial<Omit<SurveyorFeedback, 'id' | 'projectId' | 'createdAt' | 'updatedAt' | 'reviewDate'>> & { quoteId: string } = {
         quoteId: quoteIdToSave,
         quality: editableFeedback.quality,
         responsiveness: editableFeedback.responsiveness,
         deliveredOnTime: editableFeedback.deliveredOnTime,
         overallReview: editableFeedback.overallReview, // Already validated above
-        notes: editableFeedback.notes
     };
 
 
@@ -101,6 +105,46 @@
         console.error("Save failed for", quoteIdToSave, ", staying in edit mode.");
         // Optionally, provide more specific UI feedback here based on error type if available
     }
+  }
+
+  // --- Notes Modal Functions ---
+  function openNotesModal(quote: Quote) {
+    const feedback = $surveyorFeedbacks.find(fb => fb.quoteId === quote.id);
+    currentQuoteForNotes = quote;
+    currentNotes = feedback?.notes; // Load existing notes
+    showNotesModal = true;
+  }
+
+  function closeNotesModal() {
+    showNotesModal = false;
+    currentQuoteForNotes = null;
+    currentNotes = '';
+  }
+
+  async function handleSaveNotes(event: CustomEvent<{ notes: string }>) {
+    if (!currentQuoteForNotes) return;
+    
+    const newNotes = event.detail.notes;
+    console.log(`Saving notes for quote ${currentQuoteForNotes.id}`);
+    
+    // Use the same upsert function to save notes
+    const dataToSend = {
+      quoteId: currentQuoteForNotes.id,
+      notes: newNotes
+    };
+    
+    await upsertSurveyorFeedback(dataToSend);
+    closeNotesModal();
+  }
+
+  // Helper function to get notes preview
+  function getNotesPreview(notes: string | undefined): string {
+    if (!notes || notes.trim() === '') {
+      return "Add notes...";
+    }
+    // Simple preview - show first line, truncated
+    const firstLine = notes.split('\n')[0];
+    return firstLine.length > 50 ? firstLine.substring(0, 47) + '...' : firstLine;
   }
 
   // --- Delete Review Function ---
@@ -143,8 +187,6 @@
           console.log('Updated editable feedback:', editableFeedback);
       }
   }
-
-  // Notes are handled via direct binding to editableFeedback.notes when editing
 
 </script>
 
@@ -241,24 +283,9 @@
 
                     <!-- Notes -->
                     <td class="notes-cell">
-                        {#if isEditing}
-                            <textarea
-                                class="notes-textarea"
-                                rows="3"
-                                bind:value={editableFeedback.notes}
-                                placeholder="Enter review notes..."
-                                aria-label="Review notes for {quote.organisation}"
-                            ></textarea>
-                        {:else}
-                            <div class="notes-display" title={feedback?.notes || 'No notes added.'}>
-                                 {#if feedback?.notes}
-                                    <!-- Basic preview, could truncate -->
-                                    <span>{feedback.notes.length > 100 ? feedback.notes.substring(0, 97) + '...' : feedback.notes}</span>
-                                 {:else}
-                                    <span class="placeholder">No notes added.</span>
-                                 {/if}
-                            </div>
-                        {/if}
+                        <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit review notes">
+                            {getNotesPreview(feedback?.notes)}
+                        </button>
                     </td>
 
                     <!-- Actions -->
@@ -290,6 +317,16 @@
   {/if}
 
 </div>
+
+<!-- Notes Modal -->
+{#if showNotesModal && currentQuoteForNotes}
+  <NotesModal
+    initialNotes={currentNotes}
+    organisationName={currentQuoteForNotes.organisation}
+    on:save={handleSaveNotes}
+    on:cancel={closeNotesModal}
+  />
+{/if}
 
 <style>
   /* General page styling (assumed globally applied) */
@@ -399,32 +436,27 @@
       vertical-align: top; /* Align notes content top */
   }
 
-  .notes-textarea {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #cbd5e0;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-family: inherit;
-      resize: vertical;
-      min-height: 60px;
-  }
-  .notes-textarea:focus {
-      border-color: #4299e1; 
-      box-shadow: 0 0 0 1px #4299e1; 
-      outline: none;
+  /* Notes Button Styling (from instructed page) */
+  .notes-button {
+    width: 100%;
+    max-width: 200px; /* Limit maximum width */
+    padding: 10px;
+    background-color: #f1f1f1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    font-style: italic;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Prevent wrapping */
+    min-height: 40px; /* Ensure consistent button height */
   }
 
-  .notes-display {
-      color: #4a5568;
-      font-size: 0.9rem;
-      max-height: 100px; /* Limit height */
-      overflow-y: auto; /* Add scroll if needed */
-      padding: 0.2rem;
-  }
-  .notes-display .placeholder {
-      color: #a0aec0;
-      font-style: italic;
+  .notes-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
   }
 
   /* Actions Cell Styling */
