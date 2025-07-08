@@ -1318,6 +1318,15 @@ export interface SurveyorOrganisation {
     collatedNotes: string[];
 }
 
+export interface Client {
+    id: string;
+    organisation: string;
+    industry: string;
+    contacts: { name: string; email: string; phoneNumber: string; }[];
+    totalProjects: number;
+    projectNames: string[];
+}
+
 // --- Surveyor Store ---
 export const surveyorOrganisations = writable<SurveyorOrganisation[]>([]);
 
