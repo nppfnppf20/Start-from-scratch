@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { authStore } from '$lib/stores/authStore';
+  import { goto } from '$app/navigation';
   
   // Define all available tabs
   const allTabs = [
@@ -11,6 +12,14 @@
     { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed', roles: ['admin'] },
     { id: 'programme', label: 'Programme', path: '/programme', roles: ['admin'] },
     { id: 'reviews', label: 'Surveyor Reviews', path: '/reviews', roles: ['admin'] },
+    { 
+      id: 'admin', 
+      label: 'Admin', 
+      roles: ['admin'],
+      dropdown: [
+        { id: 'surveyors', label: 'Surveyors', path: '/admin-console/surveyors' }
+      ]
+    }
   ];
 
   // Filter tabs based on user role
@@ -18,20 +27,104 @@
     const userRole = $authStore.user?.role;
     return userRole && tab.roles.includes(userRole);
   });
+
+  // Dropdown state
+  let openDropdownId: string | null = null;
+  let dropdownPosition = { top: 0, left: 0 };
+
+  // Toggle dropdown
+  function toggleDropdown(tabId: string, event: MouseEvent) {
+    if (openDropdownId === tabId) {
+      openDropdownId = null;
+    } else {
+      openDropdownId = tabId;
+      
+      // Calculate position for fixed positioning - always use the button element
+      const target = event.currentTarget as HTMLElement; // currentTarget is always the button
+      const rect = target.getBoundingClientRect();
+      dropdownPosition = {
+        top: rect.bottom + 4,
+        left: rect.left
+      };
+    }
+  }
+
+  // Close dropdown when clicking outside
+  function closeDropdowns() {
+    openDropdownId = null;
+  }
+
+  // Handle dropdown navigation
+  function handleDropdownNavigation(path: string) {
+    closeDropdowns();
+    goto(path);
+  }
+
+  // Check if tab or its dropdown items are active
+  function isTabActive(tab: any): boolean {
+    if (tab.path && $page.url.pathname === tab.path) {
+      return true;
+    }
+    if (tab.dropdown) {
+      return tab.dropdown.some((item: any) => $page.url.pathname === item.path);
+    }
+    return false;
+  }
 </script>
 
-<div class="tabs">
+<div class="tabs" on:click={closeDropdowns}>
   <nav class="navigation-menu">
     <ul class="navigation-menu-list">
       {#each tabs as tab}
         <li class="navigation-menu-item">
-          <a
-            href={tab.path}
-            class="navigation-menu-link"
-            class:active={$page.url.pathname === tab.path}
-          >
-            {tab.label}
-          </a>
+          {#if tab.dropdown}
+            <!-- Dropdown tab -->
+            <button
+              class="navigation-menu-link dropdown-trigger"
+              class:active={isTabActive(tab)}
+              on:click|stopPropagation={(event) => toggleDropdown(tab.id, event)}
+            >
+              {tab.label}
+              <svg 
+                class="dropdown-arrow" 
+                class:open={openDropdownId === tab.id}
+                xmlns="http://www.w3.org/2000/svg" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                stroke-width="2" 
+                stroke-linecap="round" 
+                stroke-linejoin="round"
+              >
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </button>
+            
+            {#if openDropdownId === tab.id}
+              <div class="dropdown-menu" style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;" on:click|stopPropagation>
+                {#each tab.dropdown as item}
+                  <button
+                    class="dropdown-item"
+                    class:active={$page.url.pathname === item.path}
+                    on:click={() => handleDropdownNavigation(item.path)}
+                  >
+                    {item.label}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          {:else}
+            <!-- Regular tab -->
+            <a
+              href={tab.path}
+              class="navigation-menu-link"
+              class:active={$page.url.pathname === tab.path}
+            >
+              {tab.label}
+            </a>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -45,7 +138,7 @@
     padding: 16px 0;
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     width: 100%;
     scrollbar-width: thin;
     scrollbar-color: var(--muted) transparent;
@@ -74,6 +167,7 @@
     display: flex;
     padding: 0 20px;
     min-width: max-content;
+    overflow: visible;
   }
 
   .navigation-menu-list {
@@ -83,11 +177,13 @@
     min-width: max-content;
     margin: 0;
     padding: 0;
+    overflow: visible;
   }
 
   .navigation-menu-item {
     position: relative;
     flex-shrink: 0;
+    overflow: visible;
   }
 
   .navigation-menu-link {
@@ -130,5 +226,60 @@
   .navigation-menu-link:disabled {
     pointer-events: none;
     opacity: 0.5;
+  }
+
+  /* Dropdown styles */
+  .dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .dropdown-arrow {
+    transition: transform 0.2s ease-in-out;
+    margin-left: 4px;
+  }
+
+  .dropdown-arrow.open {
+    transform: rotate(180deg);
+  }
+
+  .dropdown-menu {
+    position: fixed;
+    z-index: 99999;
+    min-width: 180px;
+    background: var(--card, white);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius, 6px);
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+    padding: 4px;
+    margin-top: 4px;
+  }
+
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--foreground, #1a202c);
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    border-radius: calc(var(--radius, 6px) - 2px);
+    transition: all 0.15s ease-in-out;
+    white-space: nowrap;
+  }
+
+  .dropdown-item:hover {
+    background: var(--accent, #f7fafc);
+    color: var(--accent-foreground, #1a202c);
+  }
+
+  .dropdown-item.active {
+    background: #e0eaff;
+    color: var(--foreground, #1a202c);
   }
 </style> 
