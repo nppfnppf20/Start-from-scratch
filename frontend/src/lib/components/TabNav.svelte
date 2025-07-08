@@ -17,7 +17,8 @@
       label: 'Admin', 
       roles: ['admin'],
       dropdown: [
-        { id: 'surveyors', label: 'Surveyors', path: '/admin/surveyors' }
+        { id: 'surveyors', label: 'Surveyors', path: '/admin/surveyors' },
+        { id: 'clients', label: 'Clients', path: '/admin/clients' }
       ]
     }
   ];
