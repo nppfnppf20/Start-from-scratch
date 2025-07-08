@@ -14,6 +14,7 @@ const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
 const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
 const surveyorRoutes = require('./routes/surveyors'); // *** ADD THIS LINE ***
+const clientRoutes = require('./routes/clients'); // Import client routes
 const uploadRoutes = require('./routes/uploads');
 const documentRoutes = require('./routes/documents');
 const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
@@ -120,6 +121,7 @@ app.use('/api/quotes', protect, quoteRoutes);
 app.use('/api/instruction-logs', protect, instructionLogRoutes);
 app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
 app.use('/api/surveyors', protect, authorize('admin'), surveyorRoutes); // Admin only
+app.use('/api/clients', protect, authorize('admin'), clientRoutes); // Admin only
 app.use('/api/documents', protect, documentRoutes);
 app.use('/api/programme-events', protect, programmeEventRoutes);
 

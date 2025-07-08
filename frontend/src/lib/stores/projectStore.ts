@@ -1330,6 +1330,9 @@ export interface Client {
 // --- Surveyor Store ---
 export const surveyorOrganisations = writable<SurveyorOrganisation[]>([]);
 
+// --- Clients Store ---
+export const clients = writable<Client[]>([]);
+
 // Function to load surveyor organisations from the API
 export async function loadSurveyorOrganisations() {
   if (!browser) return;
@@ -1351,6 +1354,27 @@ export async function loadSurveyorOrganisations() {
 
   } catch (error) {
     console.error("Failed to load surveyor organisations:", error);
-    surveyorOrganisations.set([]); // Reset on error
+    surveyorOrganisations.set([]);
   }
+}
+
+export async function loadClients() {
+    if (!browser) return;
+
+    try {
+        console.log('Fetching clients from API...');
+        const response = await fetch(`${API_BASE_URL}/clients`, {
+            headers: getAuthTokenHeader()
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const fetchedClients: Client[] = await response.json();
+
+        console.log('Clients fetched:', fetchedClients);
+        clients.set(fetchedClients);
+    } catch (error) {
+        console.error('Failed to load clients:', error);
+        clients.set([]);
+    }
 }
