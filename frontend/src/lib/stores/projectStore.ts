@@ -148,13 +148,25 @@ export async function loadProjects() {
 // New function to fetch all quotes
 export async function loadAllQuotes() {
   if (!browser) return;
+  
   try {
-    const response = await fetch(`${API_BASE_URL}/quotes`, { headers: getAuthTokenHeader() });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const quotes = await response.json();
-    allQuotes.set(quotes.map(mapMongoId));
+    console.log('Loading all quotes...');
+    const response = await fetch(`${API_BASE_URL}/quotes`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedQuotes: any[] = await response.json();
+    
+    // Map _id to id
+    fetchedQuotes = fetchedQuotes.map(q => ({ ...q, id: q._id }));
+    
+    console.log('All quotes loaded:', fetchedQuotes);
+    allQuotes.set(fetchedQuotes);
+
   } catch (error) {
-    console.error("Failed to load all quotes:", error);
+    console.error('Failed to load all quotes:', error);
     allQuotes.set([]);
   }
 }

@@ -197,18 +197,39 @@
   function handleLineItemInput(event: Event, index: number) {
     const input = (event.target as HTMLInputElement).value;
     activeLineItemIndex = index;
+    
     if (input.length > 0) {
-      lineItemSuggestions = $uniqueLineItemItems.filter(item => 
+      const filtered = $uniqueLineItemItems.filter(item => 
         item.toLowerCase().includes(input.toLowerCase())
       );
+      
+      // Add "Add new" option if input doesn't match existing options
+      const isExisting = $uniqueLineItemItems.some(item => 
+        item.toLowerCase() === input.toLowerCase()
+      );
+      
+      if (!isExisting && input.trim() !== '') {
+        lineItemSuggestions = [...filtered, `Add "${input}"`];
+      } else {
+        lineItemSuggestions = filtered;
+      }
+      
       showLineItemSuggestions = lineItemSuggestions.length > 0;
     } else {
-      showLineItemSuggestions = false;
+      // Show all options when input is empty
+      lineItemSuggestions = $uniqueLineItemItems;
+      showLineItemSuggestions = true;
     }
   }
 
   function selectLineItem(item: string, index: number) {
-    quoteForm.lineItems[index].item = item;
+    if (item.startsWith('Add "')) {
+      // Extract the custom value from 'Add "custom value"'
+      const customValue = item.slice(5, -1);
+      quoteForm.lineItems[index].item = customValue;
+    } else {
+      quoteForm.lineItems[index].item = item;
+    }
     showLineItemSuggestions = false;
     activeLineItemIndex = null;
     // We need to re-assign to trigger Svelte's reactivity
@@ -434,11 +455,16 @@
                     on:focus={(e) => handleLineItemInput(e, index)}
                     on:blur={() => setTimeout(() => { if (activeLineItemIndex === index) showLineItemSuggestions = false }, 150)}
                     autocomplete="off"
+                    placeholder="Enter or select line item..."
                   >
                   {#if showLineItemSuggestions && activeLineItemIndex === index}
                     <div class="suggestions-list">
                       {#each lineItemSuggestions as suggestion}
-                        <div class="suggestion-item" on:mousedown={() => selectLineItem(suggestion, index)}>
+                        <div 
+                          class="suggestion-item" 
+                          class:add-new={suggestion.startsWith('Add "')}
+                          on:mousedown={() => selectLineItem(suggestion, index)}
+                        >
                           {suggestion}
                         </div>
                       {/each}

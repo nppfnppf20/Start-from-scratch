@@ -134,6 +134,6 @@ export function getAuthTokenHeader(): { Authorization?: string } {
 
     if (token) {
         return { 'Authorization': `Bearer ${token}` };
-      }
-      return {};
     }
+    return {};
+}
