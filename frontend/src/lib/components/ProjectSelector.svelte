@@ -212,7 +212,7 @@
 <style>
   .project-selector-container {
     padding: 1rem;
-    background-color: #f0f0f0;
+    background-color: white;
     border-bottom: 1px solid #ccc;
     display: flex;
     align-items: center;
@@ -236,6 +236,11 @@
     border-radius: 4px;
     font-size: 1rem;
     min-width: 200px;
+  }
+
+  select {
+    border-radius: 10px;
+    text-align: center;
   }
 
   select {
@@ -299,15 +304,16 @@
     padding: 0;
     font-size: 1.2rem;
     font-weight: bold;
-    border-radius: 50%;
+    border-radius: 5px;
     margin-left: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    line-height: 1;
+    line-height: 0;
     flex-shrink: 0;
+    transform: translateY(-1px);
   }
 
   button:last-of-type {
@@ -334,10 +340,10 @@
   }
 
   .current-project {
-      font-weight: bold;
+      font-size: 0.9rem;
+      color: #4a5568;
+      font-weight: 500;
       margin-left: auto;
-      font-style: italic;
-      color: #555;
       white-space: nowrap;
   }
 
