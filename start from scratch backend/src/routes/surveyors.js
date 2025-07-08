@@ -17,24 +17,7 @@ router.get('/', async (req, res) => {
                         discipline: "$discipline"
                     },
                     quotes: { $push: "$$ROOT" },
-                    totalQuotes: { $sum: 1 },
-                    // NEW: Conditionally sum up instructed quotes
-                    totalInstructed: {
-                        $sum: {
-                            $cond: [
-                                { $in: ["$instructionStatus", ["instructed", "partially instructed"]] },
-                                1, // Add 1 if instructed
-                                0  // Add 0 if not
-                            ]
-                        }
-                    },
-                    contacts: {
-                        $addToSet: {
-                            name: "$contactName",
-                            email: "$email",
-                            phoneNumber: "$phoneNumber"
-                        }
-                    }
+                    contacts: { $addToSet: { name: "$contactName", email: "$email", phoneNumber: "$phoneNumber" } }
                 }
             },
             
@@ -47,54 +30,73 @@ router.get('/', async (req, res) => {
                     as: "feedbacks"
                 }
             },
+
+            // Step 3: Unwind the feedbacks array to process each one
+            {
+                $unwind: {
+                    path: "$feedbacks",
+                    preserveNullAndEmptyArrays: true // Keep orgs that have no feedback
+                }
+            },
+
+            // Step 4: Sort by the feedback creation date to order notes chronologically
+            {
+                $sort: {
+                    "feedbacks.createdAt": 1 // 1 for ascending (oldest first)
+                }
+            },
             
-            // Step 3: Calculate average ratings and format output
+            // Step 5: Group back to the organisation/discipline level
+            {
+                $group: {
+                    _id: "$_id",
+                    originalQuotes: { $first: "$quotes" },
+                    contacts: { $first: "$contacts" },
+                    // Push the now-sorted feedback docs back into an array
+                    sortedFeedbacks: { $push: "$feedbacks" } 
+                }
+            },
+
+            // Step 6: Final projection of all data
             {
                 $project: {
-                    _id: 0, // Exclude the default _id
+                    _id: 0,
                     id: { $concat: ["$_id.organisation", "-", "$_id.discipline"] },
                     organisation: "$_id.organisation",
                     discipline: "$_id.discipline",
-                    contacts: {
-                        $filter: {
-                            input: "$contacts",
-                            cond: { $ne: ["$$this.name", null] }
+                    contacts: { $filter: { input: "$contacts", cond: { $ne: ["$$this.name", null] }}},
+                    totalQuotes: { $size: "$originalQuotes" },
+                    totalInstructed: {
+                        $size: {
+                            $filter: {
+                                input: "$originalQuotes",
+                                as: "quote",
+                                cond: { $in: ["$$quote.instructionStatus", ["instructed", "partially instructed"]] }
+                            }
                         }
                     },
-                    totalQuotes: "$totalQuotes",
-                    totalInstructed: "$totalInstructed", // Pass the new field through
                     averageRatings: {
-                        $let: {
-                            vars: {
-                                validFeedbacks: {
-                                    $filter: {
-                                        input: "$feedbacks",
-                                        as: "feedback",
-                                        cond: { $ne: ["$$feedback", null] }
-                                    }
-                                }
-                            },
-                            in: {
-                                quality: { $round: [{ $avg: "$$validFeedbacks.quality" }, 1] },
-                                responsiveness: { $round: [{ $avg: "$$validFeedbacks.responsiveness" }, 1] },
-                                deliveredOnTime: { $round: [{ $avg: "$$validFeedbacks.deliveredOnTime" }, 1] },
-                                overallReview: { $round: [{ $avg: "$$validFeedbacks.overallReview" }, 1] }
-                            }
+                        quality: { $round: [{ $avg: "$sortedFeedbacks.quality" }, 1] },
+                        responsiveness: { $round: [{ $avg: "$sortedFeedbacks.responsiveness" }, 1] },
+                        deliveredOnTime: { $round: [{ $avg: "$sortedFeedbacks.deliveredOnTime" }, 1] },
+                        overallReview: { $round: [{ $avg: "$sortedFeedbacks.overallReview" }, 1] }
+                    },
+                    // Filter out any null/empty notes from the sorted array
+                    collatedNotes: {
+                        $filter: {
+                            input: "$sortedFeedbacks.notes",
+                            as: "note",
+                            cond: { $and: [ { $ne: [ "$$note", null ] }, { $ne: [ "$$note", "" ] } ] }
                         }
                     }
                 }
             },
             
-            // Step 4: Sort by organisation name then discipline
-            {
-                $sort: {
-                    organisation: 1,
-                    discipline: 1
-                }
-            }
+            // Step 7: Final sort of the organisations themselves
+            { $sort: { organisation: 1, discipline: 1 } }
         ];
 
-        console.log('Executing updated surveyor aggregation pipeline with Total Instructed...');
+        console.log('Executing aggregation pipeline with sorted notes...');
         const surveyors = await Quote.aggregate(aggregationPipeline);
         
         console.log(`Found ${surveyors.length} surveyor organisation-discipline combinations`);

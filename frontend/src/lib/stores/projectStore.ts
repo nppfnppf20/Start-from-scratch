@@ -1303,22 +1303,19 @@ export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefin
 
 // --- Surveyor Organisation Interface and Store ---
 export interface SurveyorOrganisation {
-  id: string; 
-  organisation: string;
-  discipline: string;
-  contacts: Array<{
-    name: string;
-    email?: string;
-    phoneNumber?: string;
-  }>;
-  totalQuotes: number;
-  totalInstructed: number; // New field
-  averageRatings: {
-    quality?: number;
-    responsiveness?: number;
-    deliveredOnTime?: number;
-    overallReview?: number;
-  };
+    id: string;
+    organisation: string;
+    discipline: string;
+    contacts: { name: string; email: string; phoneNumber: string; }[];
+    totalQuotes: number;
+    totalInstructed: number;
+    averageRatings: {
+        quality: number | null;
+        responsiveness: number | null;
+        deliveredOnTime: number | null;
+        overallReview: number | null;
+    };
+    collatedNotes: string[];
 }
 
 // --- Surveyor Store ---
