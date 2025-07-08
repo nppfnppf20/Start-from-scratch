@@ -1300,3 +1300,51 @@ export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefin
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
 }
+
+// --- Surveyor Organisation Interface and Store ---
+export interface SurveyorOrganisation {
+  id: string; 
+  organisation: string;
+  discipline: string;
+  contacts: Array<{
+    name: string;
+    email?: string;
+    phoneNumber?: string;
+  }>;
+  totalQuotes: number;
+  totalInstructed: number; // New field
+  averageRatings: {
+    quality?: number;
+    responsiveness?: number;
+    deliveredOnTime?: number;
+    overallReview?: number;
+  };
+}
+
+// --- Surveyor Store ---
+export const surveyorOrganisations = writable<SurveyorOrganisation[]>([]);
+
+// Function to load surveyor organisations from the API
+export async function loadSurveyorOrganisations() {
+  if (!browser) return;
+
+  try {
+    console.log('Fetching surveyor organisations from API...');
+    const response = await fetch(`${API_BASE_URL}/surveyors`, {
+      headers: getAuthTokenHeader()
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const fetchedSurveyors: SurveyorOrganisation[] = await response.json();
+    
+    console.log('Surveyor organisations fetched:', fetchedSurveyors);
+    surveyorOrganisations.set(fetchedSurveyors);
+
+  } catch (error) {
+    console.error("Failed to load surveyor organisations:", error);
+    surveyorOrganisations.set([]); // Reset on error
+  }
+}
