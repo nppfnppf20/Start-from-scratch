@@ -6,6 +6,38 @@
   // Check if user is a surveyor (read-only access)
   $: isSurveyor = $authStore.user?.role === 'surveyor';
 
+  // Save state management
+  let saving = false;
+  let justSaved = false;
+
+  // Dynamic button text
+  $: buttonText = saving ? "Saving..." : justSaved ? "Saved ✓" : "Save Project Information";
+
+  // Format last saved date
+  function formatLastSaved(updatedAt: string | undefined): string {
+    if (!updatedAt) return "";
+    
+    const date = new Date(updatedAt);
+    const today = new Date();
+    
+    // Check if it's today
+    if (date.toDateString() === today.toDateString()) {
+      return `Last saved today at ${date.toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}`;
+    } else {
+      return `Last saved ${date.toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+      })} at ${date.toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}`;
+    }
+  }
+
   // Svelte action to restrict input to numbers and allowed control keys
   function numbersOnly(node: HTMLInputElement) {
     function handleKeydown(event: KeyboardEvent) {
@@ -57,18 +89,23 @@
   async function handleSubmit(event: Event) {
     event.preventDefault();
 
+    saving = true;
     const currentProject = get(selectedProject);
 
     if (currentProject) {
       console.log("Submitting updates for project:", currentProject.id, currentProject);
       const success = await updateProject(currentProject.id, currentProject);
 
+      saving = false;
+
       if (success) {
-          alert("Project information saved successfully!");
+          justSaved = true;
+          setTimeout(() => justSaved = false, 3000); // Reset after 3 seconds
       } else {
           alert("Failed to save project information. Check console for errors.");
       }
     } else {
+        saving = false;
         console.error("handleSubmit called but no project is selected.");
         alert("Error: No project selected to save.");
     }
@@ -76,7 +113,29 @@
 </script>
 
 <div class="general-info">
-  <h1>General Project Information</h1>
+  <!-- Header with title and save button -->
+  <div class="page-header">
+    <div class="title-section">
+      <h1>General Project Information</h1>
+      {#if $selectedProject && $selectedProject.updatedAt}
+        <div class="last-saved-info">
+          {formatLastSaved($selectedProject.updatedAt)}
+        </div>
+      {/if}
+    </div>
+    {#if $selectedProject && !isSurveyor}
+      <button 
+        type="button" 
+        class="save-button-header" 
+        class:saving={saving}
+        class:saved={justSaved}
+        on:click={handleSubmit}
+        disabled={saving}
+      >
+        {buttonText}
+      </button>
+    {/if}
+  </div>
   
   {#if isSurveyor}
     <div class="read-only-notice">
@@ -323,8 +382,20 @@
         </div>
       </section>
       
+      <!-- Bottom Save Button -->
       {#if !isSurveyor}
-        <button type="submit" class="save-button">Save Project Information</button>
+        <div class="bottom-save-container">
+          <button 
+            type="button" 
+            class="save-button" 
+            class:saving={saving}
+            class:saved={justSaved}
+            on:click={handleSubmit}
+            disabled={saving}
+          >
+            {buttonText}
+          </button>
+        </div>
       {/if}
     </form>
   {:else}
@@ -342,10 +413,77 @@
     font-family: 'Inter', sans-serif; /* Common modern sans-serif font */
   }
 
+  /* Page Header Layout */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .page-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #2d3748;
+  }
+
+  .last-saved-info {
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .save-button-header {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    background-color: #2f855a; /* Green matching the theme */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .save-button-header:hover:not(:disabled) {
+    background-color: #276749; /* Darker green */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .save-button-header:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5);
+  }
+
+  .save-button-header:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .save-button-header.saving {
+    background-color: #4a5568; /* Grey during saving */
+  }
+
+  .save-button-header.saved {
+    background-color: #38a169; /* Brighter green when saved */
+  }
+
+  /* General Info Container */
   .general-info {
-    padding: 2rem 1rem; /* Adjusted padding for wider layout */
-    /* max-width: 1200px; */ /* Removed to allow wider content */
-    /* margin: 0 auto; */ /* Not needed if not max-width constrained */
+    padding: 1.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
   
   h1 {
@@ -523,6 +661,14 @@
     -moz-appearance: textfield;
   }
 
+  /* Bottom Save Button Container */
+  .bottom-save-container {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
   /* Button Styling */
   .save-button {
     display: block;
@@ -539,7 +685,7 @@
     transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
-  .save-button:hover {
+  .save-button:hover:not(:disabled) {
     /* background-color: #2b6cb0; Darker blue */
     background-color: #276749; /* Darker green */
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Larger shadow on hover */
@@ -547,6 +693,16 @@
   .save-button:focus {
       outline: none;
       box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); /* Focus ring like inputs */
+  }
+  .save-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  .save-button.saving {
+    background-color: #4a5568; /* Grey during saving */
+  }
+  .save-button.saved {
+    background-color: #38a169; /* Brighter green when saved */
   }
 
   .read-only-notice {
