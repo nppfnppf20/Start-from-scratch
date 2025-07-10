@@ -553,7 +553,7 @@
 
   /* Styles adjusted for better height without calendar */
    .programme-container {
-    padding: 2rem 1rem;
+    padding: 1rem 0;
     display: flex;
     flex-direction: column;
     flex-grow: 1; 
@@ -561,23 +561,15 @@
     overflow: hidden; 
   }
   
-  h1 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 1.5rem;
-    flex-shrink: 0; 
-  }
-  
-  .programme-header {
+  h1, .programme-header {
+    padding: 0 1rem; /* Add padding to match content */
     margin-bottom: 1rem;
     flex-shrink: 0; 
   }
   
   h2 {
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: #2d3748;
+    font-size: 1.5rem;
+    color: #555;
     margin: 0;
   }
   
