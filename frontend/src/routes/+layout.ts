@@ -1,3 +1,6 @@
+// src/routes/+layout.ts
+export const ssr = false;
+
 // File: frontend/src/routes/+layout.ts
 import type { LayoutLoad } from './$types';
 import { browser } from '$app/environment';
