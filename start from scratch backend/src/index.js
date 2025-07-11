@@ -24,7 +24,7 @@ console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- Database Connection ---\n
+// --- Database Connection ---
 const connectDB = async () => {
   try {
     if (!process.env.MONGO_URI) {
@@ -111,6 +111,6 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
 
 
-// --- Start Server ---\n
+// --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

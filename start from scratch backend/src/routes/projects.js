@@ -105,7 +105,6 @@ router.delete('/:id', authorize('admin'), async (req, res) => {
     }
 });
 
-// We can keep the debug log for now if you like, or remove it
-console.log('Attempting to export project router...');
+
 
 module.exports = router;
