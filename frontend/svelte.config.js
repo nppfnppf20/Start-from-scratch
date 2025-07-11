@@ -1,4 +1,5 @@
-import adapter from '@sveltejs/adapter-static';
+// frontend/svelte.config.js
+import adapter from '@sveltejs/adapter-static'; // Ensure this is adapter-static
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,7 +9,8 @@ const config = {
 		adapter: adapter({
 			pages: 'build',
 			assets: 'build',
-			fallback: 'index.html'
+			fallback: 'index.html', // Important for SPAs
+			precompress: false
 		})
 	}
 };

@@ -6,9 +6,6 @@ import { redirect } from '@sveltejs/kit';
 import { get } from 'svelte/store';
 import { loadProjects } from '$lib/stores/projectStore';
 
-// Add this line for static adapter
-export const ssr = false;
-
 // This load function runs on both the server and the client.
 // It's the main entry point for protecting routes and loading initial data.
 export const load: LayoutLoad = async ({ url }) => {
