@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const SurveyorOrganisation = require('../models/surveyororganisations');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 
 // GET /api/surveyor-organisations (Unchanged)
 router.get('/', async (req, res) => {

@@ -4,11 +4,18 @@ const mongoose = require('mongoose');
 const SurveyorFeedback = require('../models/SurveyorFeedback');
 const Quote = require('../models/Quote');
 // --- IMPORT THE SURVEYOR ORGANISATION MODEL ---
-const SurveyorOrganisation = require('../models/surveyororganisations');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 
 // --- HELPER FUNCTION TO UPDATE AGGREGATES ---
 const updateSurveyorOrgAggregates = async (oldFeedback, newFeedback) => {
-    if (!newFeedback || !newFeedback.quoteId) return;
+    if (!newFeedback || !newFeedback.quoteId) {
+        console.log('Skipping aggregate update: no feedback or quoteId');
+        return;
+    }
+
+    console.log(`Updating aggregates for feedback on quote ${newFeedback.quoteId}`);
+    console.log('Old feedback:', oldFeedback);
+    console.log('New feedback:', newFeedback);
 
     try {
         // 1. Find the associated quote to get org and discipline
@@ -18,35 +25,59 @@ const updateSurveyorOrgAggregates = async (oldFeedback, newFeedback) => {
             return;
         }
 
-        // 2. Find the SurveyorOrganisation record
-        const surveyorOrg = await SurveyorOrganisation.findOne({
+        // 2. Find or create the SurveyorOrganisation record
+        let surveyorOrg = await SurveyorOrganisation.findOne({
             organisation: quote.organisation,
             discipline: quote.discipline
         });
 
         if (!surveyorOrg) {
-            console.error(`Could not find surveyor org for ${quote.organisation}/${quote.discipline}.`);
-            return;
+            console.log(`Creating new surveyor org for ${quote.organisation}/${quote.discipline} from feedback.`);
+            // Create a new surveyor organisation record if it doesn't exist
+            surveyorOrg = new SurveyorOrganisation({
+                organisation: quote.organisation,
+                discipline: quote.discipline,
+                contacts: [], // We don't have contact info from feedback alone
+                projectCount: 0,
+                reviewCount: 0,
+                totalQuality: 0,
+                totalResponsiveness: 0,
+                totalDeliveredOnTime: 0,
+                totalOverallReview: 0,
+            });
         }
 
         // 3. Calculate the delta (the change in scores)
         const isNewReview = !oldFeedback;
         const delta = {
-            quality: newFeedback.quality - (oldFeedback?.quality || 0),
-            responsiveness: newFeedback.responsiveness - (oldFeedback?.responsiveness || 0),
-            deliveredOnTime: newFeedback.deliveredOnTime - (oldFeedback?.deliveredOnTime || 0),
-            overallReview: newFeedback.overallReview - (oldFeedback?.overallReview || 0),
+            quality: (newFeedback.quality || 0) - (oldFeedback?.quality || 0),
+            responsiveness: (newFeedback.responsiveness || 0) - (oldFeedback?.responsiveness || 0),
+            deliveredOnTime: (newFeedback.deliveredOnTime || 0) - (oldFeedback?.deliveredOnTime || 0),
+            overallReview: (newFeedback.overallReview || 0) - (oldFeedback?.overallReview || 0),
         };
 
+        console.log('Delta calculation:', delta);
+        console.log('Is new review:', isNewReview);
+
         // 4. Apply the updates
-        surveyorOrg.totalQuality += delta.quality;
-        surveyorOrg.totalResponsiveness += delta.responsiveness;
-        surveyorOrg.totalDeliveredOnTime += delta.deliveredOnTime;
-        surveyorOrg.totalOverallReview += delta.overallReview;
+        surveyorOrg.totalQuality = (surveyorOrg.totalQuality || 0) + delta.quality;
+        surveyorOrg.totalResponsiveness = (surveyorOrg.totalResponsiveness || 0) + delta.responsiveness;
+        surveyorOrg.totalDeliveredOnTime = (surveyorOrg.totalDeliveredOnTime || 0) + delta.deliveredOnTime;
+        surveyorOrg.totalOverallReview = (surveyorOrg.totalOverallReview || 0) + delta.overallReview;
 
         if (isNewReview) {
             surveyorOrg.reviewCount = (surveyorOrg.reviewCount || 0) + 1;
         }
+
+        console.log('Final surveyor org state before save:', {
+            organisation: surveyorOrg.organisation,
+            discipline: surveyorOrg.discipline,
+            reviewCount: surveyorOrg.reviewCount,
+            totalQuality: surveyorOrg.totalQuality,
+            totalResponsiveness: surveyorOrg.totalResponsiveness,
+            totalDeliveredOnTime: surveyorOrg.totalDeliveredOnTime,
+            totalOverallReview: surveyorOrg.totalOverallReview
+        });
 
         await surveyorOrg.save();
         console.log(`Updated aggregates for ${surveyorOrg.organisation} - ${surveyorOrg.discipline}`);
