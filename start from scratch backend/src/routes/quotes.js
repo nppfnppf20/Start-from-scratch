@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
 const Project = require('../models/Project');
 // 1. Import the SurveyorOrganisation model
-const SurveyorOrganisation = require('../models/surveyororganisations');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 
 // 2. Helper function to keep the surveyor bank up-to-date
 const upsertSurveyorOrganisation = async (organisationName, contact) => {
