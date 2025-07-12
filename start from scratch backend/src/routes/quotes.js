@@ -3,54 +3,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
 const Project = require('../models/Project');
-const SurveyorOrganisation = require('../models/SurveyorOrganisation');
-
-// --- Helper function to keep surveyor bank up-to-date ---
-const upsertSurveyorOrganisation = async (quoteData) => {
-  if (!quoteData.organisation || !quoteData.discipline || !quoteData.email) {
-    console.log('Upsert skipped: Organisation name, discipline, or contact email is missing.');
-    return;
-  }
-
-  try {
-    const query = {
-      organisation: { $regex: new RegExp(`^${quoteData.organisation}$`, 'i') },
-      discipline: { $regex: new RegExp(`^${quoteData.discipline}$`, 'i') }
-    };
-
-    const org = await SurveyorOrganisation.findOne(query);
-
-    if (org) {
-      const contactExists = org.contacts.some(c => c.email.toLowerCase() === quoteData.email.toLowerCase());
-      if (!contactExists) {
-        org.contacts.push({ 
-            contactName: quoteData.contactName, 
-            email: quoteData.email,
-            phoneNumber: quoteData.phoneNumber
-        });
-      }
-      org.projectCount = (org.projectCount || 0) + 1;
-      await org.save();
-      console.log(`Updated organisation/discipline: '${org.organisation}' / '${org.discipline}'.`);
-    } else {
-      const newOrg = new SurveyorOrganisation({
-        organisation: quoteData.organisation,
-        discipline: quoteData.discipline,
-        contacts: [{
-            contactName: quoteData.contactName,
-            email: quoteData.email,
-            phoneNumber: quoteData.phoneNumber
-        }],
-        projectCount: 1,
-        reviewCount: 0,
-      });
-      await newOrg.save();
-      console.log(`New organisation/discipline created: '${newOrg.organisation}' / '${newOrg.discipline}'.`);
-    }
-  } catch (error) {
-    console.error('Error in upsertSurveyorOrganisation:', error.message);
-  }
-};
 
 
 // @route   GET /api/quotes
@@ -97,9 +49,6 @@ router.post('/', async (req, res) => {
 
         const newQuote = new Quote({ ...req.body, surveyor: req.user.id });
         const quote = await newQuote.save();
-
-        // --- Call the upsert function after a successful save ---
-        await upsertSurveyorOrganisation(quote);
 
         res.status(201).json(quote);
 
