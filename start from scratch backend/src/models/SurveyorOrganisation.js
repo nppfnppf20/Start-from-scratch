@@ -1,34 +1,28 @@
 const mongoose = require('mongoose');
 
-// A sub-schema for individual contacts.
-// By setting _id: false, we prevent Mongoose from creating a separate ID for each contact.
+// The Contact sub-schema remains unchanged.
 const ContactSchema = new mongoose.Schema({
-  contactName: { 
-    type: String, 
-    trim: true 
-  },
-  email: { 
-    type: String, 
-    lowercase: true, 
-    trim: true,
-    // Note: We don't enforce uniqueness here, as different organisations might have a contact with the same email.
-  },
-  phoneNumber: { 
-    type: String, 
-    trim: true 
-  }
+  contactName: { type: String, trim: true },
+  email: { type: String, lowercase: true, trim: true },
+  phoneNumber: { type: String, trim: true }
 }, { _id: false });
 
 const SurveyorOrganisationSchema = new mongoose.Schema({
   organisation: {
     type: String,
     required: [true, 'Organisation name is required'],
-    unique: true, // The organisation name is now the unique identifier.
     trim: true,
   },
-  contacts: [ContactSchema], // This is now an array of contact objects.
+  // --- NEW FIELD ---
+  // We are adding discipline as a required field.
+  discipline: {
+    type: String,
+    required: [true, 'Discipline is required'],
+    trim: true,
+  },
+  contacts: [ContactSchema],
   
-  // --- Aggregate Data Fields (Unchanged) ---
+  // --- Aggregate Data Fields ---
   projectCount: {
     type: Number,
     default: 0,
@@ -42,12 +36,17 @@ const SurveyorOrganisationSchema = new mongoose.Schema({
   totalDeliveredOnTime: { type: Number, default: 0 },
   totalOverallReview: { type: Number, default: 0 },
 }, {
-  // We've added timestamps to automatically track when a record is created or updated.
   timestamps: true 
 });
 
+// --- NEW COMPOUND INDEX ---
+// This is crucial. It tells MongoDB that the combination of 'organisation' 
+// and 'discipline' must be unique. This prevents us from ever creating
+// two "Tyler Grange Landscape" records by mistake.
+SurveyorOrganisationSchema.index({ organisation: 1, discipline: 1 }, { unique: true });
+
+
 // --- Virtual Properties for Averages (Unchanged) ---
-// These will continue to work perfectly.
 SurveyorOrganisationSchema.virtual('averageQuality').get(function() {
   return this.reviewCount > 0 ? (this.totalQuality / this.reviewCount).toFixed(1) : 0;
 });
@@ -61,7 +60,7 @@ SurveyorOrganisationSchema.virtual('averageOverallReview').get(function() {
   return this.reviewCount > 0 ? (this.totalOverallReview / this.reviewCount).toFixed(1) : 0;
 });
 
-// Ensure virtual properties are included in the JSON output.
+// Ensure virtuals are included in JSON output (Unchanged)
 SurveyorOrganisationSchema.set('toJSON', { virtuals: true });
 SurveyorOrganisationSchema.set('toObject', { virtuals: true });
 

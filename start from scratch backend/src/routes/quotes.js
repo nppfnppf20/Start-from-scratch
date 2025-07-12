@@ -3,51 +3,51 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
 const Project = require('../models/Project');
-// 1. Import the SurveyorOrganisation model
-const SurveyorOrganisation = require('../models/SurveyorOrganisation');
+const SurveyorOrganisation = require('../models/surveyororganisations');
 
-// 2. Helper function to keep the surveyor bank up-to-date
-const upsertSurveyorOrganisation = async (organisationName, contact) => {
-  // Guard against missing data
-  if (!organisationName || !contact || !contact.email) {
-    console.log('Upsert skipped: Organisation name or contact email is missing.');
+// --- Helper function to keep surveyor bank up-to-date ---
+const upsertSurveyorOrganisation = async (quoteData) => {
+  if (!quoteData.organisation || !quoteData.discipline || !quoteData.email) {
+    console.log('Upsert skipped: Organisation name, discipline, or contact email is missing.');
     return;
   }
 
   try {
-    // Find an organisation by its name (case-insensitive)
-    const org = await SurveyorOrganisation.findOne({ 
-      organisation: { $regex: new RegExp(`^${organisationName}$`, 'i') }
-    });
+    const query = {
+      organisation: { $regex: new RegExp(`^${quoteData.organisation}$`, 'i') },
+      discipline: { $regex: new RegExp(`^${quoteData.discipline}$`, 'i') }
+    };
+
+    const org = await SurveyorOrganisation.findOne(query);
 
     if (org) {
-      // If the organisation exists, check if this specific contact needs to be added
-      const contactExists = org.contacts.some(c => c.email.toLowerCase() === contact.email.toLowerCase());
-      
+      const contactExists = org.contacts.some(c => c.email.toLowerCase() === quoteData.email.toLowerCase());
       if (!contactExists) {
         org.contacts.push({ 
-            contactName: contact.contactName, 
-            email: contact.email,
-            phoneNumber: contact.phoneNumber // Now includes phone number
+            contactName: quoteData.contactName, 
+            email: quoteData.email,
+            phoneNumber: quoteData.phoneNumber
         });
-        await org.save();
-        console.log(`New contact '${contact.email}' added to organisation '${org.organisation}'.`);
       }
+      org.projectCount = (org.projectCount || 0) + 1;
+      await org.save();
+      console.log(`Updated organisation/discipline: '${org.organisation}' / '${org.discipline}'.`);
     } else {
-      // If the organisation does not exist, create it with the new contact
       const newOrg = new SurveyorOrganisation({
-        organisation: organisationName,
+        organisation: quoteData.organisation,
+        discipline: quoteData.discipline,
         contacts: [{
-            contactName: contact.contactName,
-            email: contact.email,
-            phoneNumber: contact.phoneNumber // Now includes phone number
-        }]
+            contactName: quoteData.contactName,
+            email: quoteData.email,
+            phoneNumber: quoteData.phoneNumber
+        }],
+        projectCount: 1,
+        reviewCount: 0,
       });
       await newOrg.save();
-      console.log(`New organisation '${organisationName}' created with contact '${contact.email}'.`);
+      console.log(`New organisation/discipline created: '${newOrg.organisation}' / '${newOrg.discipline}'.`);
     }
   } catch (error) {
-    // Log the error but do not block the main API response
     console.error('Error in upsertSurveyorOrganisation:', error.message);
   }
 };
@@ -83,7 +83,7 @@ router.post('/', async (req, res) => {
     const { projectId, discipline, organisation, contactName, lineItems, instructionStatus, ...rest } = req.body;
 
     if (!projectId || !discipline || !organisation || !contactName || !lineItems || lineItems.length === 0 || !instructionStatus) {
-        return res.status(400).json({ msg: 'Missing required fields for quote (projectId, discipline, organisation, contactName, lineItems, instructionStatus)' });
+        return res.status(400).json({ msg: 'Missing required fields for quote' });
     }
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
         return res.status(400).json({ msg: 'Invalid Project ID format' });
@@ -95,19 +95,11 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ msg: 'Project not found' });
         }
 
-        const newQuote = new Quote({
-            ...req.body,
-            surveyor: req.user.id
-        });
-
+        const newQuote = new Quote({ ...req.body, surveyor: req.user.id });
         const quote = await newQuote.save();
 
-        // 3. Call the upsert function after a successful save
-        await upsertSurveyorOrganisation(quote.organisation, { 
-            contactName: quote.contactName, 
-            email: quote.email,
-            phoneNumber: quote.phoneNumber // Pass the phone number
-        });
+        // --- Call the upsert function after a successful save ---
+        await upsertSurveyorOrganisation(quote);
 
         res.status(201).json(quote);
 
@@ -160,13 +152,6 @@ router.put('/:id', async (req, res) => {
         if (!updatedQuote) {
             return res.status(404).json({ msg: 'Quote not found or update failed silently' });
         }
-
-        // 4. Call the upsert function after a successful update
-        await upsertSurveyorOrganisation(updatedQuote.organisation, { 
-            contactName: updatedQuote.contactName, 
-            email: updatedQuote.email,
-            phoneNumber: updatedQuote.phoneNumber // Pass the phone number
-        });
 
         res.json(updatedQuote); 
 
