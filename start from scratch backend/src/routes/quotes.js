@@ -3,7 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
 const Project = require('../models/Project');
-const SurveyorOrganisation = require('../models/surveyororganisations');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 
 // --- Helper function to keep surveyor bank up-to-date ---
 const upsertSurveyorOrganisation = async (quoteData) => {

@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const SurveyorFeedback = require('../models/SurveyorFeedback');
 const Quote = require('../models/Quote');
 // --- IMPORT THE SURVEYOR ORGANISATION MODEL ---
-const SurveyorOrganisation = require('../models/surveyororganisations');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 
 // --- HELPER FUNCTION TO UPDATE AGGREGATES ---
 const updateSurveyorOrgAggregates = async (oldFeedback, newFeedback) => {
