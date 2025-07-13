@@ -88,11 +88,6 @@
 </script>
 
 <div class="surveyor-bank-container">
-    <div class="page-header">
-        <h1>Surveyor Organisations</h1>
-        <p>Manage your surveyor organisation database</p>
-    </div>
-    
     {#if error}
         <div class="error-message">
             <p>{error}</p>
