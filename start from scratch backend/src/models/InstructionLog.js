@@ -39,13 +39,13 @@ const InstructionLogSchema = new Schema({
         enum: ['not started', 'in progress', 'completed', 'TRP Reviewing', 'Client reviewing'],
         default: 'not started'
     },
-    siteVisitDate: { type: Date },
-    reportDraftDate: { type: Date },
-    operationalNotes: {
+    dependencies: {
         type: String,
         default: ''
     },
-    holdUpNotes: {
+    siteVisitDate: { type: Date },
+    reportDraftDate: { type: Date },
+    operationalNotes: {
         type: String,
         default: ''
     },

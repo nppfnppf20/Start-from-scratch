@@ -36,10 +36,10 @@
   let currentQuoteForNotes: Quote | null = null;
   let currentOperationalNotes: string | undefined = ''; // Renamed for clarity
 
-  // Modal state for Hold Ups Notes
-  let showHoldUpNotesModal = false;
-  let currentQuoteForHoldUpNotes: Quote | null = null;
-  let currentHoldUpNotes: string | undefined = '';
+  // Modal state for Dependencies Notes
+  let showDependenciesNotesModal = false;
+  let currentQuoteForDependenciesNotes: Quote | null = null;
+  let currentDependenciesNotes: string | undefined = '';
 
   // Modal state for Document Upload
   let showDocumentUploadModal = false;
@@ -105,27 +105,27 @@
     closeNotesModal();
   }
 
-  // --- Hold Up Notes Modal Functions ---
-  function openHoldUpNotesModal(quote: Quote) {
+  // --- Dependencies Notes Modal Functions ---
+  function openDependenciesNotesModal(quote: Quote) {
     const log = findLog(quote.id);
-    currentQuoteForHoldUpNotes = quote;
-    currentHoldUpNotes = log?.holdUpNotes;
-    showHoldUpNotesModal = true;
+    currentQuoteForDependenciesNotes = quote;
+    currentDependenciesNotes = log?.dependencies;
+    showDependenciesNotesModal = true;
   }
 
-  function closeHoldUpNotesModal() {
-    showHoldUpNotesModal = false;
-    currentQuoteForHoldUpNotes = null;
-    currentHoldUpNotes = '';
+  function closeDependenciesNotesModal() {
+    showDependenciesNotesModal = false;
+    currentQuoteForDependenciesNotes = null;
+    currentDependenciesNotes = '';
   }
 
-  async function handleSaveHoldUpNotes(event: CustomEvent<{ notes: string }>) {
-    if (!$selectedProject || !currentQuoteForHoldUpNotes || !browser) return;
+  async function handleSaveDependenciesNotes(event: CustomEvent<{ notes: string }>) {
+    if (!$selectedProject || !currentQuoteForDependenciesNotes || !browser) return;
     
     const newNotes = event.detail.notes;
-    console.log(`Saving hold up notes for quote ${currentQuoteForHoldUpNotes.id}`);
-    await upsertInstructionLog(currentQuoteForHoldUpNotes.id, { holdUpNotes: newNotes });
-    closeHoldUpNotesModal();
+    console.log(`Saving dependencies notes for quote ${currentQuoteForDependenciesNotes.id}`);
+    await upsertInstructionLog(currentQuoteForDependenciesNotes.id, { dependencies: newNotes });
+    closeDependenciesNotesModal();
   }
 
   // --- Document Upload Modal Functions ---
@@ -281,7 +281,7 @@
               <th>Quote Amt.</th>
               <th>Work Status</th>
               <th>Dates</th>
-              <th>Hold Ups</th>
+              <th>Dependencies</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -389,8 +389,8 @@
                   </button>
                 </td>
                 <td>
-                  <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)} title="Edit hold up notes">
-                    {getNotesPreview(log?.holdUpNotes)}
+                  <button class="notes-button" on:click={() => openDependenciesNotesModal(quote)} title="Edit dependencies notes">
+                    {getNotesPreview(log?.dependencies)}
                   </button>
                 </td>
                 <td>
@@ -424,12 +424,12 @@
   />
 {/if}
 
-{#if showHoldUpNotesModal && currentQuoteForHoldUpNotes}
+{#if showDependenciesNotesModal && currentQuoteForDependenciesNotes}
   <NotesModal
-    initialNotes={currentHoldUpNotes}
-    organisationName={currentQuoteForHoldUpNotes.organisation}
-    on:save={handleSaveHoldUpNotes}
-    on:cancel={closeHoldUpNotesModal}
+    initialNotes={currentDependenciesNotes}
+    organisationName={currentQuoteForDependenciesNotes.organisation}
+    on:save={handleSaveDependenciesNotes}
+    on:cancel={closeDependenciesNotesModal}
   />
 {/if}
 

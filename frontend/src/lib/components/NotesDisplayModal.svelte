@@ -1,11 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
 
+  export let modalTitle = 'Notes';
+  export let notesPrefix = 'Notes:';
   export let notes = '';
   export let organisationName = 'Surveyor';
-  export let modalType: 'holdUp' | 'surveyor' = 'holdUp';
-  export let editable = false; // New prop to enable editing
-  export let quoteId = ''; // New prop needed for saving
+  export let editable = false;
+  export let quoteId = '';
 
   const dispatch = createEventDispatcher();
 
@@ -35,16 +36,10 @@
     // Dispatch save event to parent component
     dispatch('save', {
       quoteId,
-      notes: editedNotes.trim(),
-      modalType
+      notes: editedNotes.trim()
     });
     isEditing = false;
   }
-
-  // Dynamic title and prefix based on modal type
-  $: modalTitle = modalType === 'holdUp' ? `Hold Up Notes for ${organisationName}` : `Surveyor Notes for ${organisationName}`;
-  $: notesPrefix = modalType === 'holdUp' ? 'Hold Up:' : 'Surveyor Notes:';
-  $: canEdit = editable; // Allow editing for both types when editable prop is true
 </script>
 
 <div class="modal-backdrop" on:click={closeModal}>
@@ -52,7 +47,7 @@
     <div class="modal-header">
       <h2>{modalTitle}</h2>
       <div class="header-buttons">
-        {#if canEdit && !isEditing}
+        {#if editable && !isEditing}
           <button on:click={startEditing} class="edit-button" title="Edit notes">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
               <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>

@@ -1094,7 +1094,7 @@ export interface InstructionLog {
   siteVisitDate?: string; // ISO date string
   reportDraftDate?: string; // ISO date string
   operationalNotes?: string;
-  holdUpNotes?: string;
+  dependencies?: string;
   uploadedWorks?: UploadedWork[]; // Uses existing UploadedWork interface
   customDates?: CustomDate[];   // Uses existing CustomDate interface
   createdAt?: string;

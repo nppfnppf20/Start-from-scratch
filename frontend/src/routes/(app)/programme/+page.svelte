@@ -257,12 +257,10 @@
   let eventBeingEdited: ProgrammeEvent | null = null;
 
   // State for the hold-up notes display modal
-  let showHoldUpNotesDisplayModal = false;
-  let showSurveyorNotesDisplayModal = false; // New state for surveyor notes modal
-  let notesToDisplay = '';
-  let orgNameToDisplay = '';
-  let modalType: 'holdUp' | 'surveyor' = 'holdUp'; // New state to track modal type
-  let currentQuoteId = ''; // New state to track which quote is being viewed
+  let showDependenciesNotesDisplayModal = false;
+  let currentNotesContent = '';
+  let currentNotesOrgName = '';
+  let currentNotesQuoteId = '';
 
   // --- Modal Handlers ---
   function handleOpenKeyDateModal(weekDate: Date) {
@@ -324,46 +322,22 @@
     eventBeingEdited = null;
   }
 
-  // Function to open the hold-up notes display modal
-  function openHoldUpNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
-    notesToDisplay = notes;
-    orgNameToDisplay = orgName;
-    currentQuoteId = quoteId;
-    modalType = 'holdUp';
-    showHoldUpNotesDisplayModal = true;
+  function openDependenciesNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
+    currentNotesContent = notes;
+    currentNotesOrgName = orgName;
+    currentNotesQuoteId = quoteId;
+    showDependenciesNotesDisplayModal = true;
   }
 
-  // Function to open the surveyor notes display modal
-  function openSurveyorNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
-    notesToDisplay = notes;
-    orgNameToDisplay = orgName;
-    currentQuoteId = quoteId;
-    modalType = 'surveyor';
-    showSurveyorNotesDisplayModal = true;
-  }
-
-  // Function to handle saving notes from the modal
-  async function handleNoteSave(event: CustomEvent<{ quoteId: string; notes: string; modalType: 'holdUp' | 'surveyor' }>) {
-    const { quoteId, notes, modalType } = event.detail;
+  async function handleSaveFromDisplay(event: CustomEvent<{ notes: string; quoteId: string }>) {
+    const { notes, quoteId } = event.detail;
+    if (!browser) return;
     
-    try {
-      if (modalType === 'surveyor') {
-        // Update operational notes
-        await upsertInstructionLog(quoteId, { operationalNotes: notes });
-        console.log('Surveyor notes updated successfully');
-      } else if (modalType === 'holdUp') {
-        // Update hold-up notes
-        await upsertInstructionLog(quoteId, { holdUpNotes: notes });
-        console.log('Hold-up notes updated successfully');
-      }
-      
-      // Update the display
-      notesToDisplay = notes;
-      
-    } catch (error) {
-      console.error('Failed to save notes:', error);
-      alert('Failed to save notes. Please try again.');
-    }
+    // Use the new upsert function
+    await upsertInstructionLog(quoteId, { dependencies: notes });
+    
+    // Close the modal
+    showDependenciesNotesDisplayModal = false;
   }
 
   // Reactive calculation for quotes belonging to the selected project
@@ -452,18 +426,18 @@
                       <span>{quote.discipline}</span>
                       <!-- Surveyor Notes Icon -->
                       {#if log && log.operationalNotes && log.operationalNotes.trim() !== ''}
-                        <svg on:click={() => openSurveyorNotesDisplayModal(log.operationalNotes || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                        <svg on:click={() => openDependenciesNotesDisplayModal(log.operationalNotes || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
                           <title>Surveyor Notes: {log.operationalNotes}</title>
                           <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z"/>
                           <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V11h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
                           <path d="M6 4h6v1H6V4zm0 3h6v1H6V7zm0 3h6v1H6v-1z"/>
                         </svg>
                       {/if}
-                      <!-- Hold-up Icon -->
-                      {#if log && log.holdUpNotes && log.holdUpNotes.trim() !== ''}
-                        <svg on:click={() => openHoldUpNotesDisplayModal(log.holdUpNotes || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
-                          <title>Hold Up: {log.holdUpNotes}</title>
-                          <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                      <!-- Dependencies Icon -->
+                      {#if log && log.dependencies && log.dependencies.trim() !== ''}
+                        <svg on:click={() => openDependenciesNotesDisplayModal(log.dependencies || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                          <title>Dependencies: {log.dependencies}</title>
+                          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 4a.905.905 0 0 1 .9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6.022a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                         </svg>
                       {/if}
                     </div>
@@ -523,27 +497,16 @@
     />
   {/if}
 
-  {#if showHoldUpNotesDisplayModal}
+  <!-- Display/Edit Modal for Dependencies Notes -->
+  {#if showDependenciesNotesDisplayModal}
     <NotesDisplayModal 
-      notes={notesToDisplay}
-      organisationName={orgNameToDisplay}
-      on:close={() => showHoldUpNotesDisplayModal = false}
-      modalType="holdUp"
-      quoteId={currentQuoteId}
-      editable={true}
-      on:save={handleNoteSave}
-    />
-  {/if}
-
-  {#if showSurveyorNotesDisplayModal}
-    <NotesDisplayModal 
-      notes={notesToDisplay}
-      organisationName={orgNameToDisplay}
-      on:close={() => showSurveyorNotesDisplayModal = false}
-      modalType="surveyor"
-      quoteId={currentQuoteId}
-      editable={true}
-      on:save={handleNoteSave}
+        modalTitle="Dependencies for {currentNotesOrgName}"
+        notesPrefix="Dependencies:"
+        notes={currentNotesContent}
+        organisationName={currentNotesOrgName}
+        quoteId={currentNotesQuoteId}
+        on:close={() => showDependenciesNotesDisplayModal = false}
+        on:save={handleSaveFromDisplay}
     />
   {/if}
 </div>
