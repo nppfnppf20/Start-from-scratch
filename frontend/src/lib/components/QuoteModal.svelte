@@ -558,6 +558,7 @@
   .modal form textarea {
     width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
     font-size: 0.95em;
+    font-family: inherit;
   }
    .modal form input:focus, .modal form select:focus, .modal form textarea:focus {
        border-color: #007bff;
