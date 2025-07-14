@@ -137,6 +137,11 @@ export async function addSurveyorOrganisation(orgData: {
 
   } catch (error) {
     console.error('Failed to add surveyor organisation:', error);
+    console.error('🚨 FULL ERROR DETAILS:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
     alert(`Error adding organisation: ${error}`);
     return null;
   }

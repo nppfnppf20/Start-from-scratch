@@ -30,7 +30,6 @@
 
   // Dropdown state
   let openDropdownId: string | null = null;
-  let dropdownPosition = { top: 0, left: 0 };
 
   // Toggle dropdown
   function toggleDropdown(tabId: string, event: MouseEvent) {
@@ -38,14 +37,8 @@
       openDropdownId = null;
     } else {
       openDropdownId = tabId;
-      
-      // Calculate position for fixed positioning - always use the button element
-      const target = event.currentTarget as HTMLElement; // currentTarget is always the button
-      const rect = target.getBoundingClientRect();
-      dropdownPosition = {
-        top: rect.bottom + 4,
-        left: rect.left
-      };
+      // No need to calculate position since we're using absolute positioning
+      // The dropdown will position itself relative to the parent menu item
     }
   }
 
@@ -103,7 +96,7 @@
             </button>
             
             {#if openDropdownId === tab.id}
-              <div class="dropdown-menu" style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;" on:click|stopPropagation>
+              <div class="dropdown-menu" on:click|stopPropagation>
                 {#each tab.dropdown as item}
                   <button
                     class="dropdown-item"
@@ -163,7 +156,6 @@
 
   .navigation-menu {
     position: relative;
-    z-index: 10;
     display: flex;
     padding: 0 20px;
     min-width: max-content;
@@ -245,8 +237,10 @@
   }
 
   .dropdown-menu {
-    position: fixed;
-    z-index: 99999;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1;
     min-width: 180px;
     background: var(--card, white);
     border: 1px solid var(--border, #e2e8f0);

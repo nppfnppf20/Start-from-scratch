@@ -4,6 +4,10 @@
 
   // Modal states
   let showAddModal = false;
+
+  function handleAddClick() {
+    showAddModal = true;
+  }
 </script>
 
 <!-- Page Header with Title and Button -->
@@ -11,11 +15,13 @@
   <h1>Surveyor Organisations</h1>
   <button 
     class="add-organisation-btn" 
-    on:click={() => showAddModal = true}
+    on:click={handleAddClick}
   >
     + Add New Organisation
   </button>
 </div>
+
+
 
 <!-- Main Table -->
 <SurveyorBankModal />

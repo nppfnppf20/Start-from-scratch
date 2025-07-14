@@ -6,7 +6,9 @@ const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 router.get('/', async (req, res) => {
   try {
     // We can enhance this later to fetch the performance data, but for now, it gets the raw bank.
-    const organisations = await SurveyorOrganisation.find({}).sort({ organisation: 1, discipline: 1 });
+    const organisations = await SurveyorOrganisation.find({})
+      .sort({ organisation: 1, discipline: 1 })
+      .collation({ locale: 'en', strength: 2 });
     res.json(organisations);
   } catch (err) {
     console.error('Error fetching surveyor organisations:', err.message);
@@ -22,10 +24,12 @@ router.post('/', async (req, res) => {
 
   try {
     // The check for an existing org is now based on BOTH name and discipline
+    // Using collation to match the index's case-insensitive behavior
     let existingOrg = await SurveyorOrganisation.findOne({ 
-      organisation: { $regex: new RegExp(`^${organisation}$`, 'i') },
-      discipline: { $regex: new RegExp(`^${discipline}$`, 'i') }
-    });
+      organisation: organisation,
+      discipline: discipline
+    }).collation({ locale: 'en', strength: 2 });
+    
     if (existingOrg) {
       return res.status(400).json({ msg: 'An organisation with this name and discipline already exists.' });
     }

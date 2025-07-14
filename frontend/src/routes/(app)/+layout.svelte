@@ -56,7 +56,6 @@
         width: 100%;
         overflow: visible;
         position: relative;
-        z-index: 10000;
     }
 
     footer {

@@ -43,7 +43,14 @@ const SurveyorOrganisationSchema = new mongoose.Schema({
 // This is crucial. It tells MongoDB that the combination of 'organisation' 
 // and 'discipline' must be unique. This prevents us from ever creating
 // two "Tyler Grange Landscape" records by mistake.
-SurveyorOrganisationSchema.index({ organisation: 1, discipline: 1 }, { unique: true });
+// Using case-insensitive collation to match our validation logic
+SurveyorOrganisationSchema.index(
+  { organisation: 1, discipline: 1 }, 
+  { 
+    unique: true,
+    collation: { locale: 'en', strength: 2 } // Case-insensitive comparison
+  }
+);
 
 
 // --- Virtual Properties for Averages (Unchanged) ---
