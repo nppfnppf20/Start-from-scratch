@@ -4,11 +4,19 @@
         surveyorOrganisations, 
         type SurveyorOrganisation 
     } from '$lib/stores/surveyorOrganisationStore';
-    
+    import EditSurveyorOrganisationModal from './EditSurveyorOrganisationModal.svelte';
+
     // State
     let isLoading = false;
     let error: string | null = null;
     let displaySurveyors: SurveyorOrganisation[] = [];
+    let showEditModal = false;
+    let selectedOrganisation: SurveyorOrganisation | null = null;
+
+    function handleEditClick(organisation: SurveyorOrganisation) {
+        selectedOrganisation = organisation;
+        showEditModal = true;
+    }
 
     // --- Sorting State ---
     type SortKey = 'organisation' | 'discipline' | 'averageQuality' | 'averageResponsiveness' | 'averageDeliveredOnTime' | 'averageOverallReview';
@@ -140,6 +148,7 @@
                             </th>
                             <th rowspan="2">Contacts</th>
                             <th colspan="4" class="text-center divider-left divider-right">Feedback (Average /5)</th>
+                            <th rowspan="2">Actions</th>
                         </tr>
                         <tr>
                             <th class="sub-header divider-left">
@@ -196,6 +205,9 @@
                                 <td class="text-center">{formatValue(surveyor.averageResponsiveness)}</td>
                                 <td class="text-center">{formatValue(surveyor.averageDeliveredOnTime)}</td>
                                 <td class="text-center divider-right">{formatValue(surveyor.averageOverallReview)}</td>
+                                <td>
+                                    <button on:click={() => handleEditClick(surveyor)}>Edit</button>
+                                </td>
                             </tr>
                         {/each}
                     </tbody>
@@ -204,6 +216,17 @@
         {/if}
     {/if}
 </div>
+
+{#if showEditModal && selectedOrganisation}
+    <EditSurveyorOrganisationModal 
+        organisation={selectedOrganisation} 
+        on:close={() => showEditModal = false}
+        on:save={() => {
+            showEditModal = false;
+            loadData(); // Refresh data after save
+        }}
+    />
+{/if}
 
 <style>
     .surveyor-bank-container {
@@ -254,6 +277,21 @@
         border: none;
         border-radius: 4px;
         cursor: pointer;
+    }
+
+    td button {
+        padding: 6px 12px;
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background-color 0.2s;
+    }
+
+    td button:hover {
+        background-color: #138496;
     }
 
     .controls-container {
