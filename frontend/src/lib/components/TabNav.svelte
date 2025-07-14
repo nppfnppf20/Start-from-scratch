@@ -130,8 +130,6 @@
     background: var(--card);
     padding: 16px 0;
     border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    overflow-y: visible;
     width: 100%;
     scrollbar-width: thin;
     scrollbar-color: var(--muted) transparent;
@@ -166,7 +164,7 @@
     display: flex;
     list-style: none;
     gap: 4px;
-    min-width: max-content;
+    flex-wrap: wrap;
     margin: 0;
     padding: 0;
     overflow: visible;
@@ -174,7 +172,6 @@
 
   .navigation-menu-item {
     position: relative;
-    flex-shrink: 0;
     overflow: visible;
   }
 

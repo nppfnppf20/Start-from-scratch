@@ -56,6 +56,7 @@
         width: 100%;
         overflow: visible;
         position: relative;
+        z-index: 2; /* Ensure header is above main content */
     }
 
     footer {
