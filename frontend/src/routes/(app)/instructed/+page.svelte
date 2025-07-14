@@ -277,7 +277,6 @@
               <th>Organisation</th>
               <th>Contact</th>
               <th>Email</th>
-              <th>Survey Type</th>
               <th>Quote Amt.</th>
               <th>Work Status</th>
               <th>Dates</th>
@@ -299,7 +298,6 @@
                     N/A
                   {/if}
                 </td>
-                <td>{quote.surveyType || 'N/A'}</td>
                 <td>
                   {#if quote.instructionStatus === 'partially instructed' && quote.partiallyInstructedTotal !== undefined}
                     £{quote.partiallyInstructedTotal.toFixed(2)} (Partial)

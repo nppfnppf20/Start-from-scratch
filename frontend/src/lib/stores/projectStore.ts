@@ -428,7 +428,6 @@ export interface Quote {
   id: string;
   projectId: string;
   discipline: string;
-  surveyType?: string;
   organisation: string;
   contactName: string;
   email?: string;
@@ -452,14 +451,6 @@ export const uniqueDisciplines = derived(
   ($allQuotes) => {
     const allDisciplines = $allQuotes.map(q => q.discipline);
     return [...new Set(allDisciplines)].sort();
-  }
-);
-
-export const uniqueSurveyTypes = derived(
-  allQuotes,
-  ($allQuotes) => {
-    const allSurveyTypes = $allQuotes.map(q => q.surveyType).filter(st => st); // Filter out empty/null values
-    return [...new Set(allSurveyTypes as string[])].sort();
   }
 );
 

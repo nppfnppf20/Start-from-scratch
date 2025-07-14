@@ -37,11 +37,6 @@ const QuoteSchema = new Schema({
         required: [true, 'Discipline is required'],
         trim: true
     },
-    surveyType: {
-        type: String,
-        trim: true
-        // required: false // Optional as per interface
-    },
     organisation: {
         type: String,
         required: [true, 'Organisation is required'],

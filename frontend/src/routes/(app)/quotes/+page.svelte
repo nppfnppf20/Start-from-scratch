@@ -163,7 +163,6 @@
           <thead>
             <tr>
               <th>Discipline</th>
-              <th>Survey Type</th>
               <th>Organisation</th>
               <th>Contact Name</th>
               <th>Email</th>
@@ -177,7 +176,6 @@
             {#each $currentProjectQuotes as quote (quote.id)}
               <tr>
                 <td>{quote.discipline}</td>
-                <td>{quote.surveyType}</td>
                 <td>{quote.organisation}</td>
                 <td>{quote.contactName}</td>
                 <td><a href="mailto:{quote.email}">{quote.email}</a></td>
