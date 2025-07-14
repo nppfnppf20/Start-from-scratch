@@ -2,10 +2,15 @@
     import { onMount } from 'svelte';
     import { projectBank, loadProjectBank, type ProjectBankItem, deleteProgrammeEvent } from '$lib/stores/projectStore';
     import { formatDate } from '$lib/utils/formatters';
+    import EditProjectModal from './EditProjectModal.svelte';
   
     let isLoading = true;
     let error: string | null = null;
     let isDeleting = false;
+
+    // --- Modal State ---
+    let showEditModal = false;
+    let selectedProjectForEdit: ProjectBankItem | null = null;
 
     // --- Filter State ---
     let searchText = '';
@@ -91,9 +96,25 @@
 
       return nameMatch || clientMatch || teamMatch;
     });
-  </script>
-  
-  <div class="project-bank-container">
+
+    function handleEditClick(project: ProjectBankItem) {
+      selectedProjectForEdit = project;
+      showEditModal = true;
+    }
+</script>
+
+{#if showEditModal && selectedProjectForEdit}
+  <EditProjectModal
+    project={selectedProjectForEdit}
+    on:close={() => showEditModal = false}
+    on:save={async () => {
+      showEditModal = false;
+      await loadProjectBank(); // Refresh data after save
+    }}
+  />
+{/if}
+
+<div class="project-bank-container">
     {#if error}
       <div class="error-message">
         <p>{error}</p>
@@ -128,6 +149,7 @@
               <th rowspan="2">Team</th>
               <th rowspan="2">Key Dates</th>
               <th colspan="3" class="text-center divider-left">Totals</th>
+              <th rowspan="2" class="divider-left">Actions</th>
             </tr>
             <tr>
               <th class="sub-header divider-left">
@@ -205,6 +227,11 @@
                   <td class="text-center divider-left">{project.quotesReceived}</td>
                   <td class="text-center">{project.surveyorsInstructed}</td>
                   <td class="text-center">{formatCurrency(project.instructedSpend)}</td>
+                  <td class="actions-cell divider-left">
+                    <button class="action-btn" on:click={() => handleEditClick(project)}>
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               {/each}
             {/if}
@@ -248,6 +275,22 @@
       white-space: nowrap;
       vertical-align: top;
       font-size: 0.85rem;
+    }
+    .actions-cell {
+      text-align: center;
+    }
+    .action-btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .action-btn:hover {
+      background-color: #0056b3;
     }
     .key-dates-cell {
       white-space: normal;

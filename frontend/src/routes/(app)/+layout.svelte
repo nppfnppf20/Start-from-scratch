@@ -49,14 +49,12 @@
         overflow-y: auto;
         background-color: var(--background-color);
         position: relative;
-        z-index: 1;
     }
 
     header {
         width: 100%;
         overflow: visible;
         position: relative;
-        z-index: 2; /* Ensure header is above main content */
     }
 
     footer {

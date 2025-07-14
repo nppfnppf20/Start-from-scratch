@@ -14,7 +14,7 @@
     { id: 'reviews', label: 'Surveyor Reviews', path: '/reviews', roles: ['admin'] },
     { 
       id: 'admin', 
-      label: 'Admin', 
+      label: 'Admin (all projects)', 
       roles: ['admin'],
       dropdown: [
         { id: 'surveyors', label: 'Surveyors', path: '/admin-console/surveyors' },
