@@ -240,7 +240,7 @@
     position: absolute;
     top: 100%;
     left: 0;
-    z-index: 1;
+    z-index: 1000;
     min-width: 180px;
     background: var(--card, white);
     border: 1px solid var(--border, #e2e8f0);

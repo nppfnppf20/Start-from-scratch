@@ -52,6 +52,7 @@ interface Project {
   name: string;
   // Basic Project Information
   client?: string; // Umbrella client name from the modal
+  teamMembers?: string[]; // Team member initials/names
   clientOrSpvName?: string; // Specific client/SPV name from the main form
   detailedDescription?: string;
   proposedUseDuration?: number;
