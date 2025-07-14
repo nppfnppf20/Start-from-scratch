@@ -11,7 +11,7 @@
     let displaySurveyors: SurveyorOrganisation[] = [];
 
     // --- Sorting State ---
-    type SortKey = 'organisation' | 'discipline' | 'projectCount' | 'reviewCount' | 'averageQuality' | 'averageResponsiveness' | 'averageDeliveredOnTime' | 'averageOverallReview';
+    type SortKey = 'organisation' | 'discipline' | 'averageQuality' | 'averageResponsiveness' | 'averageDeliveredOnTime' | 'averageOverallReview';
     let sortKey: SortKey = 'organisation';
     let sortDirection: 'asc' | 'desc' = 'asc';
 
@@ -74,10 +74,18 @@
             if (valB === null || valB === undefined) return -1;
 
             let comparison = 0;
-            if (typeof valA === 'string' && typeof valB === 'string') {
+            
+            // Attempt to convert values to numbers for sorting.
+            // This handles the feedback columns, which can be strings ('4.5') or numbers (0).
+            const numA = Number(valA);
+            const numB = Number(valB);
+
+            if (!isNaN(numA) && !isNaN(numB)) {
+                // If both are valid numbers, compare them numerically.
+                comparison = numA - numB;
+            } else if (typeof valA === 'string' && typeof valB === 'string') {
+                // Otherwise, fall back to string comparison for fields like 'organisation'.
                 comparison = valA.localeCompare(valB);
-            } else if (typeof valA === 'number' && typeof valB === 'number') {
-                comparison = valA - valB;
             }
 
             return sortDirection === 'asc' ? comparison : -comparison;
@@ -131,20 +139,9 @@
                                 </button>
                             </th>
                             <th rowspan="2">Contacts</th>
-                            <th colspan="2" class="text-center divider-left">Totals</th>
                             <th colspan="4" class="text-center divider-left divider-right">Feedback (Average /5)</th>
                         </tr>
                         <tr>
-                            <th class="sub-header divider-left">
-                                <button on:click={() => setSortKey('projectCount')}>
-                                    Projects {#if sortKey === 'projectCount'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
-                                </button>
-                            </th>
-                            <th class="sub-header">
-                                <button on:click={() => setSortKey('reviewCount')}>
-                                    Reviews {#if sortKey === 'reviewCount'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
-                                </button>
-                            </th>
                             <th class="sub-header divider-left">
                                 <button on:click={() => setSortKey('averageQuality')}>
                                     Quality {#if sortKey === 'averageQuality'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
@@ -195,8 +192,6 @@
                                         <span>-</span>
                                     {/if}
                                 </td>
-                                <td class="text-center divider-left">{surveyor.projectCount || 0}</td>
-                                <td class="text-center">{surveyor.reviewCount || 0}</td>
                                 <td class="text-center divider-left">{formatValue(surveyor.averageQuality)}</td>
                                 <td class="text-center">{formatValue(surveyor.averageResponsiveness)}</td>
                                 <td class="text-center">{formatValue(surveyor.averageDeliveredOnTime)}</td>
