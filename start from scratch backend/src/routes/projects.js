@@ -8,7 +8,95 @@ const { authorize } = require('../middleware/authMiddleware'); // Import authori
 // @access  Public
 router.get('/', async (req, res) => {
     try {
-        const projects = await Project.find().select('name client clientOrSpvName teamMembers createdAt').sort({ createdAt: -1 });
+        const projects = await Project.aggregate([
+            // Stage 1: Lookup quotes for each project
+            {
+                $lookup: {
+                    from: 'quotes',
+                    localField: '_id',
+                    foreignField: 'projectId',
+                    as: 'quotes'
+                }
+            },
+            // Stage 2: Add fields with calculated values
+            {
+                $addFields: {
+                    // Count total quotes received for the project
+                    quotesReceived: { $size: '$quotes' },
+                    
+                    // Filter to get only instructed quotes
+                    instructedQuotes: {
+                        $filter: {
+                            input: '$quotes',
+                            as: 'quote',
+                            cond: { 
+                                $in: ['$$quote.instructionStatus', ['instructed', 'partially instructed']]
+                            }
+                        }
+                    },
+                }
+            },
+            {
+                $addFields: {
+                    // Count unique surveyors instructed
+                    surveyorsInstructed: { $size: { $setUnion: '$instructedQuotes.organisation' } },
+                    
+                    // Calculate total instructed spend
+                    instructedSpend: {
+                        $reduce: {
+                            input: '$instructedQuotes',
+                            initialValue: 0,
+                            in: {
+                                $add: [
+                                    '$$value',
+                                    { 
+                                        $cond: {
+                                            if: { $eq: ['$$this.instructionStatus', 'instructed'] },
+                                            then: '$$this.total',
+                                            else: '$$this.partiallyInstructedTotal'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            // Stage 3: Lookup programme events using a pipeline to handle ObjectId to string conversion
+            {
+                $lookup: {
+                    from: 'programmeevents',
+                    let: { projectIdStr: { $toString: '$_id' } }, // Convert project _id to string
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ['$projectId', '$$projectIdStr'] // Match on the string versions
+                                }
+                            }
+                        }
+                    ],
+                    as: 'programmeEvents'
+                }
+            },
+            // Stage 4: Project the final fields
+            {
+                $project: {
+                    name: 1,
+                    client: 1,
+                    teamMembers: 1,
+                    quotesReceived: 1,
+                    surveyorsInstructed: 1,
+                    instructedSpend: 1,
+                    createdAt: 1,
+                    programmeEvents: 1 // Now this field exists and can be included
+                }
+            },
+            // Stage 5: Sort by creation date
+            {
+                $sort: { createdAt: -1 }
+            }
+        ]);
         res.json(projects);
     } catch (err) {
         console.error(err.message);

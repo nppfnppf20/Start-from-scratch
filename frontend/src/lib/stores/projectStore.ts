@@ -97,11 +97,51 @@ interface Project {
   updatedAt?: string; // From timestamps
 }
 
+// --- NEW --- Interface for the Project Bank View
+export interface ProjectBankItem extends Project {
+  quotesReceived: number;
+  surveyorsInstructed: number;
+  instructedSpend: number;
+  programmeEvents: {
+    id: string; // Add the ID field
+    title: string;
+    date: string;
+  }[];
+}
+
+
 // --- Project Store ---
 // Initialize stores with empty/null values initially
 export const projects = writable<Project[]>([]);
+export const projectBank = writable<ProjectBankItem[]>([]); // New store for the project bank
 export const selectedProject = writable<Project | null>(null);
 export const allQuotes = writable<Quote[]>([]); // New master quote store
+
+// --- NEW --- Function to load data for the project bank
+export async function loadProjectBank() {
+  if (!browser) return;
+
+  try {
+    console.log('Fetching project bank data from API...');
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedProjects: any[] = await response.json();
+
+    // Map _id to id for frontend consistency
+    const mappedProjects = fetchedProjects.map(p => mapMongoId<ProjectBankItem>(p));
+    
+    console.log('Project bank data fetched:', mappedProjects);
+    projectBank.set(mappedProjects);
+
+  } catch (error) {
+    console.error("Failed to load project bank data:", error);
+    projectBank.set([]); // Reset on error
+  }
+}
 
 // Function to load projects from the API
 export async function loadProjects() {

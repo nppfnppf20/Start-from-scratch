@@ -21,3 +21,23 @@
     }
 
     // You can add other formatting utility functions here later
+
+    /**
+     * Formats a date string or Date object into a more readable DD MMM YYYY format.
+     * @param date - The date to format (can be a string or Date object).
+     * @returns A formatted date string (e.g., "15 Jul 2024") or "Invalid Date".
+     */
+    export function formatDate(date: string | Date | undefined | null): string {
+        if (!date) return 'N/A';
+        
+        const d = new Date(date);
+        if (isNaN(d.getTime())) {
+            return 'Invalid Date';
+        }
+
+        return d.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    }
