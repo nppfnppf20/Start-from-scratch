@@ -6,6 +6,53 @@ const Quote = require('../models/Quote');
 // --- IMPORT THE SURVEYOR ORGANISATION MODEL ---
 const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 
+// Helper function declared here but will be exported for use in other files.
+const recalculateAggregatesForOrg = async (organisationId) => {
+    try {
+        const surveyorOrg = await SurveyorOrganisation.findById(organisationId);
+        if (!surveyorOrg) return;
+
+        const quotes = await Quote.find({
+            organisation: surveyorOrg.organisation,
+            discipline: surveyorOrg.discipline
+        }).select('_id');
+
+        if (quotes.length === 0) {
+            surveyorOrg.reviewCount = 0;
+            surveyorOrg.totalQuality = 0;
+            surveyorOrg.totalResponsiveness = 0;
+            surveyorOrg.totalDeliveredOnTime = 0;
+            surveyorOrg.totalOverallReview = 0;
+            await surveyorOrg.save();
+            return;
+        }
+
+        const quoteIds = quotes.map(q => q._id);
+        const feedbacks = await SurveyorFeedback.find({ quoteId: { $in: quoteIds } });
+
+        let totalQuality = 0, totalResponsiveness = 0, totalDeliveredOnTime = 0, totalOverallReview = 0;
+        
+        for (const feedback of feedbacks) {
+            totalQuality += feedback.quality || 0;
+            totalResponsiveness += feedback.responsiveness || 0;
+            totalDeliveredOnTime += feedback.deliveredOnTime || 0;
+            totalOverallReview += feedback.overallReview || 0;
+        }
+
+        surveyorOrg.reviewCount = feedbacks.length;
+        surveyorOrg.totalQuality = totalQuality;
+        surveyorOrg.totalResponsiveness = totalResponsiveness;
+        surveyorOrg.totalDeliveredOnTime = totalDeliveredOnTime;
+        surveyorOrg.totalOverallReview = totalOverallReview;
+
+        await surveyorOrg.save();
+        console.log(`Successfully recalculated aggregates for ${surveyorOrg.organisation}`);
+    } catch (error) {
+        console.error(`Error recalculating aggregates for org ${organisationId}:`, error);
+    }
+};
+
+
 // --- HELPER FUNCTION TO UPDATE AGGREGATES ---
 const updateSurveyorOrgAggregates = async (oldFeedback, newFeedback) => {
     if (!newFeedback || !newFeedback.quoteId) return;
@@ -164,4 +211,7 @@ router.delete('/:quoteId', async (req, res) => {
     }
 });
 
-module.exports = router;
+module.exports = {
+    router,
+    recalculateAggregatesForOrg
+};

@@ -12,12 +12,13 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const projectRoutes = require('./routes/projects');
 const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
-const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
+const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** FIX: Destructure router from export ***
 const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
 const uploadRoutes = require('./routes/uploads');
 const documentRoutes = require('./routes/documents');
 const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
 const authRoutes = require('./routes/auth');
+const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
 const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
@@ -122,6 +123,7 @@ app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
 app.use('/api/documents', protect, documentRoutes);
 app.use('/api/programme-events', protect, programmeEventRoutes);
 app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
+app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
 
 // Public routes
 app.use('/api/uploads', uploadRoutes);

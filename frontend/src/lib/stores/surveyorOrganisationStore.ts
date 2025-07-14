@@ -216,3 +216,145 @@ export async function deleteSurveyorOrganisation(orgId: string): Promise<boolean
     return false;
   }
 }
+
+// --- Pending Surveyor Functionality ---
+
+// --- Pending Surveyor Interface (matches backend model) ---
+export interface PendingSurveyor {
+  id: string; // Mapped from _id
+  organisation: string;
+  discipline: string;
+  status: 'pending' | 'approved' | 'merged' | 'rejected';
+  sourceQuoteId: string;
+  sourceQuoteData?: {
+    contactName?: string;
+    email?: string;
+    phoneNumber?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// --- Store for Pending Surveyors ---
+export const pendingSurveyors = writable<PendingSurveyor[]>([]);
+
+// --- API Functions for Pending Surveyors ---
+
+// Function to load all pending surveyors
+export async function loadPendingSurveyors(): Promise<void> {
+  if (!browser) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/pending-surveyors`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let data: any[] = await response.json();
+    const mappedData = data.map(item => mapMongoId<PendingSurveyor>(item));
+    pendingSurveyors.set(mappedData);
+  } catch (error) {
+    console.error("Failed to load pending surveyors:", error);
+    pendingSurveyors.set([]);
+  }
+}
+
+// Function to approve a pending surveyor
+export async function approvePendingSurveyor(pendingId: string): Promise<boolean> {
+  if (!browser) return false;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/pending-surveyors/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
+      },
+      body: JSON.stringify({ pendingId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.msg || 'Failed to approve surveyor');
+    }
+    
+    // On success, remove from the local pending store
+    pendingSurveyors.update(current => current.filter(p => p.id !== pendingId));
+    // And refresh the main surveyor list to include the new one
+    await loadSurveyorOrganisations(); 
+    return true;
+
+  } catch (error) {
+    console.error("Error approving pending surveyor:", error);
+    alert(`Approval failed: ${error}`);
+    return false;
+  }
+}
+
+// Function to merge a pending surveyor
+export async function mergePendingSurveyor(pendingId: string, targetId: string): Promise<boolean> {
+  if (!browser) return false;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/pending-surveyors/merge`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthTokenHeader()
+      },
+      body: JSON.stringify({ pendingId, targetId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.msg || 'Failed to merge surveyor');
+    }
+    
+    const { updatedSurveyor } = await response.json();
+
+    // On success, remove from the pending list
+    pendingSurveyors.update(current => current.filter(p => p.id !== pendingId));
+    
+    // And update the specific organisation in the main list
+    if (updatedSurveyor) {
+      const mappedSurveyor = mapMongoId<SurveyorOrganisation>(updatedSurveyor);
+      surveyorOrganisations.update(orgs => 
+        orgs.map(org => (org.id === mappedSurveyor.id ? mappedSurveyor : org))
+      );
+    }
+    
+    return true;
+
+  } catch (error) {
+    console.error("Error merging pending surveyor:", error);
+    alert(`Merge failed: ${error}`);
+    return false;
+  }
+}
+
+// Function to reject (delete) a pending surveyor
+export async function rejectPendingSurveyor(pendingId: string): Promise<boolean> {
+  if (!browser) return false;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/pending-surveyors/${pendingId}`, {
+      method: 'DELETE',
+      headers: getAuthTokenHeader()
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.msg || 'Failed to reject surveyor');
+    }
+
+    // On success, remove from the local pending store
+    pendingSurveyors.update(current => current.filter(p => p.id !== pendingId));
+    return true;
+
+  } catch (error) {
+    console.error("Error rejecting pending surveyor:", error);
+    alert(`Rejection failed: ${error}`);
+    return false;
+  }
+}

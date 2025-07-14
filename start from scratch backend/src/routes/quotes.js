@@ -3,6 +3,8 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
 const Project = require('../models/Project');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
+const PendingSurveyor = require('../models/PendingSurveyor');
 
 
 // @route   GET /api/quotes
@@ -30,10 +32,11 @@ router.get('/', async (req, res) => {
 });
 
 // @route   POST /api/quotes
-// @desc    Create a new quote
+// @desc    Create a new quote and check for/create pending surveyors
 router.post('/', async (req, res) => {
     const { projectId, discipline, organisation, contactName, lineItems, instructionStatus, ...rest } = req.body;
 
+    // --- 1. Basic Validation ---
     if (!projectId || !discipline || !organisation || !contactName || !lineItems || lineItems.length === 0 || !instructionStatus) {
         return res.status(400).json({ msg: 'Missing required fields for quote' });
     }
@@ -47,10 +50,44 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ msg: 'Project not found' });
         }
 
-        const newQuote = new Quote({ ...req.body, surveyor: req.user.id });
-        const quote = await newQuote.save();
+        // --- 2. Create and Save the Quote ---
+        // Save the quote first to get a quote ID for the pending surveyor reference
+        const newQuote = new Quote({ ...req.body, surveyor: req.user?.id });
+        const savedQuote = await newQuote.save();
 
-        res.status(201).json(quote);
+        // --- 3. Check for Existing Surveyor Organisation ---
+        // Use case-insensitive search to match the index
+        const existingSurveyor = await SurveyorOrganisation.findOne({
+            organisation: new RegExp(`^${organisation}$`, 'i'),
+            discipline: new RegExp(`^${discipline}$`, 'i')
+        });
+
+        // --- 4. If Surveyor Doesn't Exist, Handle Pending Logic ---
+        if (!existingSurveyor) {
+            // Check if a pending record already exists to avoid duplicates
+            const existingPending = await PendingSurveyor.findOne({
+                organisation: new RegExp(`^${organisation}$`, 'i'),
+                discipline: new RegExp(`^${discipline}$`, 'i')
+            });
+
+            if (!existingPending) {
+                // No existing main surveyor and no existing pending surveyor, so create one.
+                const newPendingSurveyor = new PendingSurveyor({
+                    organisation,
+                    discipline,
+                    sourceQuoteId: savedQuote._id, // Link to the quote that triggered this
+                    sourceQuoteData: { // Store contact info for convenience
+                        contactName: contactName,
+                        email: req.body.email,
+                        phoneNumber: req.body.phoneNumber
+                    }
+                });
+                await newPendingSurveyor.save();
+            }
+        }
+
+        // --- 5. Return the Successfully Created Quote ---
+        res.status(201).json(savedQuote);
 
     } catch (err) {
         console.error('Error creating quote:', err.message);
