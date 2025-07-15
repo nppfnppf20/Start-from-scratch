@@ -3,7 +3,23 @@
     import TopBar from "$lib/components/TopBar.svelte";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
-    import { selectedProject } from "$lib/stores/projectStore";
+    import { selectedProject, loadProjects } from "$lib/stores/projectStore";
+    import { onMount } from 'svelte';
+    import { authStore } from '$lib/stores/authStore';
+    import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
+    import { get } from 'svelte/store';
+
+    onMount(async () => {
+        if (browser) {
+            const { user, token } = get(authStore);
+            if (!user || !token) {
+                await goto('/login');
+            } else {
+                await loadProjects();
+            }
+        }
+    });
 
     // Removed FullCalendar CSS imports from here
 

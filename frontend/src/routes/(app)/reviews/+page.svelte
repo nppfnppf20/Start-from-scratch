@@ -30,9 +30,12 @@
   // }
   // ---------
 
-  // Filter for project quotes
+  // Filter for project quotes that are instructed or partially instructed
   $: projectQuotes = $selectedProject
-    ? $currentProjectQuotes // Assumes quotes are loaded when project is selected
+    ? $currentProjectQuotes.filter(q => 
+        q.instructionStatus === 'instructed' || 
+        q.instructionStatus === 'partially instructed'
+      )
     : [];
 
   // --- State for Edit Mode ---
