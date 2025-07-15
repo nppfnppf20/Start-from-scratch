@@ -138,13 +138,13 @@
   }
   
   async function handleDeleteQuote(quoteId: string, organisationName: string) { 
-      try {
-          console.log(`Attempting to delete quote: ${quoteId}`);
-          await deleteQuote(quoteId); 
-      } catch(error) {
-           console.error(`Error deleting quote ${quoteId}:`, error);
-           alert('An error occurred while deleting the quote.');
-      }
+    try {
+        console.log(`Attempting to delete quote: ${quoteId}`);
+        await deleteQuote(quoteId); 
+    } catch(error) {
+         console.error(`Error deleting quote ${quoteId}:`, error);
+         alert('An error occurred while deleting the quote.');
+    }
   }
 </script>
 

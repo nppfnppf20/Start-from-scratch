@@ -601,10 +601,6 @@ export async function updateQuoteInstructionStatus(quoteId: string, newStatus: I
 export async function deleteQuote(quoteId: string) {
   if (!browser) return false;
 
-  if (!confirm('Are you sure you want to delete this quote?')) {
-    return false;
-  }
-
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'DELETE',
