@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import type { ProjectBankItem } from '$lib/stores/projectStore';
   import { updateProject } from '$lib/stores/projectStore';
+  import { authStore } from '$lib/stores/authStore';
 
   export let project: ProjectBankItem;
   
   let name: string;
   let client: string;
   let teamMembersStr: string;
+  let authorizedSurveyors: string[] = [];
+  let allSurveyors: { _id: string; email: string }[] = [];
 
   // Initialize form fields when the project prop is set
   $: {
@@ -15,12 +18,31 @@
       name = project.name;
       client = project.client || '';
       teamMembersStr = project.teamMembers?.join(', ') || '';
+      authorizedSurveyors = project.authorizedSurveyors || [];
     }
   }
 
   let isSaving = false;
   let errorMessage = '';
   const dispatch = createEventDispatcher();
+
+  onMount(async () => {
+    try {
+        const token = $authStore.token;
+        const res = await fetch('/api/users/surveyors', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (res.ok) {
+            allSurveyors = await res.json();
+        } else {
+            console.error('Failed to fetch surveyors');
+        }
+    } catch (error) {
+        console.error('Error fetching surveyors:', error);
+    }
+  });
 
   async function handleSubmit() {
     if (isSaving) return;
@@ -40,6 +62,7 @@
         name,
         client,
         teamMembers,
+        authorizedSurveyors,
       });
 
       if (success) {
@@ -78,6 +101,18 @@
         <label for="team">Team Members</label>
         <input id="team" type="text" bind:value={teamMembersStr} placeholder="e.g., AB, CD, EF" />
         <small>Enter initials or names separated by commas.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="surveyors">Authorized Surveyors</label>
+        <select id="surveyors" multiple bind:value={authorizedSurveyors}>
+            {#each allSurveyors as surveyor}
+                <option value={surveyor._id}>
+                    {surveyor.email}
+                </option>
+            {/each}
+        </select>
+        <small>Hold Ctrl or Cmd to select multiple.</small>
       </div>
 
       {#if errorMessage}
@@ -168,5 +203,8 @@
   .btn-secondary {
     background-color: #6c757d;
     color: white;
+  }
+  .form-group select[multiple] {
+    height: 150px;
   }
 </style> 

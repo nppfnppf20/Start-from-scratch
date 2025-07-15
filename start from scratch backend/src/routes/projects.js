@@ -1,15 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const Project = require('../models/Project');
-const { authorize } = require('../middleware/authMiddleware'); // Import authorize
+const { protect, authorize, checkProjectAccess } = require('../middleware/authMiddleware'); // Import authorize and protect
 
 // @route   GET /api/projects
 // @desc    Get all projects (fetching selected fields)
-// @access  Public
-router.get('/', async (req, res) => {
+// @access  Private
+router.get('/', protect, async (req, res) => {
     try {
+        let query = {};
+        // If user is a surveyor, only return projects they are authorized for
+        if (req.user.role === 'surveyor') {
+            query.authorizedSurveyors = req.user._id;
+        }
+
         const projects = await Project.aggregate([
-            // Stage 1: Lookup quotes for each project
+            // Stage 1: Match projects based on user role
+            { $match: query },
+            // Stage 2: Lookup quotes for each project
             {
                 $lookup: {
                     from: 'quotes',
@@ -106,8 +114,8 @@ router.get('/', async (req, res) => {
 
 // @route   POST /api/projects
 // @desc    Create a new project
-// @access  Public
-router.post('/', async (req, res) => {
+// @access  Admin only
+router.post('/', protect, authorize('admin'), async (req, res) => {
     const { name, client, teamMembers, clientOrSpvName } = req.body;
     try {
         if (!name) {
@@ -129,8 +137,8 @@ router.post('/', async (req, res) => {
 
 // @route   GET /api/projects/:id
 // @desc    Get a single project by ID
-// @access  Public
-router.get('/:id', async (req, res) => {
+// @access  Private (Admin or authorized surveyor)
+router.get('/:id', protect, checkProjectAccess, async (req, res) => {
     try {
         const project = await Project.findById(req.params.id);
         if (!project) {
@@ -148,8 +156,8 @@ router.get('/:id', async (req, res) => {
 
 // @route   PUT /api/projects/:id
 // @desc    Update a project by ID
-// @access  Public
-router.put('/:id', async (req, res) => {
+// @access  Admin only
+router.put('/:id', protect, authorize('admin'), async (req, res) => {
     try {
         let project = await Project.findById(req.params.id);
         if (!project) {
@@ -176,7 +184,7 @@ router.put('/:id', async (req, res) => {
 // @route   DELETE /api/projects/:id
 // @desc    Delete a project by ID
 // @access  Admin only
-router.delete('/:id', authorize('admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     try {
         const project = await Project.findById(req.params.id);
         if (!project) {

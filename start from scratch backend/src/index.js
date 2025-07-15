@@ -21,6 +21,7 @@ const authRoutes = require('./routes/auth');
 const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
 const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
+const userRoutes = require('./routes/users');
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -124,6 +125,7 @@ app.use('/api/documents', protect, documentRoutes);
 app.use('/api/programme-events', protect, programmeEventRoutes);
 app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
 app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
+app.use('/api/users', userRoutes);
 
 // Public routes
 app.use('/api/uploads', uploadRoutes);
