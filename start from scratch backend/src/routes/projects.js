@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Project = require('../models/Project');
+const Document = require('../models/Document');
+const User = require('../models/User');
 const { protect, authorize, checkProjectAccess } = require('../middleware/authMiddleware'); // Import authorize and protect
 
 // @route   GET /api/projects
@@ -201,6 +203,51 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+// @route   POST /api/projects/:id/authorize-surveyors
+// @desc    Authorize surveyors to a project by their email addresses
+// @access  Private
+router.post('/:id/authorize-surveyors', async (req, res) => {
+    const { id } = req.params;
+    const { emails } = req.body;
+
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+        return res.status(400).json({ msg: 'Emails array is required.' });
+    }
+
+    try {
+        const project = await Project.findById(id);
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+
+        const users = await User.find({ email: { $in: emails } });
+        if (users.length === 0) {
+            // This isn't necessarily an error, maybe none of the emails are registered users yet.
+            // Or we could choose to return a specific message.
+            return res.status(200).json({ msg: 'No registered users found for the provided emails.', project });
+        }
+
+        const userIds = users.map(user => user._id);
+
+        // Add only new user IDs to the authorizedSurveyors array
+        const newSurveyorIds = userIds.filter(userId => !project.authorizedSurveyors.some(existingId => existingId.equals(userId)));
+
+        if (newSurveyorIds.length > 0) {
+            project.authorizedSurveyors.unshift(...newSurveyorIds);
+            await project.save();
+        }
+
+        const updatedProject = await Project.findById(id).populate('authorizedSurveyors');
+
+        res.json(updatedProject);
+
+    } catch (error) {
+        console.error('Error authorizing surveyors:', error);
+        res.status(500).send('Server Error');
+    }
+});
+
 
 // We can keep the debug log for now if you like, or remove it
 console.log('Attempting to export project router...');

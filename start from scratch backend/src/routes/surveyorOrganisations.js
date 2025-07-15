@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const SurveyorOrganisation = require('../models/SurveyorOrganisation');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
 // GET /api/surveyor-organisations (Unchanged)
 router.get('/', async (req, res) => {
@@ -41,6 +43,29 @@ router.post('/', async (req, res) => {
     });
 
     const savedOrganisation = await newOrganisation.save();
+
+    // Automatically create user accounts for contacts with emails
+    if (contacts && contacts.length > 0) {
+      const password = "default-password"; // IMPORTANT: Use a secure password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      for (const contact of contacts) {
+        if (contact.email) {
+          const userExists = await User.findOne({ email: contact.email });
+          if (!userExists) {
+            const newUser = new User({
+              email: contact.email,
+              password: hashedPassword,
+              name: contact.contactName || organisation,
+              role: 'surveyor' // Assign a default role
+            });
+            await newUser.save();
+          }
+        }
+      }
+    }
+
     res.status(201).json(savedOrganisation);
   } catch (err) {
     if (err.name === 'ValidationError') {

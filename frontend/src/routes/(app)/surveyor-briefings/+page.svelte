@@ -1,6 +1,6 @@
 <script lang="ts">
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
-  import { selectedProject } from '$lib/stores/projectStore';
+  import { selectedProject, authorizeSurveyors } from '$lib/stores/projectStore';
   import { emailTemplates } from '$lib/data/emailTemplates';
   import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
 
@@ -117,7 +117,13 @@
     window.location.href = mailtoLink;
   }
 
-  function handleConfirmation() {
+  async function handleConfirmation() {
+    if ($selectedProject && emailTo) {
+      const emails = emailTo.split(',').map(e => e.trim()).filter(e => e);
+      if (emails.length > 0) {
+        await authorizeSurveyors($selectedProject.id, emails);
+      }
+    }
     emailTo = '';
   }
 </script>

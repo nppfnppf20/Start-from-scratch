@@ -1328,3 +1328,36 @@ export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefin
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
 }
+
+export async function authorizeSurveyors(projectId: string, emails: string[]): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/authorize-surveyors`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthTokenHeader()
+            },
+            body: JSON.stringify({ emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.msg || 'Failed to authorize surveyors');
+        }
+
+        const updatedProject = await response.json();
+        
+        // Update the stores
+        projects.update(ps => ps.map(p => p.id === projectId ? updatedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? updatedProject : p);
+
+        return updatedProject;
+
+    } catch (error) {
+        console.error('Error in authorizeSurveyors:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}
