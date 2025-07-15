@@ -29,8 +29,8 @@ const QuoteSchema = new Schema({
     },
     surveyor: {
         type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'User'
+        // required: true // No longer required initially
     },
     discipline: {
         type: String,
@@ -54,15 +54,14 @@ const QuoteSchema = new Schema({
         // Add validation (match: /regex/) if needed
     },
     lineItems: {
-        type: [LineItemSchema],
-        validate: [v => Array.isArray(v) && v.length > 0, 'At least one line item is required']
-        // default: [] // Not needed if validation requires > 0
+        type: [LineItemSchema]
+        // validate: [v => Array.isArray(v) && v.length > 0, 'At least one line item is required'] // No longer required initially
     },
     total: {
         type: Number,
-        required: true,
-        min: 0
-        // This will be calculated before saving
+        // required: true, // No longer required
+        min: 0,
+        default: 0
     },
     instructionStatus: {
         type: String,
@@ -90,6 +89,11 @@ const QuoteSchema = new Schema({
     status: { // Internal status (optional) - might relate to draft/sent/accepted/rejected
         type: String,
         trim: true
+    },
+    quoteStatus: {
+        type: String,
+        enum: ['Fee Request Sent', 'Quote Received', 'Awaiting Instruction', 'Instructed', 'Archived'],
+        default: 'Fee Request Sent'
     },
     date: { // Optional quote date
         type: Date

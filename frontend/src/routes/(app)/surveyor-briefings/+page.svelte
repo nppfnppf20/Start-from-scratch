@@ -1,8 +1,10 @@
 <script lang="ts">
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
-  import { selectedProject } from '$lib/stores/projectStore';
+  import { selectedProject, loadAllQuotes } from '$lib/stores/projectStore';
   import { emailTemplates } from '$lib/data/emailTemplates';
-  import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
+  import { surveyorOrganisations } from '$lib/stores/surveyorOrganisationStore';
+  import { get } from 'svelte/store';
+  import { getAuthTokenHeader } from '$lib/stores/authStore';
 
   const disciplines = [
     'Agricultural Land and Soil',
@@ -45,7 +47,8 @@
   let emailTo = '';
   let emailSubject = '';
   let emailBody = '';
-  let showConfirmModal = false;
+  let confirmButtonText = 'Confirm Fee Quote Request Sent';
+  let isConfirming = false;
 
   $: availableSurveyTypes = selectedDisciplines.length > 0
     ? selectedDisciplines.flatMap(d => surveyTypeMapping[d] || [])
@@ -116,9 +119,77 @@
     const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
     window.location.href = mailtoLink;
   }
-</script>
 
-<ConfirmRequestSentModal bind:showModal={showConfirmModal} on:close={() => showConfirmModal = false} />
+  async function handleConfirmClick() {
+    if (!emailTo) {
+      alert('Please add a recipient to the "To:" field.');
+      return;
+    }
+    
+    if (isConfirming) return;
+    isConfirming = true;
+
+    try {
+      const allSurveyors = get(surveyorOrganisations);
+      const recipientEmails = emailTo.split(',').map(e => e.trim());
+
+      for (const email of recipientEmails) {
+        if (!email) continue;
+
+        let foundSurveyor = null;
+        let foundContact = null;
+
+        for (const org of allSurveyors) {
+          const contact = org.contacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+          if (contact) {
+            foundSurveyor = org;
+            foundContact = contact;
+            break;
+          }
+        }
+
+        if (foundSurveyor && foundContact) {
+          const newQuoteData = {
+            projectId: $selectedProject?.id,
+            discipline: foundSurveyor.discipline,
+            organisation: foundSurveyor.organisation,
+            contactName: foundContact.contactName,
+            email: foundContact.email,
+            quoteStatus: 'Fee Request Sent',
+          };
+          
+          const response = await fetch('/api/quotes', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...getAuthTokenHeader()
+            },
+            body: JSON.stringify(newQuoteData),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to create quote for ${email}`);
+          }
+        }
+      }
+
+      // Refresh the main quotes table
+      await loadAllQuotes();
+
+      confirmButtonText = 'Confirmed &#10004;';
+      emailTo = ''; // Reset the 'To' field
+      
+    } catch (error) {
+        console.error('Error creating quotes:', error);
+        alert('An error occurred while creating quote requests. Please try again.');
+    } finally {
+        setTimeout(() => {
+            confirmButtonText = 'Confirm Fee Quote Request Sent';
+            isConfirming = false;
+        }, 2000);
+    }
+  }
+</script>
 
 <div class="briefings-container">
   <div class="top-section">
@@ -169,7 +240,13 @@
       </div>
       <div class="email-actions">
         <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
-        <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Fee Quote Request Sent</button>
+        <button 
+          class="action-btn confirm-btn" 
+          on:click={handleConfirmClick}
+          disabled={isConfirming}
+        >
+          {@html confirmButtonText}
+        </button>
       </div>
     </div>
     <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>
@@ -258,6 +335,8 @@
       background-color: #28a745;
       color: white;
       border-color: #28a745;
+      min-width: 290px;
+      text-align: center;
   }
 
   .form-group {
