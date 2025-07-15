@@ -32,13 +32,13 @@ router.get('/', async (req, res) => {
 });
 
 // @route   POST /api/quotes
-// @desc    Create a new quote
+// @desc    Create a new quote or update an existing placeholder
 router.post('/', async (req, res) => {
-    const { projectId, discipline, organisation, contactName, email } = req.body;
+    const { projectId, organisation, lineItems } = req.body;
 
     // --- 1. Basic Validation ---
-    if (!projectId || !discipline || !organisation || !contactName) {
-        return res.status(400).json({ msg: 'Missing required fields for quote' });
+    if (!projectId || !organisation) {
+        return res.status(400).json({ msg: 'Project ID and Organisation are required.' });
     }
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
         return res.status(400).json({ msg: 'Invalid Project ID format' });
@@ -50,24 +50,51 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ msg: 'Project not found' });
         }
 
-        // --- 2. Create and Save the Quote ---
-        const newQuote = new Quote({
-            projectId,
-            discipline,
-            organisation,
-            contactName,
-            email,
-            instructionStatus: 'Fee quote request sent', // Explicitly set status
-            // lineItems and total will be empty/default
-        });
+        // Case 1: Full quote submission (contains line items)
+        if (lineItems && Array.isArray(lineItems) && lineItems.length > 0) {
+            // Try to find an existing placeholder quote to update
+            const placeholderQuote = await Quote.findOne({
+                projectId,
+                organisation,
+                instructionStatus: 'Fee quote request sent'
+            });
 
-        const savedQuote = await newQuote.save();
-        
-        // --- 3. Return the Successfully Created Quote ---
-        res.status(201).json(savedQuote);
+            const total = lineItems.reduce((acc, item) => acc + (item.cost || 0), 0);
+            const quoteDataWithTotal = { ...req.body, total, instructionStatus: 'Decision pending' };
+
+
+            if (placeholderQuote) {
+                // Update the existing placeholder
+                const updatedQuote = await Quote.findByIdAndUpdate(
+                    placeholderQuote._id,
+                    { $set: quoteDataWithTotal },
+                    { new: true, runValidators: true }
+                );
+                return res.status(200).json(updatedQuote);
+            } else {
+                // No placeholder found, create a brand new quote
+                const newQuote = new Quote(quoteDataWithTotal);
+                const savedQuote = await newQuote.save();
+                return res.status(201).json(savedQuote);
+            }
+        } else {
+            // Case 2: Fee quote request (no line items) - create a placeholder
+            const { discipline, contactName } = req.body;
+             if (!discipline || !contactName) {
+                return res.status(400).json({ msg: 'Discipline and Contact Name are required for a fee request.' });
+            }
+
+            const newQuote = new Quote({
+                ...req.body,
+                instructionStatus: 'Fee quote request sent',
+            });
+
+            const savedQuote = await newQuote.save();
+            return res.status(201).json(savedQuote);
+        }
 
     } catch (err) {
-        console.error('Error creating quote:', err.message);
+        console.error('Error in POST /api/quotes:', err.message);
         if (err.name === 'ValidationError') {
             return res.status(400).json({ msg: err.message });
         }
