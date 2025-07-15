@@ -1,15 +1,20 @@
 <script lang="ts">
   import { projects, selectedProject, addProject as addProjectToStore, selectProjectById } from '$lib/stores/projectStore';
+  import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
   import { writable, get, derived } from 'svelte/store';
   import { browser } from '$app/environment';
+  import { onMount } from 'svelte';
 
   let showAddProjectInput = writable(false);
   let newProjectName = '';
   let selectedClient = '';
   let selectedTeamMembers: string[] = [];
-  let isCollectionsOpen = writable(false);
   let selectedProjectId = '';
   let newTeamMemberInitial = ''; // For the new team member input
+
+  onMount(() => {
+    loadClientOrganisations();
+  });
 
   $: if ($selectedProject) {
     selectedProjectId = $selectedProject.id;
@@ -69,24 +74,12 @@
     }
   }
 
-  function toggleCollections() {
-    isCollectionsOpen.update(value => !value);
-  }
-
   function handleSelectionChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     const projectId = target.value;
-    if (projectId && projectId !== 'collections') {
+    if (projectId) {
         selectProjectById(projectId);
-    } else if (projectId === 'collections') {
-        toggleCollections();
-        selectedProjectId = $selectedProject?.id ?? '';
     }
-  }
-
-  function groupProjects(groupBy: string) {
-    isCollectionsOpen.set(false);
-    console.log(`Group projects by: ${groupBy}`);
   }
 
   async function addNewProject() {
@@ -133,21 +126,13 @@
           bind:value={selectedProjectId}
           on:change={handleSelectionChange}
         >
-          <option value="collections" disabled={$isCollectionsOpen}>Group By...</option>
+          <option value="" disabled selected>Select a project</option>
           {#if $projects.length === 0 && browser}<option value="" disabled>Loading...</option>{:else if $projects.length === 0}<option value="" disabled>No projects</option>{/if}
           {#each $projects as project (project.id)}
             <option value={project.id}>{project.name}</option>
           {/each}
         </select>
         
-        {#if $isCollectionsOpen}
-          <div class="collections-menu">
-            <div class="menu-header">Group Projects By:</div>
-            <button on:click={() => groupProjects('client')}>Client</button>
-            <button on:click={() => groupProjects('employee')}>TRP Employee</button>
-            <button on:click={() => groupProjects('surveyor')}>Surveyors</button>
-          </div>
-        {/if}
       </div>
       <button class="add-button" on:click={toggleAddProjectForm} aria-label="Add new project">+</button>
     </div>
@@ -160,18 +145,12 @@
         required
         aria-label="New project name"
       />
-      <input 
-        type="text" 
-        bind:value={selectedClient} 
-        placeholder="Enter or select client" 
-        aria-label="Client Name"
-        list="client-list"
-      />
-      <datalist id="client-list">
-        {#each $uniqueClients as client (client)}
-          <option value={client}></option>
+      <select bind:value={selectedClient} aria-label="Client Name" required>
+        <option value="" disabled>Select a client</option>
+        {#each $clientOrganisations as org (org.id)}
+          <option value={org.id}>{org.organisationName}</option>
         {/each}
-      </datalist>
+      </select>
       <div class="checkbox-group-container" aria-label="Select Team Members">
           <div class="checkbox-group-header">Team</div>
           <div class="checkbox-list">
