@@ -93,6 +93,8 @@ interface Project {
   // SharePoint Document Link
   sharepointLink?: string;
   
+  authorizedSurveyors?: string[]; // NEW: Array of surveyor user IDs
+
   createdAt?: string; // From timestamps
   updatedAt?: string; // From timestamps
 }
@@ -107,6 +109,7 @@ export interface ProjectBankItem extends Project {
     title: string;
     date: string;
   }[];
+  authorizedSurveyors?: string[]; // NEW: Add here as well for consistency
 }
 
 
@@ -254,16 +257,7 @@ export async function addProject(projectData: { name: string; client?: string; t
 
 // Function to update an existing project via API
 export async function updateProject(projectId: string, updatedData: Partial<Project>) {
-  if (!browser) return false; // Don't run on server
-
-  // Create a copy to avoid modifying the original object directly if needed
-  const dataToSend = { ...updatedData };
-  // Remove 'id' and MongoDB specific fields if they exist, backend uses :id from URL
-  delete dataToSend.id;
-  delete (dataToSend as any)._id; // Use any to bypass potential type error if _id isn't explicitly in Partial<Project>
-  delete dataToSend.createdAt;
-  delete dataToSend.updatedAt;
-
+  if (!browser) return false;
 
   try {
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
@@ -272,30 +266,32 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
         'Content-Type': 'application/json',
         ...getAuthTokenHeader()
       },
-      body: JSON.stringify(dataToSend),
+      body: JSON.stringify(updatedData),
     });
 
     if (!response.ok) {
-       const errorData = await response.json().catch(() => ({}));
-       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
     }
 
-    let updatedProjectFromServer = await response.json();
-    updatedProjectFromServer = { ...updatedProjectFromServer, id: updatedProjectFromServer._id };
+    let updatedProject = await response.json();
+    updatedProject = mapMongoId<Project>(updatedProject);
 
-    // Update the local stores
-    projects.update(existing =>
-      existing.map(p => (p.id === projectId ? updatedProjectFromServer : p))
-      // Consider re-sorting if needed after update
-    );
-    selectedProject.update(current =>
-      current && current.id === projectId ? updatedProjectFromServer : current
-    );
+    // Update the main projects store if it exists there
+    projects.update(all => all.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p)));
+    
+    // Update the project bank store
+    projectBank.update(all => all.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p)));
+
+    // Update the selected project if it's the one being edited
+    if (get(selectedProject)?.id === projectId) {
+      selectedProject.update(p => (p ? { ...p, ...updatedProject } : null));
+    }
+
     return true;
-
   } catch (error) {
     console.error("Failed to update project:", error);
-    alert(`Error updating project: ${error}`); // Simple user feedback
+    alert(`Error updating project: ${error}`);
     return false;
   }
 }

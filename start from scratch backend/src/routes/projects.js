@@ -97,7 +97,8 @@ router.get('/', protect, async (req, res) => {
                     surveyorsInstructed: 1,
                     instructedSpend: 1,
                     createdAt: 1,
-                    programmeEvents: 1 // Now this field exists and can be included
+                    programmeEvents: 1, // Now this field exists and can be included
+                    authorizedSurveyors: 1 // Include the list of authorized surveyors
                 }
             },
             // Stage 5: Sort by creation date

@@ -105,14 +105,14 @@
 
       <div class="form-group">
         <label for="surveyors">Authorized Surveyors</label>
-        <select id="surveyors" multiple bind:value={authorizedSurveyors}>
-            {#each allSurveyors as surveyor}
-                <option value={surveyor._id}>
-                    {surveyor.email}
-                </option>
-            {/each}
-        </select>
-        <small>Hold Ctrl or Cmd to select multiple.</small>
+        <div class="checkbox-group">
+          {#each allSurveyors as surveyor}
+            <div class="checkbox-item">
+              <input type="checkbox" id="surveyor-{surveyor._id}" value={surveyor._id} bind:group={authorizedSurveyors} />
+              <label for="surveyor-{surveyor._id}">{surveyor.email}</label>
+            </div>
+          {/each}
+        </div>
       </div>
 
       {#if errorMessage}
@@ -204,7 +204,35 @@
     background-color: #6c757d;
     color: white;
   }
-  .form-group select[multiple] {
-    height: 150px;
+
+  .checkbox-group {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.5rem;
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .checkbox-item:not(:last-child) {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Overrides for checkbox elements to fix alignment */
+  .checkbox-item input[type="checkbox"] {
+    width: auto; /* Prevent taking full width */
+    margin: 0;
+    padding: 0;
+  }
+
+  .checkbox-item label {
+    display: inline; /* Place label next to checkbox */
+    font-weight: normal; /* Use regular font weight */
+    margin-bottom: 0;
   }
 </style> 
