@@ -102,6 +102,7 @@
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
+    margin-left: 1.5rem; /* Add spacing between text and button */
   }
   .submit-button:hover {
     background-color: #0056b3;

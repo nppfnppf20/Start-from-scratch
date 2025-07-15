@@ -2,6 +2,7 @@
   import { authStore } from '$lib/stores/authStore';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
 
   let email = '';
   let password = '';
@@ -31,7 +32,12 @@
     isLoading = false;
 
     if (result.success) {
-      goto('/'); // On success, redirect to the homepage.
+      const user = get(authStore).user; // Get user from the store
+      if (user && user.role === 'surveyor') {
+        goto('/fee-quote-submission'); // Redirect surveyors
+      } else {
+        goto('/'); // Redirect other users
+      }
     } else {
       errorMessage = result.error || 'An unknown error occurred.';
     }
@@ -54,7 +60,12 @@
         // Registration successful, now login automatically
         const loginResult = await authStore.login(email, password);
         if (loginResult.success) {
-          goto('/');
+          const user = get(authStore).user;
+          if (user && user.role === 'surveyor') {
+            goto('/fee-quote-submission');
+          } else {
+            goto('/');
+          }
         } else {
           errorMessage = 'Registration successful, but login failed. Please try logging in.';
         }
