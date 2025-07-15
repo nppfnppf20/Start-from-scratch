@@ -116,9 +116,17 @@
     const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
     window.location.href = mailtoLink;
   }
+
+  function handleConfirmation() {
+    emailTo = '';
+  }
 </script>
 
-<ConfirmRequestSentModal bind:showModal={showConfirmModal} on:close={() => showConfirmModal = false} />
+<ConfirmRequestSentModal 
+  bind:showModal={showConfirmModal} 
+  on:close={() => showConfirmModal = false}
+  on:confirmed={handleConfirmation}
+/>
 
 <div class="briefings-container">
   <div class="top-section">
