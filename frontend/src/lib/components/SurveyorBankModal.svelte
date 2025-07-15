@@ -5,7 +5,10 @@
         type SurveyorOrganisation 
     } from '$lib/stores/surveyorOrganisationStore';
     import EditSurveyorOrganisationModal from './EditSurveyorOrganisationModal.svelte';
-
+    
+    // Props
+    export let showActions: boolean = true;
+    
     // State
     let isLoading = false;
     let error: string | null = null;
@@ -148,7 +151,9 @@
                             </th>
                             <th rowspan="2">Contacts</th>
                             <th colspan="4" class="text-center divider-left divider-right">Feedback (Average /5)</th>
-                            <th rowspan="2">Actions</th>
+                            {#if showActions}
+                              <th rowspan="2">Actions</th>
+                            {/if}
                         </tr>
                         <tr>
                             <th class="sub-header divider-left">
@@ -205,9 +210,11 @@
                                 <td class="text-center">{formatValue(surveyor.averageResponsiveness)}</td>
                                 <td class="text-center">{formatValue(surveyor.averageDeliveredOnTime)}</td>
                                 <td class="text-center divider-right">{formatValue(surveyor.averageOverallReview)}</td>
-                                <td>
-                                    <button on:click={() => handleEditClick(surveyor)}>Edit</button>
-                                </td>
+                                {#if showActions}
+                                  <td>
+                                      <button on:click={() => handleEditClick(surveyor)}>Edit</button>
+                                  </td>
+                                {/if}
                             </tr>
                         {/each}
                     </tbody>

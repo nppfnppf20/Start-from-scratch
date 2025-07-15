@@ -6,7 +6,7 @@
   // Define all available tabs
   const allTabs = [
     { id: 'general', label: 'General Project Information', path: '/', roles: ['admin', 'surveyor'] },
-
+    { id: 'surveyor-briefings', label: 'Surveyor Briefings', path: '/surveyor-briefings', roles: ['admin'] },
     { id: 'fee-submission', label: 'Fee Quote Submission', path: '/fee-quote-submission', roles: ['surveyor'] },
     { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes', roles: ['admin'] },
     { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed', roles: ['admin'] },

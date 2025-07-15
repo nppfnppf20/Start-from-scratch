@@ -279,7 +279,7 @@
                   <option value="" disabled>Select a discipline...</option>
                   {#each disciplineOptions as option}
                     <option value={option}>{option}</option>
-                  {/each}
+                    {/each}
                 </select>
               </div>
                <div class="form-row" style="position: relative;">
