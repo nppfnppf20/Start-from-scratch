@@ -94,6 +94,7 @@ interface Project {
   sharepointLink?: string;
   
   authorizedSurveyors?: string[]; // NEW: Array of surveyor user IDs
+  authorizedClients?: string[];
 
   createdAt?: string; // From timestamps
   updatedAt?: string; // From timestamps
@@ -110,6 +111,7 @@ export interface ProjectBankItem extends Project {
     date: string;
   }[];
   authorizedSurveyors?: string[]; // NEW: Add here as well for consistency
+  authorizedClients?: string[];
 }
 
 
@@ -255,9 +257,9 @@ export async function addProject(projectData: { name: string; client?: string; t
   }
 }
 
-// Function to update an existing project via API
-export async function updateProject(projectId: string, updatedData: Partial<Project>) {
-  if (!browser) return false;
+// Function to update a project's details
+export async function updateProject(projectId: string, updatedData: Partial<Project & { authorizedClients?: string[] }>) {
+  if (!browser) return false; // Don't run on server
 
   try {
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
@@ -270,33 +272,39 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      // Try to get error message from backend response body
+      const errorData = await response.json().catch(() => ({})); // Default if body isn't JSON
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to update project'}`);
     }
 
     let updatedProject = await response.json();
     updatedProject = mapMongoId<Project>(updatedProject);
 
-    // Update the main projects store if it exists there
-    projects.update(all => all.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p)));
+    // Update the project in the main projects list
+    projects.update(allProjects =>
+      allProjects.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p))
+    );
     
-    // Update the project bank store
-    projectBank.update(all => all.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p)));
+    // Also update the project in the project bank list
+    projectBank.update(allProjects =>
+      allProjects.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p))
+    );
 
-    // Update the selected project if it's the one being edited
-    if (get(selectedProject)?.id === projectId) {
+    // If this is the currently selected project, update it as well
+    const currentSelected = get(selectedProject);
+    if (currentSelected && currentSelected.id === projectId) {
       selectedProject.update(p => (p ? { ...p, ...updatedProject } : null));
     }
 
-    return true;
+    return true; // Indicate success
   } catch (error) {
     console.error("Failed to update project:", error);
     alert(`Error updating project: ${error}`);
-    return false;
+    return false; // Indicate failure
   }
 }
 
-// Function to select a project - Fetches full details
+// Function to select a project by its ID
 export async function selectProjectById(id: string | null) {
    if (!browser) return false;
    if (!id) { // Handle explicit clearing of selection

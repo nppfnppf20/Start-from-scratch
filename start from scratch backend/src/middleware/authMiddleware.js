@@ -41,6 +41,12 @@ exports.authorize = (...roles) => {
 // Grant access to a specific project
 exports.checkProjectAccess = async (req, res, next) => {
     try {
+        const project = await require('../models/Project').findById(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+
         // Admins have automatic access
         if (req.user.role === 'admin') {
             return next();
@@ -48,22 +54,20 @@ exports.checkProjectAccess = async (req, res, next) => {
 
         // Surveyors must be in the authorizedSurveyors list
         if (req.user.role === 'surveyor') {
-            const project = await require('../models/Project').findById(req.params.id);
-
-            if (!project) {
-                return res.status(404).json({ msg: 'Project not found' });
-            }
-
-            // Check if surveyor is authorized
             if (project.authorizedSurveyors.map(id => id.toString()).includes(req.user._id.toString())) {
                 return next();
-            } else {
-                return res.status(403).json({ msg: 'User not authorized for this project' });
+            }
+        }
+
+        // Clients must be in the authorizedClients list
+        if (req.user.role === 'client') {
+            if (project.authorizedClients.map(id => id.toString()).includes(req.user._id.toString())) {
+                return next();
             }
         }
         
-        // Deny access by default
-        return res.status(403).json({ msg: 'User not authorized' });
+        // If none of the above, deny access
+        return res.status(403).json({ msg: 'User not authorized for this project' });
 
     } catch (err) {
         console.error(err);

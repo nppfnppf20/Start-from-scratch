@@ -5,12 +5,12 @@
   
   // Define all available tabs
   const allTabs = [
-    { id: 'general', label: 'General Project Information', path: '/', roles: ['admin', 'surveyor'] },
+    { id: 'general', label: 'General Project Information', path: '/', roles: ['admin', 'surveyor', 'client'] },
     { id: 'surveyor-briefings', label: 'Surveyor Briefings', path: '/surveyor-briefings', roles: ['admin'] },
     { id: 'fee-submission', label: 'Fee Quote Submission', path: '/fee-quote-submission', roles: ['surveyor'] },
-    { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes', roles: ['admin'] },
-    { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed', roles: ['admin'] },
-    { id: 'programme', label: 'Programme', path: '/programme', roles: ['admin'] },
+    { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes', roles: ['admin', 'client'] },
+    { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed', roles: ['admin', 'client'] },
+    { id: 'programme', label: 'Programme', path: '/programme', roles: ['admin', 'client'] },
     { id: 'reviews', label: 'Surveyor Reviews', path: '/reviews', roles: ['admin'] },
     { 
       id: 'admin', 
@@ -18,6 +18,7 @@
       roles: ['admin'],
       dropdown: [
         { id: 'surveyors', label: 'Surveyors', path: '/admin-console/surveyors' },
+        { id: 'clients', label: 'Clients', path: '/admin-console/clients' },
         { id: 'projects', label: 'Projects', path: '/admin-console/projects' }
       ]
     }

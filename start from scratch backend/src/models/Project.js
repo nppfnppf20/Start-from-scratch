@@ -77,6 +77,10 @@ const ProjectSchema = new mongoose.Schema({
     authorizedSurveyors: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    }],
+    authorizedClients: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }]
 }, {
     timestamps: true // Automatically add createdAt and updatedAt fields

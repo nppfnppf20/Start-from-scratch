@@ -16,4 +16,17 @@ router.get('/surveyors', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// @route   GET /api/users/clients
+// @desc    Get all users with the 'client' role
+// @access  Admin only
+router.get('/clients', protect, authorize('admin'), async (req, res) => {
+    try {
+        const clients = await User.find({ role: 'client' }).select('email');
+        res.json(clients);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router; 

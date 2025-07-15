@@ -9,9 +9,17 @@ const UserSchema = new mongoose.Schema({
         lowercase: true,
         match: [/.+\@.+\..+/, 'Please fill a valid email address']
     },
+    password: {
+        type: String,
+        required: [true, 'Password is required']
+    },
+    name: {
+        type: String,
+        trim: true
+    },
     role: {
         type: String,
-        enum: ['admin', 'surveyor'],
+        enum: ['admin', 'surveyor', 'client'],
         default: 'surveyor'
     }
 }, {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // Helper function to determine role based on email
 function determineRole(email) {
@@ -15,6 +16,8 @@ function validateRolePassword(role, password) {
         return password === process.env.ADMIN_PASSWORD;
     } else if (role === 'surveyor') {
         return password === process.env.SURVEYOR_PASSWORD;
+    } else if (role === 'client') {
+        return password === process.env.CLIENT_DEFAULT_PASSWORD;
     }
     return false;
 }

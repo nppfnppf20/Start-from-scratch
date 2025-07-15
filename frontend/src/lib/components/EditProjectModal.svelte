@@ -11,6 +11,8 @@
   let teamMembersStr: string;
   let authorizedSurveyors: string[] = [];
   let allSurveyors: { _id: string; email: string }[] = [];
+  let authorizedClients: string[] = [];
+  let allClients: { _id: string; email: string }[] = [];
 
   // Initialize form fields when the project prop is set
   $: {
@@ -19,6 +21,7 @@
       client = project.client || '';
       teamMembersStr = project.teamMembers?.join(', ') || '';
       authorizedSurveyors = project.authorizedSurveyors || [];
+      authorizedClients = project.authorizedClients || [];
     }
   }
 
@@ -29,18 +32,24 @@
   onMount(async () => {
     try {
         const token = $authStore.token;
-        const res = await fetch('/api/users/surveyors', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (res.ok) {
-            allSurveyors = await res.json();
+        const [surveyorsRes, clientsRes] = await Promise.all([
+            fetch('/api/users/surveyors', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/users/clients', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (surveyorsRes.ok) {
+            allSurveyors = await surveyorsRes.json();
         } else {
             console.error('Failed to fetch surveyors');
         }
+
+        if (clientsRes.ok) {
+            allClients = await clientsRes.json();
+        } else {
+            console.error('Failed to fetch clients');
+        }
     } catch (error) {
-        console.error('Error fetching surveyors:', error);
+        console.error('Error fetching users:', error);
     }
   });
 
@@ -63,6 +72,7 @@
         client,
         teamMembers,
         authorizedSurveyors,
+        authorizedClients,
       });
 
       if (success) {
@@ -110,6 +120,18 @@
             <div class="checkbox-item">
               <input type="checkbox" id="surveyor-{surveyor._id}" value={surveyor._id} bind:group={authorizedSurveyors} />
               <label for="surveyor-{surveyor._id}">{surveyor.email}</label>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="clients">Authorized Clients</label>
+        <div class="checkbox-group">
+          {#each allClients as client}
+            <div class="checkbox-item">
+              <input type="checkbox" id="client-{client._id}" value={client._id} bind:group={authorizedClients} />
+              <label for="client-{client._id}">{client.email}</label>
             </div>
           {/each}
         </div>

@@ -46,7 +46,11 @@ router.post('/', async (req, res) => {
 
     // Automatically create user accounts for contacts with emails
     if (contacts && contacts.length > 0) {
-      const password = "default-password"; // IMPORTANT: Use a secure password
+      const password = process.env.SURVEYOR_PASSWORD;
+      if (!password) {
+        console.error('SURVEYOR_PASSWORD not set in .env file');
+        return res.status(500).send('Server configuration error.');
+      }
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
