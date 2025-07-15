@@ -33,6 +33,12 @@
   let quoteForDocumentUpload: Quote | null = null;
   let documentUploadType: 'quote' | 'instruction' | null = null;
 
+  $: sortedQuotes = [...$currentProjectQuotes].sort((a, b) => {
+    const disciplineA = a.discipline || '';
+    const disciplineB = b.discipline || '';
+    return disciplineA.localeCompare(disciplineB);
+  });
+
   // --- New: Reference to the scrollable table container ---
   let tableContainerElement: HTMLDivElement;
 
@@ -173,7 +179,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each $currentProjectQuotes as quote (quote.id)}
+            {#each sortedQuotes as quote (quote.id)}
               <tr>
                 <td>{quote.discipline}</td>
                 <td>{quote.organisation}</td>
