@@ -120,7 +120,7 @@
     window.location.href = mailtoLink;
   }
 
-  async function handleConfirmClick() {
+  function handleConfirmClick() {
     if (!emailTo) {
       alert('Please add a recipient to the "To:" field.');
       return;
@@ -129,65 +129,14 @@
     if (isConfirming) return;
     isConfirming = true;
 
-    try {
-      const allSurveyors = get(surveyorOrganisations);
-      const recipientEmails = emailTo.split(',').map(e => e.trim());
+    // UI feedback only - no API call is made.
+    confirmButtonText = 'Confirmed &#10004;';
+    emailTo = ''; // Reset the 'To' field
 
-      for (const email of recipientEmails) {
-        if (!email) continue;
-
-        let foundSurveyor = null;
-        let foundContact = null;
-
-        for (const org of allSurveyors) {
-          const contact = org.contacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
-          if (contact) {
-            foundSurveyor = org;
-            foundContact = contact;
-            break;
-          }
-        }
-
-        if (foundSurveyor && foundContact) {
-          const newQuoteData = {
-            projectId: $selectedProject?.id,
-            discipline: foundSurveyor.discipline,
-            organisation: foundSurveyor.organisation,
-            contactName: foundContact.contactName,
-            email: foundContact.email,
-            quoteStatus: 'Fee Request Sent',
-          };
-          
-          const response = await fetch('/api/quotes', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...getAuthTokenHeader()
-            },
-            body: JSON.stringify(newQuoteData),
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to create quote for ${email}`);
-          }
-        }
-      }
-
-      // Refresh the main quotes table
-      await loadAllQuotes();
-
-      confirmButtonText = 'Confirmed &#10004;';
-      emailTo = ''; // Reset the 'To' field
-      
-    } catch (error) {
-        console.error('Error creating quotes:', error);
-        alert('An error occurred while creating quote requests. Please try again.');
-    } finally {
-        setTimeout(() => {
-            confirmButtonText = 'Confirm Fee Quote Request Sent';
-            isConfirming = false;
-        }, 2000);
-    }
+    setTimeout(() => {
+        confirmButtonText = 'Confirm Fee Quote Request Sent';
+        isConfirming = false;
+    }, 2000);
   }
 </script>
 
@@ -275,7 +224,15 @@
     padding: 1rem;
     overflow-y: auto; /* Allow scrolling within each top box */
   }
+
+  .form-group input[type="text"] {
+    background-color: #ffffff !important; /* Set background to white */
+  }
   
+  .email-body-editor {
+    background-color: #ffffff !important;
+  }
+
   .discipline-filter ul, .survey-type-filter ul {
     list-style-type: none;
     padding: 0;
