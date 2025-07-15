@@ -2,6 +2,7 @@
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
   import { selectedProject } from '$lib/stores/projectStore';
   import { emailTemplates } from '$lib/data/emailTemplates';
+  import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
 
   const disciplines = [
     'Agricultural Land and Soil',
@@ -44,6 +45,7 @@
   let emailTo = '';
   let emailSubject = '';
   let emailBody = '';
+  let showConfirmModal = false;
 
   $: availableSurveyTypes = selectedDisciplines.length > 0
     ? selectedDisciplines.flatMap(d => surveyTypeMapping[d] || [])
@@ -95,7 +97,28 @@
       emailTo = newEmail;
     }
   }
+
+  function handleOpenEmail() {
+    if (!emailTo) {
+      alert('Please select at least one surveyor to email.');
+      return;
+    }
+
+    // Convert HTML body to plain text for mailto link
+    const plainTextBody = emailBody
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '\n• ') // bullet point for list items
+      .replace(/<mark[^>]*>/gi, '') // remove opening mark tag
+      .replace(/<\/mark>/gi, '') // remove closing mark tag
+      .replace(/<[^>]+>/g, '') // strip remaining html tags
+      .trim();
+
+    const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
+    window.location.href = mailtoLink;
+  }
 </script>
+
+<ConfirmRequestSentModal bind:showModal={showConfirmModal} on:close={() => showConfirmModal = false} />
 
 <div class="briefings-container">
   <div class="top-section">
@@ -134,13 +157,19 @@
   <div class="email-draft">
     <h2>Email Draft</h2>
     <div class="email-headers">
-      <div class="form-group">
-        <label for="email-to">To:</label>
-        <input type="text" id="email-to" bind:value={emailTo} placeholder="recipient@example.com" />
+      <div class="email-fields">
+        <div class="form-group">
+          <label for="email-to">To:</label>
+          <input type="text" id="email-to" bind:value={emailTo} placeholder="recipient@example.com" />
+        </div>
+        <div class="form-group">
+          <label for="email-subject">Subject:</label>
+          <input type="text" id="email-subject" bind:value={emailSubject} placeholder="Email subject line" />
+        </div>
       </div>
-      <div class="form-group">
-        <label for="email-subject">Subject:</label>
-        <input type="text" id="email-subject" bind:value={emailSubject} placeholder="Email subject line" />
+      <div class="email-actions">
+        <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
+        <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Fee Quote Request Sent</button>
       </div>
     </div>
     <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>
@@ -198,9 +227,37 @@
 
   .email-headers {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
     margin-bottom: 1rem;
+  }
+  
+  .email-fields {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+  }
+
+  .email-actions {
+      display: flex;
+      gap: 0.5rem;
+  }
+
+  .action-btn {
+      padding: 0.6rem 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f0f0f0;
+      cursor: pointer;
+      font-weight: 500;
+  }
+
+  .action-btn.confirm-btn {
+      background-color: #28a745;
+      color: white;
+      border-color: #28a745;
   }
 
   .form-group {
