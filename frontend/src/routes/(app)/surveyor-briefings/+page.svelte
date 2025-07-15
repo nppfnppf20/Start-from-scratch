@@ -84,6 +84,17 @@
       emailBody = '';
     }
   }
+
+  function handleSelectSurveyor(event: CustomEvent<{ email: string }>) {
+    const newEmail = event.detail.email;
+    if (emailTo.includes(newEmail)) return; // Don't add duplicates
+    
+    if (emailTo) {
+      emailTo += `, ${newEmail}`;
+    } else {
+      emailTo = newEmail;
+    }
+  }
 </script>
 
 <div class="briefings-container">
@@ -115,8 +126,8 @@
       </ul>
     </div>
     <div class="surveyor-list">
-      <h2>Suggested Surveyors</h2>
-      <SurveyorBankTable showActions={false} />
+      <h2>Surveyors</h2>
+      <SurveyorBankTable showActions={false} showSelectButton={true} on:select={handleSelectSurveyor} />
     </div>
   </div>
 

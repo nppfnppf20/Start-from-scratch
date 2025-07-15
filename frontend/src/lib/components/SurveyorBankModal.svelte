@@ -1,13 +1,16 @@
 <script lang="ts">
+    import { createEventDispatcher } from 'svelte';
     import { 
         loadSurveyorOrganisations, 
         surveyorOrganisations, 
-        type SurveyorOrganisation 
+        type SurveyorOrganisation,
+        type Contact 
     } from '$lib/stores/surveyorOrganisationStore';
     import EditSurveyorOrganisationModal from './EditSurveyorOrganisationModal.svelte';
     
     // Props
     export let showActions: boolean = true;
+    export let showSelectButton: boolean = false;
     
     // State
     let isLoading = false;
@@ -16,9 +19,17 @@
     let showEditModal = false;
     let selectedOrganisation: SurveyorOrganisation | null = null;
 
+    const dispatch = createEventDispatcher();
+
     function handleEditClick(organisation: SurveyorOrganisation) {
         selectedOrganisation = organisation;
         showEditModal = true;
+    }
+
+    function handleSelectContact(contact: Contact) {
+        if (contact.email) {
+            dispatch('select', { email: contact.email });
+        }
     }
 
     // --- Sorting State ---
@@ -154,6 +165,9 @@
                             {#if showActions}
                               <th rowspan="2">Actions</th>
                             {/if}
+                            {#if showSelectButton}
+                              <th rowspan="2"></th>
+                            {/if}
                         </tr>
                         <tr>
                             <th class="sub-header divider-left">
@@ -199,6 +213,10 @@
                                                         <br />
                                                         <span>{contact.phoneNumber}</span>
                                                     {/if}
+                                                    {#if showSelectButton}
+                                                        <br />
+                                                        <button class="select-btn" on:click={() => handleSelectContact(contact)}>Select</button>
+                                                    {/if}
                                                 </li>
                                             {/each}
                                         </ul>
@@ -214,6 +232,11 @@
                                   <td>
                                       <button on:click={() => handleEditClick(surveyor)}>Edit</button>
                                   </td>
+                                {/if}
+                                {#if showSelectButton}
+                                    <td>
+                                        <!-- This column is intentionally left blank for contacts alignment -->
+                                    </td>
                                 {/if}
                             </tr>
                         {/each}
@@ -236,6 +259,21 @@
 {/if}
 
 <style>
+    .select-btn {
+        margin-top: 0.5rem;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .select-btn:hover {
+        background-color: #0056b3;
+    }
+
     .surveyor-bank-container {
         padding: 2rem;
     }
