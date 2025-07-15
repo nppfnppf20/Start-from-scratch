@@ -15,8 +15,9 @@
   import DocumentUploadModal from '$lib/components/DocumentUploadModal.svelte';
   
   const instructionStatuses: InstructionStatus[] = [
-    'pending', 
-    'will not be instructed',
+    'Fee quote request sent',
+    'Decision pending', 
+    'will not be instructed', 
     'partially instructed', 
     'instructed'
   ];
@@ -174,7 +175,13 @@
           </thead>
           <tbody>
             {#each $currentProjectQuotes as quote (quote.id)}
-              <tr>
+              <tr
+                class:status-instructed={quote.instructionStatus === 'instructed'}
+                class:status-partially-instructed={quote.instructionStatus === 'partially instructed'}
+                class:status-decision-pending={quote.instructionStatus === 'Decision pending'}
+                class:status-will-not-be-instructed={quote.instructionStatus === 'will not be instructed'}
+                class:status-fee-request-sent={quote.instructionStatus === 'Fee quote request sent'}
+              >
                 <td>{quote.discipline}</td>
                 <td>{quote.organisation}</td>
                 <td>{quote.contactName}</td>
@@ -197,8 +204,9 @@
                     class="instruction-status-select"
                     class:status-instructed={quote.instructionStatus === 'instructed'}
                     class:status-partially-instructed={quote.instructionStatus === 'partially instructed'}
-                    class:status-pending={quote.instructionStatus === 'pending'}
+                    class:status-decision-pending={quote.instructionStatus === 'Decision pending'}
                     class:status-will-not-be-instructed={quote.instructionStatus === 'will not be instructed'}
+                    class:status-fee-request-sent={quote.instructionStatus === 'Fee quote request sent'}
                     value={quote.instructionStatus}
                     id={`status-select-${quote.id}`}
                     on:change={(e) => handleStatusChange(quote.id, e.currentTarget.value as InstructionStatus, quote)}
@@ -370,6 +378,14 @@
     background-color: #f7fafc; 
   }
 
+  /* Status-specific ROW styling */
+  tr.status-instructed { background-color: #f0fff4; }
+  tr.status-partially-instructed { background-color: #fffaf0; }
+  tr.status-will-not-be-instructed { background-color: #fff5f5; }
+  tr.status-decision-pending { background-color: #ebf4ff; }
+  tr.status-fee-request-sent { background-color: #f7fafc; }
+
+
   /* Specific Cell Alignments */
   .text-center {
     text-align: center;
@@ -458,7 +474,7 @@
     border-color: #feebc8;
     color: #975a16;
   }
-  .instruction-status-select.status-pending {
+  .instruction-status-select.status-decision-pending {
     background-color: #ebf4ff; /* Light blue */
     border-color: #bee3f8;
     color: #2c5282;
@@ -467,6 +483,9 @@
     background-color: #fff5f5; /* Light red */
     border-color: #fed7d7;
     color: #c53030;
+  }
+  .instruction-status-select.status-fee-request-sent {
+    background-color: #e2e3e5;
   }
   
   /* Action Buttons in Table */

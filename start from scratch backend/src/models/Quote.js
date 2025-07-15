@@ -66,8 +66,8 @@ const QuoteSchema = new Schema({
     instructionStatus: {
         type: String,
         required: [true, 'Instruction status is required'],
-        enum: ['pending', 'will not be instructed', 'partially instructed', 'instructed'],
-        default: 'pending'
+        enum: ['Fee quote request sent', 'Decision pending', 'will not be instructed', 'partially instructed', 'instructed'],
+        default: 'Fee quote request sent'
     },
     partiallyInstructedTotal: {
         type: Number,
@@ -89,11 +89,6 @@ const QuoteSchema = new Schema({
     status: { // Internal status (optional) - might relate to draft/sent/accepted/rejected
         type: String,
         trim: true
-    },
-    quoteStatus: {
-        type: String,
-        enum: ['Fee Request Sent', 'Quote Received', 'Awaiting Instruction', 'Instructed', 'Archived'],
-        default: 'Fee Request Sent'
     },
     date: { // Optional quote date
         type: Date

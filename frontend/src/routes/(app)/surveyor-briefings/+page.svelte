@@ -155,7 +155,6 @@
             organisation: foundSurveyor.organisation,
             contactName: foundContact.contactName,
             email: foundContact.email,
-            quoteStatus: 'Fee Request Sent',
           };
           
           const response = await fetch('/api/quotes', {

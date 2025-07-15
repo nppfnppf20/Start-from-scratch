@@ -422,7 +422,7 @@ export interface LineItem {
 	cost: number;
 }
 
-export type InstructionStatus = 'pending' | 'will not be instructed' | 'partially instructed' | 'instructed';
+export type InstructionStatus = 'Fee quote request sent' | 'Decision pending' | 'will not be instructed' | 'partially instructed' | 'instructed';
 
 export interface Quote {
   id: string;

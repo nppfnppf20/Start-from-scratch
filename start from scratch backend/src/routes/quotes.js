@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
 // @route   POST /api/quotes
 // @desc    Create a new quote
 router.post('/', async (req, res) => {
-    const { projectId, discipline, organisation, contactName, email, quoteStatus } = req.body;
+    const { projectId, discipline, organisation, contactName, email } = req.body;
 
     // --- 1. Basic Validation ---
     if (!projectId || !discipline || !organisation || !contactName) {
@@ -57,8 +57,7 @@ router.post('/', async (req, res) => {
             organisation,
             contactName,
             email,
-            quoteStatus,
-            // instructionStatus will use its default 'pending'
+            instructionStatus: 'Fee quote request sent', // Explicitly set status
             // lineItems and total will be empty/default
         });
 
