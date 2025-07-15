@@ -33,11 +33,24 @@
   let quoteForDocumentUpload: Quote | null = null;
   let documentUploadType: 'quote' | 'instruction' | null = null;
 
-  $: sortedQuotes = [...$currentProjectQuotes].sort((a, b) => {
-    const disciplineA = a.discipline || '';
-    const disciplineB = b.discipline || '';
-    return disciplineA.localeCompare(disciplineB);
-  });
+  $: processedQuotes = (() => {
+    const sorted = [...$currentProjectQuotes].sort((a, b) => {
+      const disciplineA = a.discipline || '';
+      const disciplineB = b.discipline || '';
+      return disciplineA.localeCompare(disciplineB);
+    });
+
+    let groupCounter = 0;
+    let lastDiscipline: string | null = null;
+
+    return sorted.map(quote => {
+      if (quote.discipline !== lastDiscipline) {
+        groupCounter++;
+        lastDiscipline = quote.discipline;
+      }
+      return { ...quote, group: groupCounter };
+    });
+  })();
 
   // --- New: Reference to the scrollable table container ---
   let tableContainerElement: HTMLDivElement;
@@ -179,8 +192,8 @@
             </tr>
           </thead>
           <tbody>
-            {#each sortedQuotes as quote (quote.id)}
-              <tr>
+            {#each processedQuotes as quote (quote.id)}
+              <tr class:group-odd={quote.group % 2 !== 0}>
                 <td>{quote.discipline}</td>
                 <td>{quote.organisation}</td>
                 <td>{quote.contactName}</td>
@@ -374,6 +387,10 @@
 
   .quotes-table tbody tr:hover {
     background-color: #f7fafc; 
+  }
+
+  .quotes-table tbody tr.group-odd {
+    background-color: #f7fafc;
   }
 
   /* Specific Cell Alignments */
