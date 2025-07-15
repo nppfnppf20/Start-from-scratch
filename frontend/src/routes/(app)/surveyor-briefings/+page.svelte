@@ -1,5 +1,6 @@
 <script lang="ts">
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
+  import ViewRequestsModal from '$lib/components/ViewRequestsModal.svelte';
   import { selectedProject, loadAllQuotes } from '$lib/stores/projectStore';
   import { emailTemplates } from '$lib/data/emailTemplates';
   import { surveyorOrganisations } from '$lib/stores/surveyorOrganisationStore';
@@ -49,6 +50,7 @@
   let emailBody = '';
   let confirmButtonText = 'Confirm Fee Quote Request Sent';
   let isConfirming = false;
+  let showRequestsModal = false;
 
   $: availableSurveyTypes = selectedDisciplines.length > 0
     ? selectedDisciplines.flatMap(d => surveyTypeMapping[d] || [])
@@ -120,7 +122,7 @@
     window.location.href = mailtoLink;
   }
 
-  function handleConfirmClick() {
+  async function handleConfirmClick() {
     if (!emailTo) {
       alert('Please add a recipient to the "To:" field.');
       return;
@@ -129,14 +131,73 @@
     if (isConfirming) return;
     isConfirming = true;
 
-    // UI feedback only - no API call is made.
-    confirmButtonText = 'Confirmed &#10004;';
-    emailTo = ''; // Reset the 'To' field
+    try {
+      const allSurveyors = get(surveyorOrganisations);
+      const recipientEmails = emailTo.split(',').map(e => e.trim());
+      const projectId = $selectedProject?.id;
+      const discipline = selectedDisciplines[0] || 'General'; // Use the first selected discipline or a default
 
-    setTimeout(() => {
-        confirmButtonText = 'Confirm Fee Quote Request Sent';
+      if (!projectId) {
+        alert('A project must be selected to send briefing requests.');
         isConfirming = false;
-    }, 2000);
+        return;
+      }
+
+      for (const email of recipientEmails) {
+        if (!email) continue;
+
+        let foundSurveyor = null;
+        let foundContact = null;
+
+        for (const org of allSurveyors) {
+          const contact = org.contacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+          if (contact) {
+            foundSurveyor = org;
+            foundContact = contact;
+            break;
+          }
+        }
+
+        if (foundSurveyor && foundContact) {
+          const requestData = {
+            projectId: projectId,
+            discipline: discipline,
+            organisation: foundSurveyor.organisation,
+            contactName: foundContact.contactName,
+            email: foundContact.email,
+            phoneNumber: foundContact.phoneNumber
+          };
+          
+          const response = await fetch('/api/fee-quote-requests', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...getAuthTokenHeader()
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          if (!response.ok) {
+            // Log the error but don't stop the loop
+            console.error(`Failed to create fee quote request for ${email}`);
+          }
+        } else {
+            console.warn(`Could not find surveyor details for email: ${email}`);
+        }
+      }
+
+      confirmButtonText = 'Confirmed &#10004;';
+      emailTo = ''; // Reset the 'To' field
+      
+    } catch (error) {
+        console.error('Error creating fee quote requests:', error);
+        alert('An error occurred while creating requests. Please check the console.');
+    } finally {
+        setTimeout(() => {
+            confirmButtonText = 'Confirm Fee Quote Request Sent';
+            isConfirming = false;
+        }, 2000);
+    }
   }
 </script>
 
@@ -188,6 +249,7 @@
         </div>
       </div>
       <div class="email-actions">
+        <button class="action-btn" on:click={() => showRequestsModal = true}>View Requests</button>
         <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
         <button 
           class="action-btn confirm-btn" 
@@ -201,6 +263,13 @@
     <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>
   </div>
 </div>
+
+{#if showRequestsModal && $selectedProject}
+  <ViewRequestsModal 
+    projectId={$selectedProject.id}
+    on:close={() => showRequestsModal = false} 
+  />
+{/if}
 
 <style>
   .briefings-container {
