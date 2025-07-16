@@ -3,11 +3,15 @@
   import {
     addQuote,
     updateQuote,
+    selectedProject,
     type InstructionStatus,
     type Quote,
-    type LineItem
+    type LineItem,
+    uniqueDisciplines,
+    uniqueSurveyTypes,
+    uniqueOrganisations,
+    uniqueLineItemItems
   } from "$lib/stores/projectStore"; // Import only necessary store functions
-  import NotesModal from '$lib/components/NotesModal.svelte';
 
   // --- Props ---
   export let isOpen: boolean = false;
@@ -21,21 +25,26 @@
   let isEditing = false;
   let quoteToEditId: string | null = null;
 
-  // State for Add/Edit Notes Modal
-  let showAddNotesModal = false;
-  let currentNotesForModal: string | undefined = '';
+  // --- Autocomplete State for Discipline ---
+  let disciplineSuggestions: string[] = [];
+  let showDisciplineSuggestions: boolean = false;
 
-  // Instruction status options
-  const instructionStatuses: InstructionStatus[] = [
-    'pending',
-    'will not be instructed',
-    'partially instructed',
-    'instructed'
-  ];
+  // --- Autocomplete State for Survey Type ---
+  let surveyTypeSuggestions: string[] = [];
+  let showSurveyTypeSuggestions: boolean = false;
+
+  // --- New State for Organisation Autocomplete ---
+  let organisationSuggestions: string[] = [];
+  let showOrgSuggestions: boolean = false;
+
+  // --- New State for Line Item Autocomplete ---
+  let lineItemSuggestions: string[] = [];
+  let showLineItemSuggestions: boolean = false;
+  let activeLineItemIndex: number | null = null;
 
   // --- Utility Functions ---
   function createNewLineItem(): LineItem {
-    return { description: '', cost: 0 };
+    return { item: '', description: '', cost: 0 };
   }
 
   function createInitialFormState() {
@@ -45,19 +54,16 @@
       organisation: '',
       contactName: '',
       email: '',
+      phoneNumber: '',
       lineItems: [createNewLineItem()] as LineItem[],
       additionalNotes: '',
       instructionStatus: 'pending' as InstructionStatus, // Default to pending for new
-      status: 'pending' as string,
-      date: new Date().toISOString().split('T')[0],
-      // quoteFile: null as File | null // Removed file handling for simplicity now
     };
   }
 
   // Form state
   let quoteForm = createInitialFormState();
-  // let quoteFileInput: HTMLInputElement; // Removed
-
+  
   // Reactive statement to update form when props change (modal opens/quoteToEdit changes)
   $: if (isOpen) {
       initializeForm();
@@ -75,23 +81,160 @@
               organisation: quoteToEdit.organisation,
               contactName: quoteToEdit.contactName,
               email: quoteToEdit.email || '',
+              phoneNumber: quoteToEdit.phoneNumber || '',
               lineItems: quoteToEdit.lineItems.length > 0 ? quoteToEdit.lineItems.map(item => ({ ...item })) : [createNewLineItem()], // Ensure at least one line item row
               additionalNotes: quoteToEdit.additionalNotes || '',
               instructionStatus: quoteToEdit.instructionStatus,
-              status: quoteToEdit.status || 'pending',
-              date: quoteToEdit.date ? quoteToEdit.date.split('T')[0] : new Date().toISOString().split('T')[0] // Format date correctly if exists
-              // quoteFile: null // Reset file input if needed
           };
+          // Reset autocomplete state for editing
       } else {
           console.log("Initializing modal form for new quote");
           isEditing = false;
           quoteToEditId = null;
           quoteForm = createInitialFormState(); // Reset to blank for new quote
+          // Reset autocomplete state for new quote
       }
       // Reset file input visually if it existed
       // if (quoteFileInput) quoteFileInput.value = '';
   }
 
+  // --- Autocomplete Functions ---
+  function handleDisciplineInput(event: Event) {
+    const input = (event.target as HTMLInputElement).value;
+    quoteForm.discipline = input;
+    
+    if (input.length > 0) {
+      const filtered = $uniqueDisciplines.filter(discipline => 
+        discipline.toLowerCase().includes(input.toLowerCase())
+      );
+      
+      // Add "Add new" option if input doesn't match existing options
+      const isExisting = $uniqueDisciplines.some(discipline => 
+        discipline.toLowerCase() === input.toLowerCase()
+      );
+      
+      if (!isExisting && input.trim() !== '') {
+        disciplineSuggestions = [...filtered, `Add "${input}"`];
+      } else {
+        disciplineSuggestions = filtered;
+      }
+      
+      showDisciplineSuggestions = disciplineSuggestions.length > 0;
+    } else {
+      // Show all options when input is empty
+      disciplineSuggestions = ['n/a', ...$uniqueDisciplines];
+      showDisciplineSuggestions = true;
+    }
+  }
+
+  function selectDiscipline(value: string) {
+    if (value.startsWith('Add "')) {
+      // Extract the custom value from 'Add "custom value"'
+      const customValue = value.slice(5, -1);
+      quoteForm.discipline = customValue;
+    } else {
+      quoteForm.discipline = value;
+    }
+    showDisciplineSuggestions = false;
+  }
+
+  function handleSurveyTypeInput(event: Event) {
+    const input = (event.target as HTMLInputElement).value;
+    quoteForm.surveyType = input;
+    
+    if (input.length > 0) {
+      const filtered = $uniqueSurveyTypes.filter(surveyType => 
+        surveyType.toLowerCase().includes(input.toLowerCase())
+      );
+      
+      // Add "Add new" option if input doesn't match existing options
+      const isExisting = $uniqueSurveyTypes.some(surveyType => 
+        surveyType.toLowerCase() === input.toLowerCase()
+      );
+      
+      if (!isExisting && input.trim() !== '') {
+        surveyTypeSuggestions = [...filtered, `Add "${input}"`];
+      } else {
+        surveyTypeSuggestions = filtered;
+      }
+      
+      showSurveyTypeSuggestions = surveyTypeSuggestions.length > 0;
+    } else {
+      // Show all options when input is empty
+      surveyTypeSuggestions = ['n/a', ...$uniqueSurveyTypes];
+      showSurveyTypeSuggestions = true;
+    }
+  }
+
+  function selectSurveyType(value: string) {
+    if (value.startsWith('Add "')) {
+      // Extract the custom value from 'Add "custom value"'
+      const customValue = value.slice(5, -1);
+      quoteForm.surveyType = customValue;
+    } else {
+      quoteForm.surveyType = value;
+    }
+    showSurveyTypeSuggestions = false;
+  }
+
+  function handleOrganisationInput(event: Event) {
+    const input = (event.target as HTMLInputElement).value;
+    if (input.length > 0) {
+      organisationSuggestions = $uniqueOrganisations.filter(org => 
+        org.toLowerCase().includes(input.toLowerCase())
+      );
+      showOrgSuggestions = organisationSuggestions.length > 0;
+    } else {
+      showOrgSuggestions = false;
+    }
+  }
+
+  function selectOrganisation(org: string) {
+    quoteForm.organisation = org;
+    showOrgSuggestions = false;
+  }
+
+  function handleLineItemInput(event: Event, index: number) {
+    const input = (event.target as HTMLInputElement).value;
+    activeLineItemIndex = index;
+    
+    if (input.length > 0) {
+      const filtered = $uniqueLineItemItems.filter(item => 
+        item.toLowerCase().includes(input.toLowerCase())
+      );
+      
+      // Add "Add new" option if input doesn't match existing options
+      const isExisting = $uniqueLineItemItems.some(item => 
+        item.toLowerCase() === input.toLowerCase()
+      );
+      
+      if (!isExisting && input.trim() !== '') {
+        lineItemSuggestions = [...filtered, `Add "${input}"`];
+      } else {
+        lineItemSuggestions = filtered;
+      }
+      
+      showLineItemSuggestions = lineItemSuggestions.length > 0;
+    } else {
+      // Show all options when input is empty
+      lineItemSuggestions = $uniqueLineItemItems;
+      showLineItemSuggestions = true;
+    }
+  }
+
+  function selectLineItem(item: string, index: number) {
+    if (item.startsWith('Add "')) {
+      // Extract the custom value from 'Add "custom value"'
+      const customValue = item.slice(5, -1);
+      quoteForm.lineItems[index].item = customValue;
+    } else {
+      quoteForm.lineItems[index].item = item;
+    }
+    showLineItemSuggestions = false;
+    activeLineItemIndex = null;
+    // We need to re-assign to trigger Svelte's reactivity
+    quoteForm.lineItems = [...quoteForm.lineItems];
+  }
 
   // --- Modal Functions ---
   function closeModal() {
@@ -123,23 +266,14 @@
     }
   }
 
-  // --- Notes Modal Functions ---
-  function openAddNotesModal() {
-    currentNotesForModal = quoteForm.additionalNotes;
-    showAddNotesModal = true;
-  }
-
-  function closeAddNotesModal() {
-    showAddNotesModal = false;
-  }
-
-  function handleSaveAddNotes(event: CustomEvent<{ notes: string }>) {
-    quoteForm.additionalNotes = event.detail.notes;
-    closeAddNotesModal();
-  }
-
   // --- Form Submission ---
   async function submitQuote() {
+    // Validate required fields
+    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName) {
+      alert('Please fill in all required fields (Discipline, Organisation, Contact Name).');
+      return;
+    }
+
     if (!isEditing && !projectId) {
       alert('Error: Project ID is missing. Cannot add quote.');
       console.error("Attempted to add quote without projectId prop.");
@@ -147,14 +281,17 @@
     }
 
     // Basic form validation
-    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName) {
-      alert('Please fill in all required fields (Discipline, Organisation, Contact Name).');
-      return;
-    }
     const validLineItems = quoteForm.lineItems.filter(item => item.description.trim() !== '');
     if (validLineItems.length === 0) {
       alert('Please add at least one valid line item with a description.');
       return;
+    }
+
+    // New validation for 'item' field
+    const invalidItem = validLineItems.find(item => !item.item || item.item.trim() === '');
+    if (invalidItem) {
+        alert('Please fill in the "Item" for all line items.');
+        return;
     }
 
     // Prepare data for the store/API call
@@ -164,12 +301,10 @@
       organisation: quoteForm.organisation,
       contactName: quoteForm.contactName,
       email: quoteForm.email || undefined,
-      lineItems: validLineItems, // Already filtered
+      phoneNumber: quoteForm.phoneNumber || undefined,
+      lineItems: validLineItems,
       additionalNotes: quoteForm.additionalNotes || undefined,
       instructionStatus: quoteForm.instructionStatus,
-      status: quoteForm.status,
-      date: quoteForm.date || undefined,
-      // Add projectId only when creating a new quote
       ...( !isEditing && { projectId: projectId } )
     };
 
@@ -212,17 +347,80 @@
       <form on:submit|preventDefault={submitQuote}>
           <!-- Form Fields -->
           <div class="form-grid-modal"> <!-- Use grid for better layout -->
-              <div class="form-row">
+              <div class="form-row" style="position: relative;">
                 <label for="discipline">Discipline*</label>
-                <input type="text" id="discipline" bind:value={quoteForm.discipline} required>
+                <input 
+                  type="text" 
+                  id="discipline" 
+                  bind:value={quoteForm.discipline} 
+                  required 
+                  on:input={handleDisciplineInput}
+                  on:focus={handleDisciplineInput}
+                  on:blur={() => setTimeout(() => showDisciplineSuggestions = false, 150)}
+                  autocomplete="off"
+                  placeholder="Enter or select discipline..."
+                >
+                {#if showDisciplineSuggestions}
+                  <div class="suggestions-list">
+                    {#each disciplineSuggestions as suggestion}
+                      <div 
+                        class="suggestion-item" 
+                        class:add-new={suggestion.startsWith('Add "')}
+                        on:mousedown={() => selectDiscipline(suggestion)}
+                      >
+                        {suggestion}
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
               </div>
-              <div class="form-row">
+              <div class="form-row" style="position: relative;">
                  <label for="surveyType">Survey Type</label>
-                 <input type="text" id="surveyType" bind:value={quoteForm.surveyType}>
+                 <input 
+                   type="text" 
+                   id="surveyType" 
+                   bind:value={quoteForm.surveyType} 
+                   on:input={handleSurveyTypeInput}
+                   on:focus={handleSurveyTypeInput}
+                   on:blur={() => setTimeout(() => showSurveyTypeSuggestions = false, 150)}
+                   autocomplete="off"
+                   placeholder="Enter or select survey type..."
+                 >
+                 {#if showSurveyTypeSuggestions}
+                   <div class="suggestions-list">
+                     {#each surveyTypeSuggestions as suggestion}
+                       <div 
+                         class="suggestion-item" 
+                         class:add-new={suggestion.startsWith('Add "')}
+                         on:mousedown={() => selectSurveyType(suggestion)}
+                       >
+                         {suggestion}
+                       </div>
+                     {/each}
+                   </div>
+                 {/if}
               </div>
-               <div class="form-row">
+               <div class="form-row" style="position: relative;">
                  <label for="organisation">Organisation*</label>
-                 <input type="text" id="organisation" bind:value={quoteForm.organisation} required>
+                 <input 
+                   type="text" 
+                   id="organisation" 
+                   bind:value={quoteForm.organisation} 
+                   required 
+                   on:input={handleOrganisationInput}
+                   on:focus={() => quoteForm.organisation && organisationSuggestions.length > 0 && (showOrgSuggestions = true)}
+                   on:blur={() => setTimeout(() => showOrgSuggestions = false, 150)}
+                   autocomplete="off"
+                 >
+                 {#if showOrgSuggestions}
+                   <div class="suggestions-list">
+                     {#each organisationSuggestions as org}
+                       <div class="suggestion-item" on:mousedown={() => selectOrganisation(org)}>
+                         {org}
+                       </div>
+                     {/each}
+                   </div>
+                 {/if}
                </div>
                <div class="form-row">
                  <label for="contactName">Contact Name*</label>
@@ -233,38 +431,80 @@
                  <input type="email" id="email" bind:value={quoteForm.email}>
                </div>
                <div class="form-row">
-                 <label for="date">Date</label>
-                 <input type="date" id="date" bind:value={quoteForm.date}>
-               </div>
-               <div class="form-row">
-                 <label for="instructionStatus">Instruction Status</label>
-                 <select id="instructionStatus" bind:value={quoteForm.instructionStatus}>
-                     {#each instructionStatuses as status} <option value={status}>{status}</option> {/each}
-                 </select>
-               </div>
-               <div class="form-row">
-                 <label for="status">Internal Status</label>
-                 <input type="text" id="status" bind:value={quoteForm.status} placeholder="e.g., Draft, Sent">
+                 <label for="phoneNumber">Phone Number</label>
+                 <input type="tel" id="phoneNumber" bind:value={quoteForm.phoneNumber}>
                </div>
           </div>
 
           <!-- Line Items Section -->
-          <h4>Line Items*</h4>
+          <h4>Line Items</h4>
+          <div class="line-item-headers">
+             <span>Item</span>
+             <span>Description</span>
+             <span>£ excl. VAT</span>
+          </div>
           {#each quoteForm.lineItems as item, index}
              <div class="line-item-row">
-                <input type="text" placeholder="Description" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
-                <input type="number" placeholder="Cost" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <div class="autocomplete-wrapper">
+                  <input 
+                    type="text" 
+                    bind:value={item.item} 
+                    required 
+                    maxlength="100" 
+                    on:input={(e) => handleLineItemInput(e, index)}
+                    on:focus={(e) => handleLineItemInput(e, index)}
+                    on:blur={() => setTimeout(() => { if (activeLineItemIndex === index) showLineItemSuggestions = false }, 150)}
+                    autocomplete="off"
+                    placeholder="Enter or select line item..."
+                  >
+                  {#if showLineItemSuggestions && activeLineItemIndex === index}
+                    <div class="suggestions-list">
+                      {#each lineItemSuggestions as suggestion}
+                        <div 
+                          class="suggestion-item" 
+                          class:add-new={suggestion.startsWith('Add "')}
+                          on:mousedown={() => selectLineItem(suggestion, index)}
+                        >
+                          {suggestion}
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+                <input class="line-item-description" type="text" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <input type="number" placeholder="0.00" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
                 <button type="button" on:click={() => removeLineItem(index)} disabled={quoteForm.lineItems.length <= 1} title="Remove Line Item">-</button>
              </div>
           {/each}
           <button type="button" on:click={addLineItem} class="add-line-item-btn" title="Add Line Item">+ Add Line Item</button>
           <p class="modal-total">Calculated Total: £{quoteTotal.toFixed(2)}</p>
 
+          <!-- SharePoint Upload Section -->
+          <div class="form-row sharepoint-row">
+             <label>Upload quote files via SharePoint:</label>
+             {#if $selectedProject?.sharepointLink}
+               <div class="sharepoint-link-container">
+                 <span 
+                   class="sharepoint-link-text"
+                   on:click={() => window.open($selectedProject.sharepointLink, '_blank')}
+                   title="Click to open SharePoint link"
+                 >
+                   {$selectedProject.sharepointLink}
+                 </span>
+               </div>
+               <div class="sharepoint-spacing"></div>
+             {:else}
+               <div class="sharepoint-link-container">
+                 <span class="no-link-text">No upload link configured</span>
+               </div>
+               <div class="sharepoint-spacing"></div>
+             {/if}
+          </div>
+
           <!-- Notes Section -->
           <div class="form-row notes-row">
              <label>Additional Notes</label>
-             <textarea rows="3" readonly bind:value={quoteForm.additionalNotes} placeholder="Click button to add/edit notes"></textarea>
-             <button type="button" on:click={openAddNotesModal}>Add/Edit Notes</button>
+             <textarea rows="4" bind:value={quoteForm.additionalNotes}></textarea>
           </div>
 
           <!-- Optional File Upload Placeholder -->
@@ -277,23 +517,13 @@
 
           <!-- Modal Actions -->
           <div class="modal-actions">
-            <button type="submit" class="submit-btn">{isEditing ? 'Update Quote' : 'Add Quote'}</button>
+            <button type="submit" class="save-btn">{isEditing ? 'Save Changes' : 'Add Quote'}</button>
             <button type="button" on:click={closeModal} class="cancel-btn">Cancel</button>
           </div>
       </form>
     </div>
   </div>
 {/if}
-
-<!-- Add/Edit Notes Modal (Nested within this component's scope) -->
-{#if showAddNotesModal}
-    <NotesModal
-        initialNotes={currentNotesForModal}
-        on:save={handleSaveAddNotes}
-        on:close={closeAddNotesModal}
-    />
-{/if}
-
 
 <style>
   .modal-backdrop {
@@ -322,7 +552,7 @@
   .modal form label { margin-bottom: 5px; font-weight: 600; font-size: 0.9em; }
   .modal form input[type="text"],
   .modal form input[type="email"],
-  .modal form input[type="date"],
+  .modal form input[type="tel"],
   .modal form input[type="number"],
   .modal form select,
   .modal form textarea {
@@ -337,28 +567,220 @@
 
   h4 { margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
 
-  .line-item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-  .line-item-row input[type="text"] { flex-grow: 1; }
-  .line-item-row input[type="number"] { width: 110px; }
-  .line-item-row button {
-      padding: 5px 9px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; line-height: 1;
+  .line-item-row {
+    display: flex;
+    gap: 0.5rem; /* spacing between elements */
+    align-items: center;
+    margin-bottom: 0.5rem;
   }
-  .line-item-row button:disabled { background-color: #f8d7da; cursor: not-allowed; }
+
+  .line-item-row input {
+    flex: 1; /* a little more space for text */
+    min-width: 0;
+  }
+
+  .autocomplete-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .autocomplete-wrapper input {
+    width: 100%;
+  }
+
+  .line-item-row .line-item-description {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .line-item-row input[type="number"] {
+    flex: 0.5; /* less space for cost */
+  }
+
+  .line-item-row button {
+    flex-shrink: 0; /* prevent button from shrinking */
+    padding: 5px 9px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; line-height: 1;
+  }
+  .line-item-row button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+  /* Hide arrows from number input */
+  .line-item-row input[type=number] {
+    -moz-appearance: textfield;
+  }
+  .line-item-row input[type=number]::-webkit-outer-spin-button,
+  .line-item-row input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   .add-line-item-btn {
-      margin-top: 5px; background-color: #17a2b8; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; align-self: flex-start;
+      margin-top: 5px;
+      background-color: #007bff;
+      color: white;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      align-self: flex-start;
   }
 
   .modal-total { font-weight: bold; margin: 15px 0; text-align: right; font-size: 1.1em; }
 
-  .notes-row { display: flex; flex-direction: column; margin-top: 15px; }
-  .notes-row textarea { margin-bottom: 5px; background-color: #f8f9fa; min-height: 60px; }
-  .notes-row button { align-self: flex-start; background-color: #6c757d; }
+  .notes-row {
+    grid-column: 1 / -1; /* Make notes span full width */
+  }
+  .notes-row textarea {
+    width: 100%;
+    resize: vertical;
+  }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; }
   .modal-actions button { padding: 10px 18px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; }
-  .submit-btn { background-color: #28a745; color: white; }
+  .save-btn { background-color: #007bff; color: white; }
   .cancel-btn { background-color: #6c757d; color: white; }
-  .submit-btn:hover { background-color: #218838; }
+  .save-btn:hover { background-color: #0069d9; }
   .cancel-btn:hover { background-color: #5a6268; }
+
+  .line-item-headers {
+    display: flex;
+    gap: 0.5rem;
+    padding-right: 40px; /* Space for the remove button to align columns */
+    margin-bottom: 4px;
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #333;
+  }
+  .line-item-headers span {
+    flex: 1;
+  }
+  .line-item-headers span:last-child {
+    flex: 0.5;
+  }
+
+  .new-value-input {
+    margin-top: 8px;
+  }
+
+  .select-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  /* This rule targets the select elements themselves */
+  .select-wrapper select {
+    -webkit-appearance: none; /* Hide default arrow on Safari/Chrome */
+    -moz-appearance: none;    /* Hide default arrow on Firefox */
+    appearance: none;
+    width: 100%; /* Make sure select fills the wrapper */
+    padding-right: 2.5rem; /* Add space for our custom arrow */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+  }
+
+  .suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 101; /* Needs to be above other modal content */
+  }
+  .suggestion-item {
+    padding: 9px;
+    cursor: pointer;
+  }
+  .suggestion-item:hover {
+    background-color: #f0f0f0;
+  }
+  .suggestion-item.add-new {
+    color: #007bff;
+    font-style: italic;
+    border-top: 1px solid #eee;
+  }
+  .suggestion-item.add-new:hover {
+    background-color: #e3f2fd;
+  }
+
+  .sharepoint-row {
+    grid-column: 1 / -1; /* Span full width */
+    margin-top: 15px;
+    margin-bottom: 25px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+  }
+
+  .sharepoint-link {
+    color: #007bff; /* Link color */
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .sharepoint-link:hover {
+    text-decoration: underline;
+  }
+
+  .no-link-message {
+    color: #6c757d;
+    font-style: italic;
+  }
+
+  .sharepoint-input {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 0.95em;
+    background-color: #f8f9fa; /* Light background for readability */
+    color: #333;
+  }
+
+  .sharepoint-input:read-only {
+    background-color: #e9ecef; /* Slightly darker background for read-only */
+    cursor: not-allowed;
+  }
+
+  .sharepoint-input.clickable {
+    cursor: pointer;
+    background-color: #f8f9fa; /* Keep lighter background for clickable */
+  }
+
+  .sharepoint-input.clickable:hover {
+    background-color: #e2e6ea; /* Hover effect */
+    border-color: #007bff; /* Blue border on hover */
+  }
+
+  .sharepoint-spacing {
+    height: 10px; /* Space between input and label */
+  }
+
+  .sharepoint-link-container {
+    position: relative;
+    display: inline-block; /* Allow text to be clickable */
+  }
+
+  .sharepoint-link-text {
+    color: #007bff; /* Blue color for the text */
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .sharepoint-link-text:hover {
+    text-decoration: underline;
+  }
+
+  .no-link-text {
+    color: #6c757d;
+    font-style: italic;
+  }
 
 </style> 

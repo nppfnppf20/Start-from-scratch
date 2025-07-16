@@ -1,5 +1,6 @@
 <script lang="ts">
-    import "../app.css";
+    import "../../app.css";
+    import TopBar from "$lib/components/TopBar.svelte";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
     import { selectedProject } from "$lib/stores/projectStore";
@@ -9,6 +10,7 @@
 </script>
 
 <div class="app">
+    <TopBar />
     <header>
         <ProjectSelector />
         <TabNav />
@@ -43,9 +45,9 @@
         flex-direction: column;
         padding: 1rem;
         width: 100%;
-        max-width: 64rem;
-        margin: 0 auto;
         box-sizing: border-box;
+        overflow-y: auto;
+        background-color: var(--background-color);
     }
 
     header {

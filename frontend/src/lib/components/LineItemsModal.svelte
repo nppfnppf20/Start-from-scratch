@@ -26,7 +26,8 @@
         <ul class="items-list">
           {#each items as item, index}
             <li class="item">
-              <span class="item-description">{index + 1}. {item.description}</span>
+              <span class="item-name">{index + 1}. {item.item}</span>
+              <span class="item-description">{item.description}</span>
               <span class="item-cost">£{item.cost.toFixed(2)}</span>
             </li>
           {/each}
@@ -96,14 +97,22 @@
   }
 
   .item {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 1rem;
+      align-items: center;
       padding: 0.6rem 0;
       border-bottom: 1px solid #f0f0f0;
   }
   
   .item:last-child {
       border-bottom: none;
+  }
+  
+  .item-name {
+      font-weight: 500;
+      color: #555;
+      white-space: nowrap;
   }
   
   .item-description {
@@ -113,8 +122,6 @@
   .item-cost {
       font-weight: 500;
       color: #555;
-      white-space: nowrap;
-      margin-left: 1rem;
   }
 
   hr {

@@ -3,6 +3,11 @@ const { Schema } = mongoose;
 
 // Schema for line items within a quote
 const LineItemSchema = new Schema({
+    item: {
+        type: String,
+        required: [true, 'Line item type/category is required'],
+        trim: true
+    },
     description: {
         type: String,
         required: [true, 'Line item description is required'],
@@ -21,6 +26,11 @@ const QuoteSchema = new Schema({
         ref: 'Project', // Reference to the Project model
         required: [true, 'Project ID is required'],
         index: true // Index for faster lookups by project
+    },
+    surveyor: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
     discipline: {
         type: String,
