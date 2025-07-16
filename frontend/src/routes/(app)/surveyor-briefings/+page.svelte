@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
   import { selectedProject, authorizeSurveyors } from '$lib/stores/projectStore';
   import { emailTemplates } from '$lib/data/emailTemplates';
@@ -134,69 +135,80 @@
   on:confirmed={handleConfirmation}
 />
 
-<div class="briefings-container">
-  <div class="top-section">
-    <div class="discipline-filter">
-      <h2>Discipline</h2>
-      <ul>
-        {#each disciplines as discipline}
-          <li>
-            <label>
-              <input type="checkbox" bind:group={selectedDisciplines} value={discipline} />
-              {discipline}
-            </label>
-          </li>
-        {/each}
-      </ul>
-    </div>
-    <div class="survey-type-filter">
-      <h2>Survey Type</h2>
-      <ul>
-        {#each availableSurveyTypes as surveyType}
-          <li>
-            <label>
-              <input type="checkbox" bind:group={selectedSurveyTypes} value={surveyType} />
-              {surveyType}
-            </label>
-          </li>
-        {/each}
-      </ul>
-    </div>
-    <div class="surveyor-list">
-      <h2>Surveyors</h2>
-      <SurveyorBankTable showActions={false} showSelectButton={true} on:select={handleSelectSurveyor} />
-    </div>
-  </div>
+<div class="briefings-page-container">
+  <PageHeader 
+    title="Surveyor Briefings" 
+    subtitle="Select disciplines and surveyors to draft a fee quote request."
+  />
 
-  <div class="email-draft">
-    <h2>Email Draft</h2>
-    <div class="email-headers">
-      <div class="email-fields">
-        <div class="form-group">
-          <label for="email-to">To:</label>
-          <input type="text" id="email-to" bind:value={emailTo} placeholder="recipient@example.com" />
-        </div>
-        <div class="form-group">
-          <label for="email-subject">Subject:</label>
-          <input type="text" id="email-subject" bind:value={emailSubject} placeholder="Email subject line" />
-        </div>
+  <div class="briefings-content-area">
+    <div class="top-section">
+      <div class="discipline-filter">
+        <h2>Discipline</h2>
+        <ul>
+          {#each disciplines as discipline}
+            <li>
+              <label>
+                <input type="checkbox" bind:group={selectedDisciplines} value={discipline} />
+                {discipline}
+              </label>
+            </li>
+          {/each}
+        </ul>
       </div>
-      <div class="email-actions">
-        <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
-        <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Fee Quote Request Sent</button>
+      <div class="survey-type-filter">
+        <h2>Survey Type</h2>
+        <ul>
+          {#each availableSurveyTypes as surveyType}
+            <li>
+              <label>
+                <input type="checkbox" bind:group={selectedSurveyTypes} value={surveyType} />
+                {surveyType}
+              </label>
+            </li>
+          {/each}
+        </ul>
+      </div>
+      <div class="surveyor-list">
+        <h2>Surveyors</h2>
+        <SurveyorBankTable showActions={false} showSelectButton={true} on:select={handleSelectSurveyor} />
       </div>
     </div>
-    <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>
+
+    <div class="email-draft">
+      <h2>Email Draft</h2>
+      <div class="email-headers">
+        <div class="email-fields">
+          <div class="form-group">
+            <label for="email-to">To:</label>
+            <input type="text" id="email-to" bind:value={emailTo} placeholder="recipient@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="email-subject">Subject:</label>
+            <input type="text" id="email-subject" bind:value={emailSubject} placeholder="Email subject line" />
+          </div>
+        </div>
+        <div class="email-actions">
+          <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
+          <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Fee Quote Request Sent</button>
+        </div>
+      </div>
+      <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>
+    </div>
   </div>
 </div>
 
 <style>
-  .briefings-container {
+  .briefings-page-container {
+    padding: 1rem 2rem; /* Consistent padding with other pages */
+  }
+
+  .briefings-content-area {
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    padding: 1rem;
-    height: calc(100vh - 150px); /* Adjust based on header/footer height */
+    /* Height calc accounts for main app chrome (approx 150px) + page header (approx 70px) */
+    height: calc(100vh - 220px); 
   }
 
   .top-section {

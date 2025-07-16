@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes,
@@ -259,13 +260,12 @@
 </script>
 
 <div class="instructed-container">
-  <h1>Instructed Surveyors</h1>
+  <PageHeader
+    title="Instructed Surveyors"
+    subtitle={$selectedProject ? `Surveyors for ${$selectedProject.name}` : 'Please select a project'}
+  />
   
   {#if $selectedProject}
-    <div class="instructed-header">
-      <h2>Surveyors for {$selectedProject.name}</h2>
-      <p>Tracking operational progress for instructed quotes.</p>
-    </div>
     
     {#if instructedQuotes.length > 0}
       <div class="table-scroll-wrapper">
@@ -464,7 +464,7 @@
   /* General page styling (assumed globally applied) */
 
   .instructed-container {
-    padding: 2rem 1rem; /* Match general-info padding */
+    padding: 1rem 2rem;
   }
   
   /* Headings */
@@ -1195,5 +1195,10 @@
     right: -18px; /* Position halfway outside the container */
   }
   /* ------------------------------------------- */
+
+  .page-description {
+    margin-bottom: 1.5rem;
+    color: #4a5568;
+  }
 
 </style> 
