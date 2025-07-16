@@ -296,7 +296,7 @@
   /* General page styling (assumed globally applied) */
 
   .quotes-container {
-    padding: 1.5rem;
+    padding: 1rem 2rem; /* Consistent padding */
   }
 
   h1 {

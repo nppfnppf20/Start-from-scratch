@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import ClientTable from '$lib/components/ClientTable.svelte';
   import AddClientOrganisationModal from '$lib/components/AddClientOrganisationModal.svelte';
 
@@ -9,16 +10,20 @@
   }
 </script>
 
-<div class="page-header">
-  <h1>Clients</h1>
-  <div class="header-actions">
-    <button class="add-btn" on:click={handleAddClient}>
-      + Add New Client
-    </button>
-  </div>
-</div>
+<div class="admin-clients-container">
+  <PageHeader
+    title="Clients"
+    subtitle="View, add, and manage client organisations."
+  >
+    <div slot="actions" class="header-actions">
+      <button class="add-btn" on:click={handleAddClient}>
+        + Add New Client
+      </button>
+    </div>
+  </PageHeader>
 
-<ClientTable />
+  <ClientTable />
+</div>
 
 <AddClientOrganisationModal
   bind:isOpen={showAddModal}
@@ -26,6 +31,10 @@
 />
 
 <style>
+  .admin-clients-container {
+    padding: 1rem 2rem;
+  }
+
   .page-header {
     display: flex;
     justify-content: space-between;

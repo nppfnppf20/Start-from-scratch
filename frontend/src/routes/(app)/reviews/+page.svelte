@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject,
     currentProjectQuotes,
@@ -194,13 +195,13 @@
 </script>
 
 <div class="reviews-container">
-  <h1>Surveyor Reviews</h1>
+  <PageHeader 
+    title="Surveyor Reviews"
+    subtitle={$selectedProject ? `Reviews for Instructed Surveyors on ${$selectedProject.name}` : 'Please select a project'}
+  />
 
   {#if $selectedProject}
-    <div class="reviews-header">
-      <h2>Reviews for Instructed Surveyors on {$selectedProject.name}</h2>
-      <p>Click 'Edit' to rate surveyors and add notes.</p>
-    </div>
+    <p class="page-description">Click 'Edit' to rate surveyors and add notes.</p>
 
     {#if projectQuotes.length > 0}
       <div class="table-scroll-wrapper">
@@ -335,32 +336,13 @@
   /* General page styling (assumed globally applied) */
 
   .reviews-container {
-    padding: 2rem 1rem; /* Match general-info padding */
+    padding: 1rem 2rem; /* Match other pages */
   }
   
-  /* Headings */
-  h1 {
-    font-size: 1.8rem; 
-    font-weight: 600; 
+  .page-description {
     margin-bottom: 1.5rem;
-    color: #1a202c; 
-  }
-  
-  h2 {
-    font-size: 1.3rem; 
-    font-weight: 500; 
-    color: #2d3748; 
-    margin: 0; 
-  }
-
-  /* Header section */
-  .reviews-header {
-    margin-bottom: 1.5rem;
-  }
-  .reviews-header p {
-      margin-top: 0.5rem;
-      color: #718096; 
-      font-size: 0.95rem;
+    color: #718096;
+    font-size: 0.95rem;
   }
   
   /* Table Styling */

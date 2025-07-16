@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes,
@@ -351,13 +353,12 @@
 </script>
 
 <div class="programme-container">
-  <h1>Programme</h1>
+  <PageHeader 
+    title="Programme"
+    subtitle={$selectedProject ? `Timeline for ${$selectedProject.name}` : 'Please select a project'}
+  />
   
   {#if $selectedProject}
-    <div class="programme-header">
-      <h2>Timeline for {$selectedProject.name}</h2>
-    </div>
-    
     <div class="programme-content timeline-view">
       {#if $instructedSurveyors.length > 0 || $currentProjectManualEvents.length > 0}
         <div class="table-scroll-container">
@@ -516,32 +517,12 @@
 
   /* Styles adjusted for better height without calendar */
    .programme-container {
-    padding: 2rem 1rem;
+    padding: 1rem 2rem; /* Consistent padding */
     display: flex;
     flex-direction: column;
     flex-grow: 1; 
     height: calc(100vh - 150px); /* Adjust as needed */
     overflow: hidden; 
-  }
-  
-  h1 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 1.5rem;
-    flex-shrink: 0; 
-  }
-  
-  .programme-header {
-    margin-bottom: 1rem;
-    flex-shrink: 0; 
-  }
-  
-  h2 {
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: #2d3748;
-    margin: 0;
   }
   
   .programme-content {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import SurveyorBankModal from '$lib/components/SurveyorBankModal.svelte';
   import AddSurveyorOrganisationModal from '$lib/components/AddSurveyorOrganisationModal.svelte';
   import PendingSurveyorsModal from '../../../../lib/components/PendingSurveyorsModal.svelte';
@@ -16,20 +17,21 @@
   }
 </script>
 
-<!-- Page Header with Title and Buttons -->
-<div class="surveyor-page-header">
-  <h1>Surveyor Organisations</h1>
-  <div class="header-actions">
-    <button class="pending-btn" on:click={handlePendingClick}>
-      Manage Pending
-    </button>
-    <button class="add-organisation-btn" on:click={handleAddClick}>
-      + Add New Organisation
-    </button>
-  </div>
+<div class="admin-surveyors-container">
+  <PageHeader 
+    title="Surveyor Organisations"
+    subtitle="View, add, and manage surveyor organisations across all projects."
+  >
+    <div slot="actions" class="header-actions">
+      <button class="pending-btn" on:click={handlePendingClick}>
+        Manage Pending
+      </button>
+      <button class="add-organisation-btn" on:click={handleAddClick}>
+        + Add New Organisation
+      </button>
+    </div>
+  </PageHeader>
 </div>
-
-
 
 <!-- Main Table -->
 <SurveyorBankModal />
@@ -48,13 +50,8 @@
 
 
 <style>
-  .surveyor-page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
+  .admin-surveyors-container {
+    padding: 1rem 2rem;
   }
 
   .surveyor-page-header h1 {
