@@ -641,6 +641,22 @@
     min-height: 80px; /* Taller default height */
   }
   
+  .read-only-notice {
+    display: inline-block;
+    background-color: #f7fafc; /* Light, neutral grey */
+    color: #4a5568;            /* Darker grey for text, matches labels */
+    border: 1px solid #e2e8f0; /* Subtle grey border, matches other elements */
+    padding: 0.5rem 1rem;      /* More fitting padding for a smaller element */
+    border-radius: 6px;        /* Consistent with buttons */
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+
+  .read-only-notice p {
+    margin: 0; /* Remove default paragraph margin */
+  }
+
+  /* Form Section and Grid Layout */
   .no-project-selected {
     text-align: center;
     margin: 3rem auto; /* More margin */
@@ -728,20 +744,6 @@
   }
   .save-button.saved {
     background-color: #38a169; /* Brighter green when saved */
-  }
-
-  .read-only-notice {
-    background-color: #fed7d7;
-    color: #c53030;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-bottom: 1.5rem;
-  }
-
-  .read-only-notice p {
-    margin: 0;
   }
 
   /* SharePoint Link Styles */
