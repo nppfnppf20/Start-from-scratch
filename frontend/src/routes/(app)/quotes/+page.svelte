@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes, 
@@ -167,14 +168,20 @@
 </script>
 
 <div class="quotes-container">
-  <h1>Surveyor Quotes</h1>
+  <PageHeader 
+    title="Surveyor Quotes" 
+    subtitle={$selectedProject ? `Quotes for ${$selectedProject.name}` : 'Please select a project to view quotes.'}
+  >
+    <div slot="actions">
+      {#if $selectedProject}
+        <button class="add-quote-btn" on:click={openNewQuoteModal}>
+          + Add New Quote
+        </button>
+      {/if}
+    </div>
+  </PageHeader>
   
   {#if $selectedProject}
-    <div class="quotes-header">
-      <h2>Quotes for {$selectedProject.name}</h2>
-      <button class="add-quote-btn" on:click={openNewQuoteModal} disabled={!$selectedProject}>+ Add New Quote</button>
-    </div>
-    
     <div class="table-scroll-wrapper">
       <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
       <div class="quotes-table-container" bind:this={tableContainerElement}>
@@ -247,7 +254,7 @@
       <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
     </div>
   {:else}
-    <p>Please select a project to view quotes.</p>
+    <!-- Message is now in the subtitle -->
   {/if}
   
   <QuoteModal 
@@ -289,25 +296,15 @@
   /* General page styling (assumed globally applied) */
 
   .quotes-container {
-    padding: 2rem 1rem; /* Match general-info padding */
-  }
-  
-  /* Headings */
-  h1 {
-    font-size: 1.8rem; 
-    font-weight: 600; 
-    margin-bottom: 1.5rem;
-    color: #1a202c; 
-  }
-  
-  h2 {
-    font-size: 1.3rem; 
-    font-weight: 500; 
-    color: #2d3748; 
-    margin: 0; 
+    padding: 1.5rem;
   }
 
-  /* Header section */
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
   .quotes-header {
     display: flex;
     justify-content: space-between;
@@ -315,36 +312,82 @@
     margin-bottom: 1.5rem;
   }
 
-  /* Add Quote Button */
+  h2 {
+    font-size: 1.25rem;
+    color: #4a5568;
+  }
+
   .add-quote-btn {
+    background-color: #3182ce;
+    color: white;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
-    background-color: #3182ce; /* Blue accent */
-    color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
+
   .add-quote-btn:hover {
-    background-color: #2b6cb0; 
+    background-color: #2b6cb0;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
+
   .add-quote-btn:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); 
   }
+
   .add-quote-btn:disabled {
     background-color: #a0aec0;
     cursor: not-allowed;
     box-shadow: none;
   }
-  
-  /* Table Styling */
+
+  .table-scroll-wrapper {
+    position: relative;
+    margin-bottom: 2rem; /* Keep space below */
+  }
+
+  .scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
+    border: 1px solid #cbd5e0;
+    border-radius: 50%; /* Circle */
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
+    cursor: pointer;
+    color: #4a5568;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: inline-flex; /* Use inline-flex */
+    align-items: center;    /* Flexbox: Vertically center content */
+    justify-content: center; /* Flexbox: Horizontally center content */
+    padding: 0; /* Remove padding if flex is centering */
+  }
+
+  .scroll-btn:hover {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  }
+
+  .scroll-btn-left {
+    left: -18px; /* Position halfway outside the container */
+  }
+
+  .scroll-btn-right {
+    right: -18px; /* Position halfway outside the container */
+  }
+  /* ------------------------------------------- */
+
   .quotes-table-container {
-    overflow-x: scroll; /* Changed from auto to scroll for persistent visibility */
+    overflow-x: auto; /* Changed from auto to scroll for persistent visibility */
     background-color: #ffffff;
     border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -389,8 +432,8 @@
     background-color: #f7fafc; 
   }
 
-  .quotes-table tbody tr.group-odd {
-    background-color: #f7fafc;
+  tr.group-odd {
+    background-color: #f8f9fa; /* zebra striping for groups */
   }
 
   /* Specific Cell Alignments */
@@ -414,29 +457,19 @@
 
   /* Line Items Button */
   .line-items-button {
-    background-color: #edf2f7;
-    color: #4a5568;
-    border: 1px solid #e2e8f0;
-    border-radius: 50%; /* Circle */
-    width: auto; /* Adjust width based on content */
-    min-width: 28px; /* Keep minimum size */
-    height: 28px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    /* line-height: 26px; Remove fixed line height */
-    text-align: center;
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 9999px; /* Pill shape */
+    padding: 0.3rem 0.8rem;
     cursor: pointer;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    display: inline-flex; /* Use flex for centering */
+    display: flex;
     align-items: center;
-    justify-content: center;
-    /* position: relative; Remove relative positioning */
-    padding: 0 0.5rem; /* Add some horizontal padding */
-    gap: 0.25rem; /* Add gap between number and plus */
+    gap: 0.4rem;
+    transition: background-color 0.2s, border-color 0.2s;
   }
   .line-items-button:hover {
-    background-color: #e2e8f0;
-    border-color: #cbd5e0;
+    background-color: #e9ecef;
+    border-color: #adb5bd;
   }
   .line-items-button .plus-sign {
     /* display: none; Remove hiding */
@@ -448,68 +481,55 @@
 
   /* Instruction Status Select */
   .instruction-status-select {
-    padding: 0.4rem 2rem 0.4rem 0.8rem; /* Increase right padding for arrow */
-    border: 1px solid #cbd5e0;
-    border-radius: 15px; /* Pill shape */
-    font-size: 0.85rem;
-    background-color: #fff;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: white;
     cursor: pointer;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    min-width: 120px; /* Ensure dropdown is wide enough */
-    appearance: none; /* Hide default arrow */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E"); /* Add custom arrow */
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1em 1em;
+    min-width: 150px;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
   .instruction-status-select:focus {
-      border-color: #4299e1; 
-      box-shadow: 0 0 0 1px #4299e1; 
-      outline: none;
+      border-color: #80bdff; 
+      outline: 0;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); 
   }
 
   /* Status-specific Select Styling */
-  .instruction-status-select.status-instructed {
-    background-color: #f0fff4; /* Light green */
-    border-color: #c6f6d5;
-    color: #276749;
+  .status-instructed {
+    background-color: #c6f6d5;
+    color: #2f855a;
+    font-weight: 500;
   }
-  .instruction-status-select.status-partially-instructed {
-    background-color: #fffaf0; /* Light orange/yellow */
-    border-color: #feebc8;
-    color: #975a16;
+  .status-partially-instructed {
+    background-color: #faf089;
+    color: #b7791f;
+    font-weight: 500;
   }
-  .instruction-status-select.status-pending {
-    background-color: #ebf4ff; /* Light blue */
-    border-color: #bee3f8;
-    color: #2c5282;
+  .status-pending {
+    background-color: #e2e8f0;
+    color: #4a5568;
   }
-  .instruction-status-select.status-will-not-be-instructed {
-    background-color: #fff5f5; /* Light red */
-    border-color: #fed7d7;
+  .status-will-not-be-instructed {
+    background-color: #fed7d7;
     color: #c53030;
+    font-weight: 500;
   }
   
   /* Action Buttons in Table */
   .action-cell {
-    text-align: center; /* Center align actions */
+    text-align: right; /* Center align actions */
+    white-space: nowrap;
   }
   
   .action-btn {
-    display: inline-block;
     padding: 0.3rem 0.7rem;
-    margin: 0 0.2rem; /* Adjust spacing */
-    font-size: 0.8rem;
-    font-weight: 500;
+    margin-left: 0.4rem;
+    border: none;
     border-radius: 4px;
-    text-decoration: none;
     cursor: pointer;
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    border: 1px solid transparent;
-    background: none;
-    color: #718096; /* Default subtle grey */
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
   }
   .action-btn:hover {
      background-color: #edf2f7; /* Light grey background on hover */
@@ -518,16 +538,18 @@
 
   /* Specific Button Styles */
   .edit-btn {
-    /* Maybe a subtle blue hint? */
-     /* border-color: #bee3f8; */
+    background-color: #3182ce;
+    color: white;
+  }
+  .edit-btn:hover {
+    background-color: #2b6cb0;
   }
   .delete-btn {
-    /* Maybe a subtle red hint? */
-     /* border-color: #fed7d7; */
-     /* color: #e53e3e; */
+    background-color: #e53e3e;
+    color: white;
   }
   .delete-btn:hover {
-      background-color: #fed7d7; /* Light red background on hover */
+      background-color: #c53030; /* Light red background on hover */
       color: #c53030; /* Red text on hover */
   }
 
@@ -557,45 +579,4 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     color: #718096;
   }
-
-  /* --- New: Table Scroll Wrapper and Buttons --- */
-  .table-scroll-wrapper {
-    position: relative; /* Context for absolute positioning of buttons */
-    margin-bottom: 2rem; /* Keep space below */
-  }
-
-  .scroll-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%); /* Center vertically */
-    z-index: 10;
-    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
-    border: 1px solid #cbd5e0;
-    border-radius: 50%; /* Circle */
-    width: 36px;
-    height: 36px;
-    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
-    cursor: pointer;
-    color: #4a5568;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    display: inline-flex; /* Use inline-flex */
-    align-items: center;    /* Flexbox: Vertically center content */
-    justify-content: center; /* Flexbox: Horizontally center content */
-    padding: 0; /* Remove padding if flex is centering */
-  }
-
-  .scroll-btn:hover {
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-  }
-
-  .scroll-btn-left {
-    left: -18px; /* Position halfway outside the container */
-  }
-
-  .scroll-btn-right {
-    right: -18px; /* Position halfway outside the container */
-  }
-  /* ------------------------------------------- */
 </style> 

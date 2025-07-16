@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/PageHeader.svelte";
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
   import { authStore } from "$lib/stores/authStore";
   import { get } from 'svelte/store';
@@ -113,37 +114,34 @@
 </script>
 
 <div class="page-container">
-  <!-- Header with title and save button -->
-  <div class="page-header">
-    <h1>General Project Information</h1>
-    {#if $selectedProject}
-      <h2>Project information for {$selectedProject.name}</h2>
-    {/if}
-  </div>
+  <PageHeader
+    title="General Project Information"
+    subtitle={$selectedProject ? `Project information for ${$selectedProject.name}` : undefined}
+  >
+    <div slot="actions" class="header-actions-wrapper">
+      {#if $selectedProject?.updatedAt}
+        <div class="last-saved-info">
+          {formatLastSaved($selectedProject.updatedAt)}
+        </div>
+      {/if}
+
+      {#if $selectedProject && !isSurveyor}
+        <button
+          type="button"
+          class="save-button-header"
+          class:saving={saving}
+          class:saved={justSaved}
+          on:click={handleSubmit}
+          disabled={saving}
+        >
+          {buttonText}
+        </button>
+      {/if}
+    </div>
+  </PageHeader>
 
   {#if $selectedProject}
     <div class="general-info">
-      <div class="info-header">
-        {#if $selectedProject.updatedAt}
-          <div class="last-saved-info">
-            {formatLastSaved($selectedProject.updatedAt)}
-          </div>
-        {/if}
-
-        {#if !isSurveyor}
-          <button
-            type="button"
-            class="save-button-header"
-            class:saving={saving}
-            class:saved={justSaved}
-            on:click={handleSubmit}
-            disabled={saving}
-          >
-            {buttonText}
-          </button>
-        {/if}
-      </div>
-
       {#if isSurveyor}
         <div class="read-only-notice">
           <p>Read only</p>
@@ -415,50 +413,19 @@
 
 <style>
   .page-container {
-    padding: 2rem 1rem;
+    padding: 1rem 2rem;
+  }
+
+  .header-actions-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
   }
 
   /* General page styling */
   :global(body) { /* Apply to body for overall background */
     background-color: #f8f9fa; /* Light grey background like the dashboard */
     font-family: 'Inter', sans-serif; /* Common modern sans-serif font */
-  }
-
-  /* Page Header Layout */
-  .page-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-  }
-
-  .info-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .title-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .page-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #1a202c;
-  }
-
-  .page-header h2 {
-    margin: 1.75rem 0 0 0;
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: #2d3748;
-    border-bottom: none;
   }
 
   .last-saved-info {
