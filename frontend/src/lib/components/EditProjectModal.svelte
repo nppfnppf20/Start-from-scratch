@@ -3,6 +3,7 @@
   import type { ProjectBankItem } from '$lib/stores/projectStore';
   import { updateProject } from '$lib/stores/projectStore';
   import { authStore } from '$lib/stores/authStore';
+  import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
 
   export let project: ProjectBankItem;
   
@@ -14,14 +15,19 @@
   let authorizedClients: string[] = [];
   let allClients: { _id: string; email: string }[] = [];
 
-  // Initialize form fields when the project prop is set
+  // This reactive block ensures that when the project data or the list of clients loads,
+  // the form is correctly populated, including finding the right client ID for the dropdown.
   $: {
-    if (project) {
+    if (project && $clientOrganisations) {
       name = project.name;
-      client = project.client || '';
       teamMembersStr = project.teamMembers?.join(', ') || '';
       authorizedSurveyors = project.authorizedSurveyors || [];
       authorizedClients = project.authorizedClients || [];
+      
+      // Find the client organisation that matches the project's client name
+      const matchingOrg = $clientOrganisations.find(org => org.organisationName === project.client);
+      // Set the client variable to the ID of the matching org, which the dropdown will use
+      client = matchingOrg ? matchingOrg.id : '';
     }
   }
 
@@ -30,6 +36,7 @@
   const dispatch = createEventDispatcher();
 
   onMount(async () => {
+    loadClientOrganisations();
     try {
         const token = $authStore.token;
         const [surveyorsRes, clientsRes] = await Promise.all([
@@ -104,7 +111,12 @@
 
       <div class="form-group">
         <label for="client">Client</label>
-        <input id="client" type="text" bind:value={client} />
+        <select id="client" bind:value={client}>
+          <option value="">-- Select a Client --</option>
+          {#each $clientOrganisations as org (org.id)}
+            <option value={org.id}>{org.organisationName}</option>
+          {/each}
+        </select>
       </div>
 
       <div class="form-group">
