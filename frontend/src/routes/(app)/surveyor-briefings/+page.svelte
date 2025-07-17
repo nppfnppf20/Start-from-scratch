@@ -47,6 +47,30 @@
   let emailSubject = '';
   let emailBody = '';
   let showConfirmModal = false;
+  let copyButtonText = 'Copy to Clipboard';
+
+  function processTemplate(template: string, project: any): string {
+    return template.replace(/\[([^\]]+)\]/g, (match, placeholder) => {
+      const keyMap: { [key: string]: keyof typeof project } = {
+        'Project Name': 'name',
+        'Client (or SPV) Name': 'clientOrSpvName',
+        'Project Type': 'projectType',
+        'Area (ha)': 'area',
+        'Address': 'address',
+        'Site Designations': 'siteDesignations',
+        'Invoicing details': 'invoicingDetails'
+      };
+      
+      const key = keyMap[placeholder];
+      if (key && project[key]) {
+        return project[key].toString();
+      } else if (key) {
+        return `[Insert ${placeholder}]`;
+      }
+      
+      return match; // Return original if not a mapped placeholder
+    });
+  }
 
   $: availableSurveyTypes = selectedDisciplines.length > 0
     ? selectedDisciplines.flatMap(d => surveyTypeMapping[d] || [])
@@ -57,22 +81,15 @@
 
     if (disciplineWithTemplate) {
       const template = emailTemplates[disciplineWithTemplate];
-      let subject = template.subject;
+      let subject = '';
       let body = template.body;
 
-      // Perform mail merge for project name
       if ($selectedProject) {
-        const projectName = $selectedProject.name;
-        subject = subject.replace(/\[Project\s*Name\]/gi, projectName);
-        body = body.replace(/\[Project\s*Name\]/gi, projectName);
-
-        // Populate other placeholders
-        body = body.replace(/\[Client \(or SPV\) Name\]/gi, $selectedProject.clientOrSpvName || '');
-        body = body.replace(/\[Project Type\]/gi, $selectedProject.projectType || '');
-        body = body.replace(/\[Area \(ha\)\]/gi, $selectedProject.area?.toString() || '');
-        body = body.replace(/\[Address\]/gi, $selectedProject.address || '');
-        body = body.replace(/\[Site Designations\]/gi, $selectedProject.siteDesignations || '');
-        body = body.replace(/\[Invoicing details\]/gi, $selectedProject.invoicingDetails || '');
+        subject = `${$selectedProject.name} - Fee Quote Request, ${disciplineWithTemplate}`;
+        body = processTemplate(body, $selectedProject);
+      } else {
+        subject = `Project Name - Fee Quote Request, ${disciplineWithTemplate}`;
+        body = processTemplate(body, {});
       }
       
       const surveyTypesList = selectedSurveyTypes.length > 0
@@ -116,6 +133,25 @@
 
     const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
     window.location.href = mailtoLink;
+  }
+
+  async function handleCopyToClipboard() {
+    const plainTextBody = emailBody
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '\n• ')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+      
+    try {
+        await navigator.clipboard.writeText(plainTextBody);
+        copyButtonText = 'Copied!';
+        setTimeout(() => {
+            copyButtonText = 'Copy to Clipboard';
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy email body.');
+    }
   }
 
   async function handleConfirmation() {
@@ -189,7 +225,10 @@
           </div>
         </div>
         <div class="email-actions">
-          <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
+          <div class="stacked-buttons">
+            <button class="action-btn" on:click={handleOpenEmail}>Open in Email App</button>
+            <button class="action-btn" on:click={handleCopyToClipboard}>{copyButtonText}</button>
+          </div>
           <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Fee Quote Request Sent</button>
         </div>
       </div>
@@ -267,8 +306,16 @@
   }
 
   .email-actions {
-      display: flex;
-      gap: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0; /* Prevent buttons from wrapping on smaller screens */
+    align-items: center;
+  }
+
+  .stacked-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .action-btn {
