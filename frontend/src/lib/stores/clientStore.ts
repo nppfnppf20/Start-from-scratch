@@ -86,3 +86,26 @@ export async function addClientOrganisation(orgData: {
     return null;
   }
 } 
+
+export const updateClientOrganisation = async (clientData: ClientOrganisation) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/client-organisations/${clientData.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clientData)
+    });
+    if (!response.ok) throw new Error('Failed to update client organisation.');
+    const updatedClient = await response.json();
+    clientOrganisations.update(clients => {
+      const index = clients.findIndex(c => c.id === updatedClient.id);
+      if (index !== -1) {
+        clients[index] = updatedClient;
+      }
+      return clients;
+    });
+    return updatedClient;
+  } catch (error) {
+    console.error('Error updating client organisation:', error);
+    return null;
+  }
+}; 

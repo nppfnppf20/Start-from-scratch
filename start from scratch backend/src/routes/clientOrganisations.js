@@ -66,4 +66,46 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// @route   PUT /api/client-organisations/:id
+// @desc    Update a client organisation
+// @access  Admin only
+router.put('/:id', protect, authorize('admin'), async (req, res) => {
+    const { organisationName, contacts } = req.body;
+
+    try {
+        let organisation = await ClientOrganisation.findById(req.params.id);
+        if (!organisation) {
+            return res.status(404).json({ msg: 'Client organisation not found' });
+        }
+
+        // Update organisation details
+        organisation.organisationName = organisationName;
+        organisation.contacts = contacts;
+
+        const updatedOrganisation = await organisation.save();
+
+        // Handle user accounts for contacts
+        if (contacts && contacts.length > 0) {
+            for (const contact of contacts) {
+                if (contact.email) {
+                    const userExists = await User.findOne({ email: contact.email });
+                    if (!userExists) {
+                        const newUser = new User({
+                            email: contact.email,
+                            name: contact.contactName || organisationName,
+                            role: 'client'
+                        });
+                        await newUser.save();
+                    }
+                }
+            }
+        }
+
+        res.json(updatedOrganisation);
+    } catch (err) {
+        console.error('Error updating client organisation:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router; 

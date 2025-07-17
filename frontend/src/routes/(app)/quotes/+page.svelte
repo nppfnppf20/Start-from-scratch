@@ -298,10 +298,10 @@
   .quotes-container {
     padding: 1rem 2rem; /* Consistent padding */
   }
-
+  
   h1 {
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-size: 1.8rem; 
+    font-weight: 600; 
     margin-bottom: 0.5rem;
   }
 
@@ -331,7 +331,7 @@
   }
 
   .add-quote-btn:hover {
-    background-color: #2b6cb0;
+    background-color: #2b6cb0; 
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 
@@ -345,7 +345,7 @@
     cursor: not-allowed;
     box-shadow: none;
   }
-
+  
   .table-scroll-wrapper {
     position: relative;
     margin-bottom: 2rem; /* Keep space below */

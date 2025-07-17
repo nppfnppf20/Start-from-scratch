@@ -1,15 +1,23 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { clientOrganisations, loadClientOrganisations, type ClientOrganisation } from '$lib/stores/clientStore';
+  import EditClientOrganisationModal from './EditClientOrganisationModal.svelte';
 
   let displayClients: ClientOrganisation[] = [];
   let isLoading = true;
   let searchText = '';
+  let showEditModal = false;
+  let selectedClient: ClientOrganisation | null = null;
 
   onMount(async () => {
     await loadClientOrganisations();
     isLoading = false;
   });
+
+  function handleEditClick(client: ClientOrganisation) {
+    selectedClient = client;
+    showEditModal = true;
+  }
 
   $: {
     let allClients = $clientOrganisations;
@@ -84,7 +92,7 @@
                                     {/if}
                                 </td>
                                 <td>
-                                    <button class="action-btn">Edit</button>
+                                    <button class="action-btn" on:click={() => handleEditClick(client)}>Edit</button>
                                 </td>
                             </tr>
                         {/each}
@@ -94,6 +102,15 @@
         {/if}
     {/if}
 </div>
+
+<EditClientOrganisationModal
+  bind:isOpen={showEditModal}
+  client={selectedClient}
+  on:close={() => {
+    showEditModal = false;
+    selectedClient = null;
+  }}
+/>
 
 <style>
 /* General container for the whole component */
