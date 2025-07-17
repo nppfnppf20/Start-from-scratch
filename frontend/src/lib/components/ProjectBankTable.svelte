@@ -16,7 +16,7 @@
     let searchText = '';
   
     // --- Sorting State ---
-    type SortKey = 'name' | 'client' | 'quotesReceived' | 'surveyorsInstructed' | 'instructedSpend';
+    type SortKey = 'name' | 'client' | 'instructedSpend';
     let sortKey: SortKey = 'name';
     let sortDirection: 'asc' | 'desc' = 'asc';
   
@@ -159,20 +159,13 @@
               </th>
               <th rowspan="2">Team</th>
               <th rowspan="2">Key Dates</th>
-              <th colspan="3" class="text-center divider-left">Totals</th>
+              <th colspan="4" class="text-center divider-left">Surveyor Totals</th>
               <th rowspan="2" class="divider-left">Actions</th>
             </tr>
             <tr>
-              <th class="sub-header divider-left">
-                <button on:click={() => setSortKey('quotesReceived')}>
-                  Quotes Received {#if sortKey === 'quotesReceived'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
-                </button>
-              </th>
-              <th class="sub-header">
-                <button on:click={() => setSortKey('surveyorsInstructed')}>
-                  Surveyors Instructed {#if sortKey === 'surveyorsInstructed'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
-                </button>
-              </th>
+              <th class="sub-header divider-left">Instructed</th>
+              <th class="sub-header">Completed</th>
+              <th class="sub-header">Outstanding</th>
               <th class="sub-header">
                 <button on:click={() => setSortKey('instructedSpend')}>
                   Instructed Spend (£) {#if sortKey === 'instructedSpend'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
@@ -183,7 +176,7 @@
           <tbody>
             {#if finalProjects.length === 0}
               <tr>
-                <td colspan="7" class="empty-state">
+                <td colspan="9" class="empty-state">
                   {#if searchText}
                     <p>No projects match your filter "{searchText}".</p>
                   {:else}
@@ -235,8 +228,9 @@
                       -
                     {/if}
                   </td>
-                  <td class="text-center divider-left">{project.quotesReceived}</td>
-                  <td class="text-center">{project.surveyorsInstructed}</td>
+                  <td class="text-center divider-left">{project.instructedCount}</td>
+                  <td class="text-center">{project.completedCount}</td>
+                  <td class="text-center">{project.outstandingCount}</td>
                   <td class="text-center">{formatCurrency(project.instructedSpend)}</td>
                   <td class="actions-cell divider-left">
                     <button class="action-btn" on:click={() => handleEditClick(project)}>

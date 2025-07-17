@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Quote = require('../models/Quote'); // Added for cascade deletion
 const ProgrammeEvent = require('../models/ProgrammeEvent'); // Added for cascade deletion
 const SurveyorFeedback = require('../models/SurveyorFeedback'); // Added for cascade deletion
+const InstructionLog = require('../models/InstructionLog');
 const { protect, authorize, checkProjectAccess } = require('../middleware/authMiddleware'); // Import authorize and protect
 
 // @route   GET /api/projects
@@ -49,12 +50,9 @@ router.get('/', protect, async (req, res) => {
                     as: 'quotes'
                 }
             },
-            // Stage 2: Add fields with calculated values
+            // Stage 4: Add fields with calculated values
             {
                 $addFields: {
-                    // Count total quotes received for the project
-                    quotesReceived: { $size: '$quotes' },
-                    
                     // Filter to get only instructed quotes
                     instructedQuotes: {
                         $filter: {
@@ -70,7 +68,7 @@ router.get('/', protect, async (req, res) => {
             {
                 $addFields: {
                     // Count unique surveyors instructed
-                    surveyorsInstructed: { $size: { $setUnion: '$instructedQuotes.organisation' } },
+                    instructedCount: { $size: { $ifNull: [{ $setUnion: '$instructedQuotes.organisation' }, []] } },
                     
                     // Calculate total instructed spend
                     instructedSpend: {
@@ -93,7 +91,36 @@ router.get('/', protect, async (req, res) => {
                     }
                 }
             },
-            // Stage 3: Lookup programme events using a pipeline to handle ObjectId to string conversion
+            // Stage 5: Lookup instruction logs for the instructed quotes
+            {
+                $lookup: {
+                    from: 'instructionlogs',
+                    localField: 'instructedQuotes._id',
+                    foreignField: 'quoteId',
+                    as: 'instructedLogs'
+                }
+            },
+            // Stage 6: Calculate completed and outstanding counts
+            {
+                $addFields: {
+                    completedCount: {
+                        $size: {
+                            $filter: {
+                                input: '$instructedLogs',
+                                as: 'log',
+                                cond: { $eq: ['$$log.workStatus', 'completed'] }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    // Outstanding is instructed surveyors minus completed
+                    outstandingCount: { $subtract: ['$instructedCount', '$completedCount'] }
+                }
+            },
+            // Stage 7: Lookup programme events using a pipeline
             {
                 $lookup: {
                     from: 'programmeevents',
@@ -110,22 +137,23 @@ router.get('/', protect, async (req, res) => {
                     as: 'programmeEvents'
                 }
             },
-            // Stage 4: Project the final fields
+            // Stage 8: Project the final fields
             {
                 $project: {
                     name: 1,
                     client: '$clientDetails.organisationName', // Use the name from the populated client
                     teamMembers: 1,
-                    quotesReceived: 1,
-                    surveyorsInstructed: 1,
+                    instructedCount: 1,
+                    completedCount: 1,
+                    outstandingCount: 1,
                     instructedSpend: 1,
                     createdAt: 1,
-                    programmeEvents: 1, // Now this field exists and can be included
-                    authorizedSurveyors: 1, // Include the list of authorized surveyors
+                    programmeEvents: 1,
+                    authorizedSurveyors: 1,
                     authorizedClients: 1
                 }
             },
-            // Stage 5: Sort by creation date
+            // Stage 9: Sort by creation date
             {
                 $sort: { createdAt: -1 }
             }

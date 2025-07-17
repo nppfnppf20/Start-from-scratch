@@ -102,8 +102,9 @@ interface Project {
 
 // --- NEW --- Interface for the Project Bank View
 export interface ProjectBankItem extends Project {
-  quotesReceived: number;
-  surveyorsInstructed: number;
+  instructedCount: number;
+  completedCount: number;
+  outstandingCount: number;
   instructedSpend: number;
   programmeEvents: {
     id: string; // Add the ID field
