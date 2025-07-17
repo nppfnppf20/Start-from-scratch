@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { projectBank, loadProjectBank, type ProjectBankItem, deleteProgrammeEvent } from '$lib/stores/projectStore';
+    import { projectBank, loadProjectBank, type ProjectBankItem, deleteProgrammeEvent, deleteProject } from '$lib/stores/projectStore';
     import { formatDate } from '$lib/utils/formatters';
     import EditProjectModal from './EditProjectModal.svelte';
   
@@ -66,6 +66,17 @@
       }
     }
   
+    async function handleDeleteProject(projectId: string) {
+      if (confirm('Are you sure you want to delete this project? This will also delete all associated data and cannot be undone.')) {
+        try {
+          await deleteProject(projectId);
+          await loadProjectBank(); // Refresh the list
+        } catch (err) {
+          alert(`Failed to delete project: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+    }
+
     // --- Reactive Declaration for Sorting ---
     $: sortedProjects = [...$projectBank].sort((a, b) => {
       const valA = a[sortKey];
@@ -231,6 +242,9 @@
                     <button class="action-btn" on:click={() => handleEditClick(project)}>
                       Edit
                     </button>
+                    <button class="action-btn delete" on:click={() => handleDeleteProject(project.id)}>
+                      Delete
+                    </button>
                   </td>
                 </tr>
               {/each}
@@ -280,22 +294,32 @@
       text-align: center;
     }
     .action-btn {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: background-color 0.2s;
+        background-color: transparent;
+        border: 1px solid #007bff;
+        color: #007bff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
     }
+
     .action-btn:hover {
-      background-color: #0056b3;
+        background-color: #007bff;
+        color: white;
     }
-    .key-dates-cell {
-      white-space: normal;
-      min-width: 200px;
+
+    .action-btn.delete {
+        border-color: #dc3545;
+        color: #dc3545;
     }
+
+    .action-btn.delete:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    /* Key Dates styling */
     .key-dates-cell ul {
       margin: 0;
       padding-left: 0;

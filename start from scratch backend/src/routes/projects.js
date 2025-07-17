@@ -3,6 +3,9 @@ const router = express.Router();
 const Project = require('../models/Project');
 const Document = require('../models/Document');
 const User = require('../models/User');
+const Quote = require('../models/Quote'); // Added for cascade deletion
+const ProgrammeEvent = require('../models/ProgrammeEvent'); // Added for cascade deletion
+const SurveyorFeedback = require('../models/SurveyorFeedback'); // Added for cascade deletion
 const { protect, authorize, checkProjectAccess } = require('../middleware/authMiddleware'); // Import authorize and protect
 
 // @route   GET /api/projects
@@ -188,18 +191,34 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   DELETE /api/projects/:id
-// @desc    Delete a project by ID
+// @desc    Delete a project by ID and all associated data
 // @access  Admin only
 router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     try {
-        const project = await Project.findById(req.params.id);
+        const projectId = req.params.id;
+        const project = await Project.findById(projectId);
+        
         if (!project) {
             return res.status(404).json({ msg: 'Project not found' });
         }
-        await Project.findByIdAndDelete(req.params.id);
-        res.json({ msg: 'Project removed' });
+
+        // --- Cascade Deletion ---
+        // 1. Delete associated Quotes
+        await Quote.deleteMany({ projectId: projectId });
+        
+        // 2. Delete associated ProgrammeEvents
+        await ProgrammeEvent.deleteMany({ projectId: projectId });
+
+        // 3. Delete associated SurveyorFeedback
+        await SurveyorFeedback.deleteMany({ projectId: projectId });
+
+        // 4. Delete the Project itself
+        await Project.findByIdAndDelete(projectId);
+
+        res.json({ msg: 'Project and all associated data removed successfully' });
+
     } catch (err) {
-        console.error(err.message);
+        console.error('Error during project deletion:', err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Project not found (invalid ID format)' });
         }

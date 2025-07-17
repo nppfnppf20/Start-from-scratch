@@ -376,50 +376,40 @@ export function selectProjectByName(name: string) {
   return found;
 }
 
-// Function to delete a project via API
+// Function to delete a project
 export async function deleteProject(projectId: string) {
-  if (!browser) return false;
-
-  if (!confirm('Are you sure you want to delete this project? This cannot be undone.')) {
-      return false;
-  }
+  if (!browser) return;
 
   try {
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-          method: 'DELETE',
-          headers: getAuthTokenHeader()
-      });
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: getAuthTokenHeader(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete project');
+    }
 
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
-      }
+    // Remove from local stores
+    projects.update(all => all.filter(p => p.id !== projectId));
+    projectBank.update(all => all.filter(p => p.id !== projectId));
+    
+    // If the deleted project was the selected one, clear the selection
+    const currentSelected = get(selectedProject);
+    if (currentSelected && currentSelected.id === projectId) {
+      selectedProject.set(null);
+    }
 
-      // Remove from local stores
-      projects.update(existing => existing.filter(p => p.id !== projectId));
-      // Check if the deleted project was the selected one
-      const currentSelected = get(selectedProject);
-      if (currentSelected && currentSelected.id === projectId) {
-          const remainingProjects = get(projects);
-          if (remainingProjects.length > 0) {
-             // Select the first remaining project
-             await selectProjectById(remainingProjects[0].id);
-          } else {
-             // No projects left, clear selection
-             selectProjectById(null);
-          }
-      }
-      console.log(`Project ${projectId} deleted.`);
-      return true;
-
-  } catch (error) {
-      console.error("Failed to delete project:", error);
-      alert(`Error deleting project: ${error}`);
-      return false;
+  } catch (err: any) {
+    console.error('Error deleting project:', err);
+    // Optionally re-throw or handle in UI
+    throw err;
   }
 }
 
-// --- Quote Interface and Store ---
+// --- QUOTE MANAGEMENT ---
+
+// Interface for LineItem
 export interface LineItem {
 	item?: string;
 	description: string;
