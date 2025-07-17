@@ -3,6 +3,7 @@ const router = express.Router();
 const SurveyorOrganisation = require('../models/SurveyorOrganisation');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
 // GET /api/surveyor-organisations (Unchanged)
 router.get('/', async (req, res) => {
@@ -117,20 +118,31 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/surveyor-organisations/:id (Unchanged)
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
+// @route   DELETE /api/surveyor-organisations/:id
+// @desc    Delete a surveyor organisation and its associated users
+// @access  Admin only
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+    try {
+        const organisation = await SurveyorOrganisation.findById(req.params.id);
+        if (!organisation) {
+            return res.status(404).json({ msg: 'Surveyor organisation not found' });
+        }
 
-  try {
-    const org = await SurveyorOrganisation.findByIdAndRemove(id);
-    if (!org) {
-      return res.status(404).json({ msg: 'Surveyor organisation not found' });
+        // Delete associated user accounts
+        if (organisation.contacts && organisation.contacts.length > 0) {
+            const emails = organisation.contacts.map(c => c.email).filter(Boolean);
+            if (emails.length > 0) {
+                await User.deleteMany({ email: { $in: emails } });
+            }
+        }
+
+        await organisation.deleteOne();
+
+        res.json({ msg: 'Surveyor organisation and associated users removed' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
-    res.json({ msg: 'Surveyor organisation removed successfully' });
-  } catch (err) {
-    console.error('Error deleting surveyor organisation:', err.message);
-    res.status(500).send('Server Error');
-  }
 });
 
 module.exports = router;

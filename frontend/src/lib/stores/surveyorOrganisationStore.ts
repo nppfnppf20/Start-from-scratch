@@ -5,6 +5,12 @@ import { getAuthTokenHeader } from './authStore';
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+export interface Contact {
+  contactName?: string;
+  email?: string;
+  phoneNumber?: string;
+}
+
 // --- Helper Function to map _id to id ---
 function mapMongoId<T>(item: any): T {
   if (!item || typeof item !== 'object') return item;
@@ -44,11 +50,7 @@ export interface SurveyorOrganisation {
   id: string; // Mapped from _id
   organisation: string;
   discipline: string;
-  contacts: {
-    contactName?: string;
-    email?: string;
-    phoneNumber?: string;
-  }[];
+  contacts: Contact[];
   projectCount: number;
   reviewCount: number;
   totalQuality: number;
@@ -188,34 +190,27 @@ export async function updateSurveyorOrganisation(
   }
 }
 
-// Function to delete a surveyor organisation
-export async function deleteSurveyorOrganisation(orgId: string): Promise<boolean> {
-  if (!browser) return false;
+export const deleteSurveyorOrganisation = async (organisationId: string) => {
+    if (!browser) return;
 
-  try {
-    console.log('Deleting surveyor organisation:', orgId);
-    const response = await fetch(`${API_BASE_URL}/surveyor-organisations/${orgId}`, {
-      method: 'DELETE',
-      headers: getAuthTokenHeader()
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/surveyor-organisations/${organisationId}`, {
+            method: 'DELETE',
+            headers: getAuthTokenHeader()
+        });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to delete organisation'}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.msg || 'Failed to delete surveyor organisation');
+        }
+
+        surveyorOrganisations.update(orgs => orgs.filter(org => org.id !== organisationId));
+
+    } catch (err) {
+        console.error('Failed to delete surveyor organisation:', err);
+        throw err;
     }
-
-    // Update the local store
-    surveyorOrganisations.update(orgs => orgs.filter(org => org.id !== orgId));
-
-    console.log('Surveyor organisation deleted successfully');
-    return true;
-
-  } catch (error) {
-    console.error('Failed to delete surveyor organisation:', error);
-    alert(`Error deleting organisation: ${error}`);
-    return false;
-  }
-}
+};
 
 // --- Pending Surveyor Functionality ---
 

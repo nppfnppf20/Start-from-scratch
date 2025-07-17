@@ -3,6 +3,7 @@
     import { 
         loadSurveyorOrganisations, 
         surveyorOrganisations, 
+        deleteSurveyorOrganisation,
         type SurveyorOrganisation,
         type Contact 
     } from '$lib/stores/surveyorOrganisationStore';
@@ -24,6 +25,16 @@
     function handleEditClick(organisation: SurveyorOrganisation) {
         selectedOrganisation = organisation;
         showEditModal = true;
+    }
+
+    async function handleDeleteClick(organisationId: string) {
+        if (confirm('Are you sure you want to delete this organisation? This will also delete all associated user accounts and cannot be undone.')) {
+            try {
+                await deleteSurveyorOrganisation(organisationId);
+            } catch (err) {
+                alert(`Failed to delete organisation: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
+        }
     }
 
     function handleSelectContact(contact: Contact) {
@@ -229,8 +240,9 @@
                                 <td class="text-center">{formatValue(surveyor.averageDeliveredOnTime)}</td>
                                 <td class="text-center divider-right">{formatValue(surveyor.averageOverallReview)}</td>
                                 {#if showActions}
-                                  <td>
-                                      <button on:click={() => handleEditClick(surveyor)}>Edit</button>
+                                  <td class="actions-cell">
+                                      <button class="action-btn" on:click={() => handleEditClick(surveyor)}>Edit</button>
+                                      <button class="action-btn delete" on:click={() => handleDeleteClick(surveyor.id)}>Delete</button>
                                   </td>
                                 {/if}
                                 {#if showSelectButton}
@@ -472,5 +484,60 @@
 
     .divider-right {
         border-right: 1px solid #e2e8f0;
+    }
+
+    .actions-cell {
+        white-space: nowrap;
+    }
+
+    .action-btn {
+        padding: 6px 12px;
+        font-size: 0.875rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        border: 1px solid transparent;
+        background-color: transparent;
+        margin-right: 5px;
+    }
+
+    .action-btn:hover {
+        color: white;
+    }
+
+    .action-btn {
+        border-color: #007bff;
+        color: #007bff;
+    }
+
+    .action-btn:hover {
+        background-color: #007bff;
+    }
+
+    .action-btn.delete {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .action-btn.delete:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .select-btn {
+        margin-top: 5px;
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        border-radius: 4px;
+        border: 1px solid #28a745;
+        background-color: transparent;
+        color: #28a745;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .select-btn:hover {
+        background-color: #28a745;
+        color: white;
     }
 </style>
