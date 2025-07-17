@@ -11,6 +11,7 @@
   let client: string;
   let projectLead: string[] = [];
   let projectManager: string[] = [];
+  const availablePersonnel = ['JR', 'AD', 'BM', 'BW', 'RS', 'S Smith', 'S Scott', 'CB', 'PE', 'RM', 'GE', 'RK', 'DH', 'AC'];
   
   let authorizedSurveyors: string[] = [];
   let allSurveyors: { _id: string; email: string }[] = [];
@@ -126,43 +127,27 @@
         </div>
 
         <div class="form-group">
-          <label for="projectLead">Project Lead</label>
-          <select multiple id="projectLead" bind:value={projectLead}>
-            <option value="JR">JR</option>
-            <option value="AD">AD</option>
-            <option value="BM">BM</option>
-            <option value="BW">BW</option>
-            <option value="RS">RS</option>
-            <option value="S Smith">S Smith</option>
-            <option value="S Scott">S Scott</option>
-            <option value="CB">CB</option>
-            <option value="PE">PE</option>
-            <option value="RM">RM</option>
-            <option value="GE">GE</option>
-            <option value="RK">RK</option>
-            <option value="DH">DH</option>
-            <option value="AC">AC</option>
-          </select>
+          <label>Project Lead</label>
+          <div class="checkbox-group">
+            {#each availablePersonnel as member}
+              <label class="checkbox-item">
+                <input type="checkbox" bind:group={projectLead} value={member} />
+                {member}
+              </label>
+            {/each}
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="projectManager">Project Manager</label>
-          <select multiple id="projectManager" bind:value={projectManager}>
-            <option value="JR">JR</option>
-            <option value="AD">AD</option>
-            <option value="BM">BM</option>
-            <option value="BW">BW</option>
-            <option value="RS">RS</option>
-            <option value="S Smith">S Smith</option>
-            <option value="S Scott">S Scott</option>
-            <option value="CB">CB</option>
-            <option value="PE">PE</option>
-            <option value="RM">RM</option>
-            <option value="GE">GE</option>
-            <option value="RK">RK</option>
-            <option value="DH">DH</option>
-            <option value="AC">AC</option>
-          </select>
+          <label>Project Manager</label>
+          <div class="checkbox-group">
+            {#each availablePersonnel as member}
+              <label class="checkbox-item">
+                <input type="checkbox" bind:group={projectManager} value={member} />
+                {member}
+              </label>
+            {/each}
+          </div>
         </div>
 
         <div class="form-group">
