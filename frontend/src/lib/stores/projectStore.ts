@@ -52,6 +52,9 @@ interface Project {
   name: string;
   // Basic Project Information
   client?: string; // Umbrella client name from the modal
+  projectLead?: string[];
+  projectManager?: string[];
+  teamMembers?: string[]; // Team member initials/names
   clientOrSpvName?: string; // Specific client/SPV name from the main form
   detailedDescription?: string;
   proposedUseDuration?: number;
@@ -92,15 +95,67 @@ interface Project {
   // SharePoint Document Link
   sharepointLink?: string;
   
+  authorizedSurveyors?: string[]; // NEW: Array of surveyor user IDs
+  authorizedClients?: string[];
+
   createdAt?: string; // From timestamps
   updatedAt?: string; // From timestamps
 }
 
+// --- NEW --- Interface for the Project Bank View
+export interface ProjectBankItem extends Project {
+  instructedCount: number;
+  completedCount: number;
+  outstandingCount: number;
+  outstandingSurveys: {
+    quoteId: string;
+    organisation: string;
+    contactName: string;
+    workStatus: string;
+  }[];
+  instructedSpend: number;
+  programmeEvents: {
+    id: string; // Add the ID field
+    title: string;
+    date: string;
+  }[];
+  authorizedSurveyors?: string[]; // NEW: Add here as well for consistency
+  authorizedClients?: string[];
+}
+
+
 // --- Project Store ---
 // Initialize stores with empty/null values initially
 export const projects = writable<Project[]>([]);
+export const projectBank = writable<ProjectBankItem[]>([]); // New store for the project bank
 export const selectedProject = writable<Project | null>(null);
 export const allQuotes = writable<Quote[]>([]); // New master quote store
+
+// --- NEW --- Function to load data for the project bank
+export async function loadProjectBank() {
+  if (!browser) return;
+
+  try {
+    console.log('Fetching project bank data from API...');
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedProjects: any[] = await response.json();
+
+    // Map _id to id for frontend consistency
+    const mappedProjects = fetchedProjects.map(p => mapMongoId<ProjectBankItem>(p));
+    
+    console.log('Project bank data fetched:', mappedProjects);
+    projectBank.set(mappedProjects);
+
+  } catch (error) {
+    console.error("Failed to load project bank data:", error);
+    projectBank.set([]); // Reset on error
+  }
+}
 
 // Function to load projects from the API
 export async function loadProjects() {
@@ -177,7 +232,7 @@ import { get } from 'svelte/store';
 // --- Store Manipulation Functions ---
 
 // Function to add a new project via API
-export async function addProject(projectData: { name: string; client?: string; teamMembers?: string[] }) {
+export async function addProject(projectData: { name: string; client?: string; projectLead?: string[]; projectManager?: string[] }) {
   if (!browser) return null; // Don't run on server
 
   try {
@@ -202,6 +257,10 @@ export async function addProject(projectData: { name: string; client?: string; t
     // Add to the local store
     projects.update(existing => [...existing, newProject].sort((a, b) => a.name.localeCompare(b.name))); // Keep sorted? Or sort by date? Maybe sort in component
     selectedProject.set(newProject); // Automatically select the new project
+
+    // After adding the project, reload the project bank data to include the new project
+    await loadProjectBank();
+    
   return newProject;
 
   } catch (error) {
@@ -211,18 +270,9 @@ export async function addProject(projectData: { name: string; client?: string; t
   }
 }
 
-// Function to update an existing project via API
-export async function updateProject(projectId: string, updatedData: Partial<Project>) {
+// Function to update a project's details
+export async function updateProject(projectId: string, updatedData: Partial<Project & { authorizedClients?: string[] }>) {
   if (!browser) return false; // Don't run on server
-
-  // Create a copy to avoid modifying the original object directly if needed
-  const dataToSend = { ...updatedData };
-  // Remove 'id' and MongoDB specific fields if they exist, backend uses :id from URL
-  delete dataToSend.id;
-  delete (dataToSend as any)._id; // Use any to bypass potential type error if _id isn't explicitly in Partial<Project>
-  delete dataToSend.createdAt;
-  delete dataToSend.updatedAt;
-
 
   try {
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
@@ -231,35 +281,43 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
         'Content-Type': 'application/json',
         ...getAuthTokenHeader()
       },
-      body: JSON.stringify(dataToSend),
+      body: JSON.stringify(updatedData),
     });
 
     if (!response.ok) {
-       const errorData = await response.json().catch(() => ({}));
-       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      // Try to get error message from backend response body
+      const errorData = await response.json().catch(() => ({})); // Default if body isn't JSON
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to update project'}`);
     }
 
-    let updatedProjectFromServer = await response.json();
-    updatedProjectFromServer = { ...updatedProjectFromServer, id: updatedProjectFromServer._id };
+    let updatedProject = await response.json();
+    updatedProject = mapMongoId<Project>(updatedProject);
 
-    // Update the local stores
-    projects.update(existing =>
-      existing.map(p => (p.id === projectId ? updatedProjectFromServer : p))
-      // Consider re-sorting if needed after update
+    // Update the project in the main projects list
+    projects.update(allProjects =>
+      allProjects.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p))
     );
-    selectedProject.update(current =>
-      current && current.id === projectId ? updatedProjectFromServer : current
+    
+    // Also update the project in the project bank list
+    projectBank.update(allProjects =>
+      allProjects.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p))
     );
-    return true;
 
+    // If this is the currently selected project, update it as well
+    const currentSelected = get(selectedProject);
+    if (currentSelected && currentSelected.id === projectId) {
+      selectedProject.update(p => (p ? { ...p, ...updatedProject } : null));
+    }
+
+    return true; // Indicate success
   } catch (error) {
     console.error("Failed to update project:", error);
-    alert(`Error updating project: ${error}`); // Simple user feedback
-    return false;
+    alert(`Error updating project: ${error}`);
+    return false; // Indicate failure
   }
 }
 
-// Function to select a project - Fetches full details
+// Function to select a project by its ID
 export async function selectProjectById(id: string | null) {
    if (!browser) return false;
    if (!id) { // Handle explicit clearing of selection
@@ -331,50 +389,40 @@ export function selectProjectByName(name: string) {
   return found;
 }
 
-// Function to delete a project via API
+// Function to delete a project
 export async function deleteProject(projectId: string) {
-  if (!browser) return false;
-
-  if (!confirm('Are you sure you want to delete this project? This cannot be undone.')) {
-      return false;
-  }
+  if (!browser) return;
 
   try {
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-          method: 'DELETE',
-          headers: getAuthTokenHeader()
-      });
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: getAuthTokenHeader(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete project');
+    }
 
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
-      }
+    // Remove from local stores
+    projects.update(all => all.filter(p => p.id !== projectId));
+    projectBank.update(all => all.filter(p => p.id !== projectId));
+    
+    // If the deleted project was the selected one, clear the selection
+    const currentSelected = get(selectedProject);
+    if (currentSelected && currentSelected.id === projectId) {
+      selectedProject.set(null);
+    }
 
-      // Remove from local stores
-      projects.update(existing => existing.filter(p => p.id !== projectId));
-      // Check if the deleted project was the selected one
-      const currentSelected = get(selectedProject);
-      if (currentSelected && currentSelected.id === projectId) {
-          const remainingProjects = get(projects);
-          if (remainingProjects.length > 0) {
-             // Select the first remaining project
-             await selectProjectById(remainingProjects[0].id);
-          } else {
-             // No projects left, clear selection
-             selectProjectById(null);
-          }
-      }
-      console.log(`Project ${projectId} deleted.`);
-      return true;
-
-  } catch (error) {
-      console.error("Failed to delete project:", error);
-      alert(`Error deleting project: ${error}`);
-      return false;
+  } catch (err: any) {
+    console.error('Error deleting project:', err);
+    // Optionally re-throw or handle in UI
+    throw err;
   }
 }
 
-// --- Quote Interface and Store ---
+// --- QUOTE MANAGEMENT ---
+
+// Interface for LineItem
 export interface LineItem {
 	item?: string;
 	description: string;
@@ -387,7 +435,6 @@ export interface Quote {
   id: string;
   projectId: string;
   discipline: string;
-  surveyType?: string;
   organisation: string;
   contactName: string;
   email?: string;
@@ -411,14 +458,6 @@ export const uniqueDisciplines = derived(
   ($allQuotes) => {
     const allDisciplines = $allQuotes.map(q => q.discipline);
     return [...new Set(allDisciplines)].sort();
-  }
-);
-
-export const uniqueSurveyTypes = derived(
-  allQuotes,
-  ($allQuotes) => {
-    const allSurveyTypes = $allQuotes.map(q => q.surveyType).filter(st => st); // Filter out empty/null values
-    return [...new Set(allSurveyTypes as string[])].sort();
   }
 );
 
@@ -1053,7 +1092,7 @@ export interface InstructionLog {
   siteVisitDate?: string; // ISO date string
   reportDraftDate?: string; // ISO date string
   operationalNotes?: string;
-  holdUpNotes?: string;
+  dependencies?: string;
   uploadedWorks?: UploadedWork[]; // Uses existing UploadedWork interface
   customDates?: CustomDate[];   // Uses existing CustomDate interface
   createdAt?: string;
@@ -1299,4 +1338,49 @@ export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> 
 export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
+}
+
+export async function authorizeSurveyors(projectId: string, emails: string[]): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/authorize-surveyors`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthTokenHeader()
+            },
+            body: JSON.stringify({ emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            // Check for a specific error message format from the backend
+            if (errorData && errorData.msg === 'Invalid Project ID format') {
+                 throw new Error('Invalid Project ID format. Please select a valid project.');
+            }
+            throw new Error(errorData.msg || 'Failed to authorize surveyors');
+        }
+
+        const result = await response.json();
+        
+        // The backend now returns { msg, project } on some 200 responses,
+        // or just the updated project object on others. We need to handle both.
+        const updatedProject = result.project ? mapMongoId<ProjectBankItem>(result.project) : mapMongoId<ProjectBankItem>(result);
+
+        if (result.msg && result.msg !== 'Surveyors authorized successfully.') { // Adjust success message if needed
+            alert(result.msg); // Show non-critical messages from the backend
+        }
+        
+        // Update the stores
+        projectBank.update(ps => ps.map(p => p.id === projectId ? updatedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? updatedProject : p);
+
+        return updatedProject;
+
+    } catch (error) {
+        console.error('Error in authorizeSurveyors:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
 }

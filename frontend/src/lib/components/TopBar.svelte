@@ -16,7 +16,7 @@
     {#if $authStore.user}
       <div class="user-info">
         <span class="user-email">{$authStore.user.email}</span>
-        <span class="role-badge" class:admin={$authStore.user.role === 'admin'} class:surveyor={$authStore.user.role === 'surveyor'}>
+        <span class="role-badge" class:admin={$authStore.user.role === 'admin'} class:surveyor={$authStore.user.role === 'surveyor'} class:client={$authStore.user.role === 'client'}>
           {$authStore.user.role}
         </span>
       </div>
@@ -93,6 +93,12 @@
     background-color: #ebf4ff;
     color: #2c5282;
     border: 1px solid #90cdf4;
+  }
+
+  .role-badge.client {
+    background-color: #f0fff4;
+    color: #2f855a;
+    border: 1px solid #9ae6b4;
   }
 
   .logout-btn {

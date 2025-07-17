@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose'); // Needed for ObjectId validation
+const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
-const Project = require('../models/Project'); // Optional: To verify project exists before adding quote
+const Project = require('../models/Project');
+const SurveyorOrganisation = require('../models/SurveyorOrganisation');
+const PendingSurveyor = require('../models/PendingSurveyor');
+
 
 // @route   GET /api/quotes
 // @desc    Get all quotes (optionally filtered by projectId)
-// @access  Public (adjust as needed)
 router.get('/', async (req, res) => {
     try {
         const filter = {};
@@ -17,14 +19,10 @@ router.get('/', async (req, res) => {
             filter.projectId = req.query.projectId;
         }
 
-        // --- Role-based filtering ---
-        // If the user is a surveyor, only show them their own quotes.
-        // Admins can see all quotes.
         if (req.user.role === 'surveyor') {
             filter.surveyor = req.user.id;
         }
 
-        // Consider adding sorting, e.g., .sort({ date: -1 })
         const quotes = await Quote.find(filter);
         res.json(quotes);
     } catch (err) {
@@ -34,34 +32,62 @@ router.get('/', async (req, res) => {
 });
 
 // @route   POST /api/quotes
-// @desc    Create a new quote
-// @access  Public (adjust as needed)
+// @desc    Create a new quote and check for/create pending surveyors
 router.post('/', async (req, res) => {
-    const { projectId, discipline, organisation, contactName, lineItems, instructionStatus, /* other fields */ ...rest } = req.body;
+    const { projectId, discipline, organisation, contactName, lineItems, instructionStatus, ...rest } = req.body;
 
-    // Basic validation
+    // --- 1. Basic Validation ---
     if (!projectId || !discipline || !organisation || !contactName || !lineItems || lineItems.length === 0 || !instructionStatus) {
-        return res.status(400).json({ msg: 'Missing required fields for quote (projectId, discipline, organisation, contactName, lineItems, instructionStatus)' });
+        return res.status(400).json({ msg: 'Missing required fields for quote' });
     }
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
         return res.status(400).json({ msg: 'Invalid Project ID format' });
     }
 
     try {
-        // Optional: Check if project actually exists
         const projectExists = await Project.findById(projectId);
         if (!projectExists) {
             return res.status(404).json({ msg: 'Project not found' });
         }
 
-        const newQuote = new Quote({
-            ...req.body,
-            surveyor: req.user.id // Stamp the quote with the logged-in user's ID
+        // --- 2. Create and Save the Quote ---
+        // Save the quote first to get a quote ID for the pending surveyor reference
+        const newQuote = new Quote({ ...req.body, surveyor: req.user?.id });
+        const savedQuote = await newQuote.save();
+
+        // --- 3. Check for Existing Surveyor Organisation ---
+        // Use case-insensitive search to match the index
+        const existingSurveyor = await SurveyorOrganisation.findOne({
+            organisation: new RegExp(`^${organisation}$`, 'i'),
+            discipline: new RegExp(`^${discipline}$`, 'i')
         });
 
-        // Total is calculated by pre-validate hook
-        const quote = await newQuote.save();
-        res.status(201).json(quote);
+        // --- 4. If Surveyor Doesn't Exist, Handle Pending Logic ---
+        if (!existingSurveyor) {
+            // Check if a pending record already exists to avoid duplicates
+            const existingPending = await PendingSurveyor.findOne({
+                organisation: new RegExp(`^${organisation}$`, 'i'),
+                discipline: new RegExp(`^${discipline}$`, 'i')
+            });
+
+            if (!existingPending) {
+                // No existing main surveyor and no existing pending surveyor, so create one.
+                const newPendingSurveyor = new PendingSurveyor({
+                    organisation,
+                    discipline,
+                    sourceQuoteId: savedQuote._id, // Link to the quote that triggered this
+                    sourceQuoteData: { // Store contact info for convenience
+                        contactName: contactName,
+                        email: req.body.email,
+                        phoneNumber: req.body.phoneNumber
+                    }
+                });
+                await newPendingSurveyor.save();
+            }
+        }
+
+        // --- 5. Return the Successfully Created Quote ---
+        res.status(201).json(savedQuote);
 
     } catch (err) {
         console.error('Error creating quote:', err.message);
@@ -74,7 +100,6 @@ router.post('/', async (req, res) => {
 
 // @route   GET /api/quotes/:id
 // @desc    Get a single quote by its ID
-// @access  Public (adjust as needed)
 router.get('/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ msg: 'Invalid Quote ID format' });
@@ -94,7 +119,6 @@ router.get('/:id', async (req, res) => {
 
 // @route   PUT /api/quotes/:id
 // @desc    Update a quote by its ID
-// @access  Public (adjust as needed)
 router.put('/:id', async (req, res) => {
     const quoteId = req.params.id; 
 
@@ -128,7 +152,6 @@ router.put('/:id', async (req, res) => {
 
 // @route   DELETE /api/quotes/:id
 // @desc    Delete a quote by its ID
-// @access  Public (adjust as needed)
 router.delete('/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ msg: 'Invalid Quote ID format' });
@@ -142,9 +165,6 @@ router.delete('/:id', async (req, res) => {
 
         await Quote.findByIdAndDelete(req.params.id);
 
-        // TODO: Consider deleting associated Reviews as well?
-        // await Review.deleteMany({ quoteId: req.params.id });
-
         res.json({ msg: 'Quote removed' });
 
     } catch (err) {
@@ -153,4 +173,4 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;

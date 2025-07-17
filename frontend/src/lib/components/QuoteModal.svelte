@@ -7,8 +7,6 @@
     type InstructionStatus,
     type Quote,
     type LineItem,
-    uniqueDisciplines,
-    uniqueSurveyTypes,
     uniqueOrganisations,
     uniqueLineItemItems
   } from "$lib/stores/projectStore"; // Import only necessary store functions
@@ -25,13 +23,22 @@
   let isEditing = false;
   let quoteToEditId: string | null = null;
 
-  // --- Autocomplete State for Discipline ---
-  let disciplineSuggestions: string[] = [];
-  let showDisciplineSuggestions: boolean = false;
-
-  // --- Autocomplete State for Survey Type ---
-  let surveyTypeSuggestions: string[] = [];
-  let showSurveyTypeSuggestions: boolean = false;
+  const disciplines = [
+    'Agricultural Land and Soil',
+    'Arboriculture',
+    'Contaminated Land',
+    'Ecology',
+    'Fire Safety',
+    'Flood and Drainage',
+    'Geophys',
+    'Glint & Glare',
+    'Heritage',
+    'Landscape and Visual',
+    'PR/Communications and Consultation',
+    'Topographical',
+    'Transport'
+  ];
+  const disciplineOptions = [...disciplines.sort(), 'Other'];
 
   // --- New State for Organisation Autocomplete ---
   let organisationSuggestions: string[] = [];
@@ -50,7 +57,6 @@
   function createInitialFormState() {
     return {
       discipline: '',
-      surveyType: '',
       organisation: '',
       contactName: '',
       email: '',
@@ -77,7 +83,6 @@
           quoteForm = {
               ...createInitialFormState(), // Start fresh but override
               discipline: quoteToEdit.discipline,
-              surveyType: quoteToEdit.surveyType || '',
               organisation: quoteToEdit.organisation,
               contactName: quoteToEdit.contactName,
               email: quoteToEdit.email || '',
@@ -99,84 +104,6 @@
   }
 
   // --- Autocomplete Functions ---
-  function handleDisciplineInput(event: Event) {
-    const input = (event.target as HTMLInputElement).value;
-    quoteForm.discipline = input;
-    
-    if (input.length > 0) {
-      const filtered = $uniqueDisciplines.filter(discipline => 
-        discipline.toLowerCase().includes(input.toLowerCase())
-      );
-      
-      // Add "Add new" option if input doesn't match existing options
-      const isExisting = $uniqueDisciplines.some(discipline => 
-        discipline.toLowerCase() === input.toLowerCase()
-      );
-      
-      if (!isExisting && input.trim() !== '') {
-        disciplineSuggestions = [...filtered, `Add "${input}"`];
-      } else {
-        disciplineSuggestions = filtered;
-      }
-      
-      showDisciplineSuggestions = disciplineSuggestions.length > 0;
-    } else {
-      // Show all options when input is empty
-      disciplineSuggestions = ['n/a', ...$uniqueDisciplines];
-      showDisciplineSuggestions = true;
-    }
-  }
-
-  function selectDiscipline(value: string) {
-    if (value.startsWith('Add "')) {
-      // Extract the custom value from 'Add "custom value"'
-      const customValue = value.slice(5, -1);
-      quoteForm.discipline = customValue;
-    } else {
-      quoteForm.discipline = value;
-    }
-    showDisciplineSuggestions = false;
-  }
-
-  function handleSurveyTypeInput(event: Event) {
-    const input = (event.target as HTMLInputElement).value;
-    quoteForm.surveyType = input;
-    
-    if (input.length > 0) {
-      const filtered = $uniqueSurveyTypes.filter(surveyType => 
-        surveyType.toLowerCase().includes(input.toLowerCase())
-      );
-      
-      // Add "Add new" option if input doesn't match existing options
-      const isExisting = $uniqueSurveyTypes.some(surveyType => 
-        surveyType.toLowerCase() === input.toLowerCase()
-      );
-      
-      if (!isExisting && input.trim() !== '') {
-        surveyTypeSuggestions = [...filtered, `Add "${input}"`];
-      } else {
-        surveyTypeSuggestions = filtered;
-      }
-      
-      showSurveyTypeSuggestions = surveyTypeSuggestions.length > 0;
-    } else {
-      // Show all options when input is empty
-      surveyTypeSuggestions = ['n/a', ...$uniqueSurveyTypes];
-      showSurveyTypeSuggestions = true;
-    }
-  }
-
-  function selectSurveyType(value: string) {
-    if (value.startsWith('Add "')) {
-      // Extract the custom value from 'Add "custom value"'
-      const customValue = value.slice(5, -1);
-      quoteForm.surveyType = customValue;
-    } else {
-      quoteForm.surveyType = value;
-    }
-    showSurveyTypeSuggestions = false;
-  }
-
   function handleOrganisationInput(event: Event) {
     const input = (event.target as HTMLInputElement).value;
     if (input.length > 0) {
@@ -269,8 +196,8 @@
   // --- Form Submission ---
   async function submitQuote() {
     // Validate required fields
-    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName) {
-      alert('Please fill in all required fields (Discipline, Organisation, Contact Name).');
+    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName || !quoteForm.email) {
+      alert('Please fill in all required fields (Discipline, Organisation, Contact Name, Email).');
       return;
     }
 
@@ -297,7 +224,6 @@
     // Prepare data for the store/API call
     const quoteDataForStore: Partial<Omit<Quote, 'id' | 'total'>> = {
       discipline: quoteForm.discipline,
-      surveyType: quoteForm.surveyType || undefined,
       organisation: quoteForm.organisation,
       contactName: quoteForm.contactName,
       email: quoteForm.email || undefined,
@@ -347,58 +273,14 @@
       <form on:submit|preventDefault={submitQuote}>
           <!-- Form Fields -->
           <div class="form-grid-modal"> <!-- Use grid for better layout -->
-              <div class="form-row" style="position: relative;">
+              <div class="form-row">
                 <label for="discipline">Discipline*</label>
-                <input 
-                  type="text" 
-                  id="discipline" 
-                  bind:value={quoteForm.discipline} 
-                  required 
-                  on:input={handleDisciplineInput}
-                  on:focus={handleDisciplineInput}
-                  on:blur={() => setTimeout(() => showDisciplineSuggestions = false, 150)}
-                  autocomplete="off"
-                  placeholder="Enter or select discipline..."
-                >
-                {#if showDisciplineSuggestions}
-                  <div class="suggestions-list">
-                    {#each disciplineSuggestions as suggestion}
-                      <div 
-                        class="suggestion-item" 
-                        class:add-new={suggestion.startsWith('Add "')}
-                        on:mousedown={() => selectDiscipline(suggestion)}
-                      >
-                        {suggestion}
-                      </div>
+                <select id="discipline" bind:value={quoteForm.discipline} required>
+                  <option value="" disabled>Select a discipline...</option>
+                  {#each disciplineOptions as option}
+                    <option value={option}>{option}</option>
                     {/each}
-                  </div>
-                {/if}
-              </div>
-              <div class="form-row" style="position: relative;">
-                 <label for="surveyType">Survey Type</label>
-                 <input 
-                   type="text" 
-                   id="surveyType" 
-                   bind:value={quoteForm.surveyType} 
-                   on:input={handleSurveyTypeInput}
-                   on:focus={handleSurveyTypeInput}
-                   on:blur={() => setTimeout(() => showSurveyTypeSuggestions = false, 150)}
-                   autocomplete="off"
-                   placeholder="Enter or select survey type..."
-                 >
-                 {#if showSurveyTypeSuggestions}
-                   <div class="suggestions-list">
-                     {#each surveyTypeSuggestions as suggestion}
-                       <div 
-                         class="suggestion-item" 
-                         class:add-new={suggestion.startsWith('Add "')}
-                         on:mousedown={() => selectSurveyType(suggestion)}
-                       >
-                         {suggestion}
-                       </div>
-                     {/each}
-                   </div>
-                 {/if}
+                </select>
               </div>
                <div class="form-row" style="position: relative;">
                  <label for="organisation">Organisation*</label>
@@ -427,8 +309,8 @@
                  <input type="text" id="contactName" bind:value={quoteForm.contactName} required>
                </div>
                <div class="form-row">
-                 <label for="email">Email</label>
-                 <input type="email" id="email" bind:value={quoteForm.email}>
+                 <label for="email">Email*</label>
+                 <input type="email" id="email" bind:value={quoteForm.email} required>
                </div>
                <div class="form-row">
                  <label for="phoneNumber">Phone Number</label>
@@ -529,7 +411,7 @@
   .modal-backdrop {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0,0,0,0.6);
-    display: flex; justify-content: center; align-items: center; z-index: 100;
+    display: flex; justify-content: center; align-items: center; z-index: 9999;
   }
   .quote-modal-content { /* Use specific class */
     background-color: white; padding: 25px; border-radius: 8px;
@@ -558,6 +440,7 @@
   .modal form textarea {
     width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
     font-size: 0.95em;
+    font-family: inherit;
   }
    .modal form input:focus, .modal form select:focus, .modal form textarea:focus {
        border-color: #007bff;

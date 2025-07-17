@@ -2,12 +2,12 @@
   import { authStore } from '$lib/stores/authStore';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
 
   let email = '';
   let password = '';
   let errorMessage = '';
   let isLoading = false;
-  let isRegistering = false; // Toggle between login and register
 
   // If a user who is already logged in navigates to this page,
   // redirect them to the main application.
@@ -31,77 +31,24 @@
     isLoading = false;
 
     if (result.success) {
-      goto('/'); // On success, redirect to the homepage.
+      const user = get(authStore).user; // Get user from the store
+      if (user && user.role === 'surveyor') {
+        goto('/fee-quote-submission'); // Redirect surveyors
+      } else {
+        goto('/'); // Redirect other users
+      }
     } else {
       errorMessage = result.error || 'An unknown error occurred.';
-    }
-  }
-
-  async function handleRegister() {
-    isLoading = true;
-    errorMessage = '';
-    
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        // Registration successful, now login automatically
-        const loginResult = await authStore.login(email, password);
-        if (loginResult.success) {
-          goto('/');
-        } else {
-          errorMessage = 'Registration successful, but login failed. Please try logging in.';
-        }
-      } else {
-        errorMessage = data.msg || 'Registration failed.';
-      }
-    } catch (error) {
-      errorMessage = 'Network error occurred.';
-    }
-    
-    isLoading = false;
-  }
-
-  async function handleSubmit() {
-    if (isRegistering) {
-      await handleRegister();
-    } else {
-      await handleLogin();
     }
   }
 </script>
 
 <div class="login-container">
   <div class="login-box">
-    <h1>{isRegistering ? 'Create Account' : 'Login'}</h1>
-    <p>{isRegistering ? 'Create your account to access the system.' : 'Please enter your credentials to continue.'}</p>
+    <h1>Login</h1>
+    <p>Please enter your credentials to continue.</p>
     
-    <div class="toggle-buttons">
-      <button 
-        type="button" 
-        class="toggle-btn {!isRegistering ? 'active' : ''}"
-        on:click={() => { isRegistering = false; errorMessage = ''; }}
-        disabled={isLoading}
-      >
-        Login
-      </button>
-      <button 
-        type="button" 
-        class="toggle-btn {isRegistering ? 'active' : ''}"
-        on:click={() => { isRegistering = true; errorMessage = ''; }}
-        disabled={isLoading}
-      >
-        Create Account
-      </button>
-    </div>
-
-    <form on:submit|preventDefault={handleSubmit}>
+    <form on:submit|preventDefault={handleLogin}>
       <div class="input-group">
         <label for="email">Email</label>
         <input 
@@ -121,7 +68,6 @@
           bind:value={password}
           required
           disabled={isLoading}
-          placeholder={isRegistering ? 'Use your role-specific password' : ''}
         />
       </div>
       
@@ -131,9 +77,9 @@
 
       <button type="submit" class="login-button" disabled={isLoading}>
         {#if isLoading}
-          <span>{isRegistering ? 'Creating Account...' : 'Logging In...'}</span>
+          <span>Logging In...</span>
         {:else}
-          <span>{isRegistering ? 'Create Account' : 'Login'}</span>
+          <span>Login</span>
         {/if}
       </button>
     </form>
@@ -220,36 +166,5 @@
     font-size: 0.9rem;
   }
 
-  .toggle-buttons {
-    display: flex;
-    margin-bottom: 2rem;
-    border-radius: 6px;
-    overflow: hidden;
-    border: 1px solid #ddd;
-  }
-
-  .toggle-btn {
-    flex: 1;
-    padding: 0.75rem;
-    border: none;
-    background-color: #f8f9fa;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-  }
-
-  .toggle-btn:hover:not(:disabled) {
-    background-color: #e9ecef;
-  }
-
-  .toggle-btn.active {
-    background-color: #007bff;
-    color: white;
-  }
-
-  .toggle-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
+  /* Registration-specific styles are no longer needed */
 </style>

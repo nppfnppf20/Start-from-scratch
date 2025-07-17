@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes,
@@ -13,7 +14,8 @@
   import NotesModal from "$lib/components/NotesModal.svelte";
   import InstructedDocumentUploadModal from "$lib/components/InstructedDocumentUploadModal.svelte";
   import { browser } from '$app/environment'; // Ensure browser check is available
-  
+  import LineItemsModal from '$lib/components/LineItemsModal.svelte';
+
   // --- New: Reference to the scrollable table container ---
   let tableContainerElement: HTMLDivElement; // UNCOMMENTED
 
@@ -36,14 +38,18 @@
   let currentQuoteForNotes: Quote | null = null;
   let currentOperationalNotes: string | undefined = ''; // Renamed for clarity
 
-  // Modal state for Hold Ups Notes
-  let showHoldUpNotesModal = false;
-  let currentQuoteForHoldUpNotes: Quote | null = null;
-  let currentHoldUpNotes: string | undefined = '';
+  // Modal state for Dependencies Notes
+  let showDependenciesNotesModal = false;
+  let currentQuoteForDependenciesNotes: Quote | null = null;
+  let currentDependenciesNotes: string | undefined = '';
 
   // Modal state for Document Upload
   let showDocumentUploadModal = false;
   let currentQuoteForUpload: Quote | null = null;
+
+  // --- NEW: Line Items Modal State ---
+  let showLineItemsModal = false;
+  let selectedQuoteForLineItems: Quote | null = null;
 
   // Filter for instructed quotes based on selected project
   $: instructedQuotes = $currentProjectQuotes.filter(quote =>
@@ -105,27 +111,27 @@
     closeNotesModal();
   }
 
-  // --- Hold Up Notes Modal Functions ---
-  function openHoldUpNotesModal(quote: Quote) {
+  // --- Dependencies Notes Modal Functions ---
+  function openDependenciesNotesModal(quote: Quote) {
     const log = findLog(quote.id);
-    currentQuoteForHoldUpNotes = quote;
-    currentHoldUpNotes = log?.holdUpNotes;
-    showHoldUpNotesModal = true;
+    currentQuoteForDependenciesNotes = quote;
+    currentDependenciesNotes = log?.dependencies;
+    showDependenciesNotesModal = true;
   }
 
-  function closeHoldUpNotesModal() {
-    showHoldUpNotesModal = false;
-    currentQuoteForHoldUpNotes = null;
-    currentHoldUpNotes = '';
+  function closeDependenciesNotesModal() {
+    showDependenciesNotesModal = false;
+    currentQuoteForDependenciesNotes = null;
+    currentDependenciesNotes = '';
   }
 
-  async function handleSaveHoldUpNotes(event: CustomEvent<{ notes: string }>) {
-    if (!$selectedProject || !currentQuoteForHoldUpNotes || !browser) return;
+  async function handleSaveDependenciesNotes(event: CustomEvent<{ notes: string }>) {
+    if (!$selectedProject || !currentQuoteForDependenciesNotes || !browser) return;
     
     const newNotes = event.detail.notes;
-    console.log(`Saving hold up notes for quote ${currentQuoteForHoldUpNotes.id}`);
-    await upsertInstructionLog(currentQuoteForHoldUpNotes.id, { holdUpNotes: newNotes });
-    closeHoldUpNotesModal();
+    console.log(`Saving dependencies notes for quote ${currentQuoteForDependenciesNotes.id}`);
+    await upsertInstructionLog(currentQuoteForDependenciesNotes.id, { dependencies: newNotes });
+    closeDependenciesNotesModal();
   }
 
   // --- Document Upload Modal Functions ---
@@ -164,6 +170,16 @@
     await upsertInstructionLog(quoteId, { uploadedWorks: updatedWorksArray });
 
     closeDocumentUploadModal(); // Close modal on successful upload
+  }
+
+  // --- Line Items Modal Functions ---
+  function openLineItemsModal(quote: Quote) {
+    selectedQuoteForLineItems = quote;
+    showLineItemsModal = true;
+  }
+  function closeLineItemsModal() {
+    showLineItemsModal = false;
+    selectedQuoteForLineItems = null;
   }
 
   // Helper function to get notes preview
@@ -259,13 +275,12 @@
 </script>
 
 <div class="instructed-container">
-  <h1>Instructed Surveyors</h1>
+  <PageHeader
+    title="Instructed Surveyors"
+    subtitle={$selectedProject ? `Surveyors for ${$selectedProject.name}` : 'Please select a project'}
+  />
   
   {#if $selectedProject}
-    <div class="instructed-header">
-      <h2>Surveyors for {$selectedProject.name}</h2>
-      <p>Tracking operational progress for instructed quotes.</p>
-    </div>
     
     {#if instructedQuotes.length > 0}
       <div class="table-scroll-wrapper">
@@ -276,12 +291,11 @@
             <tr>
               <th>Organisation</th>
               <th>Contact</th>
-              <th>Email</th>
-              <th>Survey Type</th>
+              <th>Line Items</th>
               <th>Quote Amt.</th>
               <th>Work Status</th>
               <th>Dates</th>
-              <th>Hold Ups</th>
+              <th>Dependencies</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -291,15 +305,24 @@
               {@const currentWorkStatus = log?.workStatus || 'not started'}
               <tr class:row-completed={currentWorkStatus === 'completed'}>
                 <td>{quote.organisation}</td>
-                <td>{quote.contactName}</td>
                 <td>
+                  <div class="contact-name">{quote.contactName}</div>
                   {#if quote.email}
-                    <a href="mailto:{quote.email}">{quote.email}</a>
-                  {:else}
-                    N/A
+                    <a href="mailto:{quote.email}" class="contact-email">{quote.email}</a>
                   {/if}
                 </td>
-                <td>{quote.surveyType || 'N/A'}</td>
+                <td class="text-center">
+                  <button 
+                      type="button" 
+                      class="line-items-button" 
+                      title="View Line Items" 
+                      on:click={() => openLineItemsModal(quote)}
+                      aria-label={`View ${quote.lineItems.length} line items`}
+                  >
+                    {quote.lineItems.length}
+                    <span class="plus-sign">+</span>
+                  </button>
+                </td>
                 <td>
                   {#if quote.instructionStatus === 'partially instructed' && quote.partiallyInstructedTotal !== undefined}
                     £{quote.partiallyInstructedTotal.toFixed(2)} (Partial)
@@ -389,8 +412,8 @@
                   </button>
                 </td>
                 <td>
-                  <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)} title="Edit hold up notes">
-                    {getNotesPreview(log?.holdUpNotes)}
+                  <button class="notes-button" on:click={() => openDependenciesNotesModal(quote)} title="Edit dependencies notes">
+                    {getNotesPreview(log?.dependencies)}
                   </button>
                 </td>
                 <td>
@@ -424,17 +447,23 @@
   />
 {/if}
 
-{#if showHoldUpNotesModal && currentQuoteForHoldUpNotes}
+{#if showDependenciesNotesModal && currentQuoteForDependenciesNotes}
   <NotesModal
-    initialNotes={currentHoldUpNotes}
-    organisationName={currentQuoteForHoldUpNotes.organisation}
-    on:save={handleSaveHoldUpNotes}
-    on:cancel={closeHoldUpNotesModal}
+    initialNotes={currentDependenciesNotes}
+    organisationName={currentQuoteForDependenciesNotes.organisation}
+    on:save={handleSaveDependenciesNotes}
+    on:cancel={closeDependenciesNotesModal}
   />
 {/if}
 
-<!-- Add log before the check -->
-{console.log("Rendering check for Document Upload Modal:", showDocumentUploadModal, currentQuoteForUpload)} 
+{#if showLineItemsModal && selectedQuoteForLineItems}
+  <LineItemsModal 
+    items={selectedQuoteForLineItems.lineItems} 
+    organisationName={selectedQuoteForLineItems.organisation} 
+    on:close={closeLineItemsModal} 
+  />
+{/if}
+
 {#if showDocumentUploadModal && currentQuoteForUpload}
   {@const logForModal = findLog(currentQuoteForUpload.id)}
   <InstructedDocumentUploadModal
@@ -466,7 +495,7 @@
   /* General page styling (assumed globally applied) */
 
   .instructed-container {
-    padding: 2rem 1rem; /* Match general-info padding */
+    padding: 1rem 2rem;
   }
   
   /* Headings */
@@ -514,7 +543,7 @@
   
   .table-container th,
   .table-container td {
-    padding: 0.9rem 1.2rem; /* MATCHING QUOTES */
+    padding: 0.6rem 0.8rem; /* REDUCED PADDING */
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
@@ -526,12 +555,27 @@
   }
   
   .table-container th {
-    background-color: #f7fafc; 
+    background-color: #f8f9fa; 
     font-weight: 600;
     color: #4a5568;
     text-transform: uppercase;
-    font-size: 0.8rem; /* MATCHING QUOTES */
     letter-spacing: 0.05em;
+    font-size: 0.75rem; /* SMALLER HEADER FONT */
+  }
+
+  .contact-name {
+    font-weight: 500;
+    color: #1a202c;
+  }
+
+  .contact-email {
+    font-size: 0.9em;
+    color: #718096;
+    text-decoration: none;
+  }
+
+  .contact-email:hover {
+    text-decoration: underline;
   }
 
   .table-container tbody tr:last-child td {
@@ -544,7 +588,7 @@
 
   /* Completed Row Styling */
 .row-completed {
-    background-color: #f0fff4; /* Light green background */
+    background-color: #f0fff4; /* A light green to indicate completion */
   }
   .row-completed td {
     color: #38a169; /* Darker green text */
@@ -570,11 +614,11 @@
   }
 
   .work-status-dropdown {
-    padding: 8px 12px;
+    padding: 0.3rem 0.5rem; /* SMALLER PADDING */
+    border-radius: 5px;
     border: 1px solid #cbd5e0;
-    border-radius: 15px; /* Pill shape */
-    font-size: 0.85rem; /* MATCHING QUOTES (like instruction-status-select) */
-    background-color: #fff;
+    font-size: 0.85rem; /* SMALLER FONT */
+    background-color: white;
     cursor: pointer;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
     min-width: 120px; 
@@ -632,20 +676,20 @@
 }
   .date-label { /* Styling for labels like 'Site Visit' */
     display: block;
-    font-size: 0.8rem;
-    color: #718096;
-    margin-bottom: 0.25rem;
+    font-size: 0.75rem; /* SMALLER LABEL */
+    color: #4a5568;
+    margin-bottom: 2px;
     font-weight: 500;
 }
   /* .standard-date-label can inherit from .date-label or have specific styles */
 
   input.date-input { /* Styling for the date input fields */
-    padding: 0.4rem 0.6rem;
+    padding: 0.25rem 0.4rem; /* SMALLER PADDING */
     border: 1px solid #cbd5e0;
     border-radius: 4px;
-    font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
+    font-size: 0.85rem; /* SMALLER FONT */
     background-color: #fff;
-    width: auto; /* Don't force full width */
+    width: 150px;
     min-width: 130px; /* Ensure a reasonable minimum width */
   }
   input.date-input:focus {
@@ -662,12 +706,10 @@
 
   /* Notes Button Styling */
   .notes-button {
-    width: 100%;
-    max-width: 200px; /* Limit maximum width */
-    padding: 10px;
-    background-color: #f1f1f1;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.3rem 0.6rem; /* SMALLER PADDING */
+    font-size: 0.8rem; /* SMALLER FONT */
+    border-radius: 5px;
+    border: 1px solid #cbd5e0;
     text-align: left;
     cursor: pointer;
     font-style: italic;
@@ -1198,4 +1240,53 @@
   }
   /* ------------------------------------------- */
 
+  .page-description {
+    margin-bottom: 1.5rem;
+    color: #4a5568;
+  }
+
+  .line-items-button {
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 9999px; /* Pill shape */
+    padding: 0.2rem 0.6rem; /* Adjusted padding */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: background-color 0.2s, border-color 0.2s;
+    font-size: 0.75rem; /* Smaller font */
+  }
+  
+  .line-items-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+  }
+
+  .plus-sign {
+    font-weight: bold;
+  }
+  
+  .contact-name {
+    font-weight: 500;
+    color: #1a202c;
+  }
+
+  .contact-email {
+    font-size: 0.9em;
+    color: #718096;
+    text-decoration: none;
+  }
+
+  .contact-email:hover {
+    text-decoration: underline;
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .text-center {
+    text-align: center;
+  }
 </style> 

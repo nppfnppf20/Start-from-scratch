@@ -12,13 +12,17 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const projectRoutes = require('./routes/projects');
 const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
-const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
+const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** FIX: Destructure router from export ***
+const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
 const uploadRoutes = require('./routes/uploads');
 const documentRoutes = require('./routes/documents');
 const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
 const authRoutes = require('./routes/auth');
+const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
 const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
+const userRoutes = require('./routes/users');
+const clientOrganisationsRoutes = require('./routes/clientOrganisations');
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -70,20 +74,35 @@ const seedAdminUsers = async () => {
 connectDB();
 
 // --- CORS Configuration ---
-// If RENDER_FRONTEND_URLS has a value, use it. Otherwise, allow all for local dev.
+const RENDER_FRONTEND_URLS = process.env.RENDER_FRONTEND_URLS; // You'll set this in Render's env vars for the backend
+
 const corsOptions = {
-  origin: process.env.RENDER_FRONTEND_URLS || "*",
-  optionsSuccessStatus: 200,
-  credentials: true, // This is important for sending cookies or authorization headers.
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: 'Content-Type, Authorization'
+  origin: function (origin, callback) {
+    const allowedOrigins = [];
+    if (RENDER_FRONTEND_URLS) {
+      // Split the comma-separated string into an array of origins
+      allowedOrigins.push(...RENDER_FRONTEND_URLS.split(',').map(url => url.trim()));
+    }
+    // Allow local development origins if not in a 'production' environment
+    // You might set NODE_ENV=production in Render's environment variables
+    if (process.env.NODE_ENV !== 'production') {
+      allowedOrigins.push("http://localhost:5173"); // SvelteKit's default dev port
+      allowedOrigins.push("http://127.0.0.1:5173"); // Another common localhost variant
+      // Add any other local frontend ports you might use
+    }
+
+    // Allow requests with no origin (like Postman, server-to-server) or from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Request from origin '${origin}' blocked.`); // Optional: Log blocked origins
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
 app.use(cors(corsOptions));
-
-// This is also important to handle preflight requests
-app.options('*', cors(corsOptions));
-
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -105,6 +124,10 @@ app.use('/api/instruction-logs', protect, instructionLogRoutes);
 app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
 app.use('/api/documents', protect, documentRoutes);
 app.use('/api/programme-events', protect, programmeEventRoutes);
+app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
+app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/client-organisations', clientOrganisationsRoutes);
 
 // Public routes
 app.use('/api/uploads', uploadRoutes);
