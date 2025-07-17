@@ -3,6 +3,7 @@
     import { projectBank, loadProjectBank, type ProjectBankItem, deleteProgrammeEvent, deleteProject } from '$lib/stores/projectStore';
     import { formatDate } from '$lib/utils/formatters';
     import EditProjectModal from './EditProjectModal.svelte';
+    import OutstandingSurveysModal from './OutstandingSurveysModal.svelte';
   
     let isLoading = true;
     let error: string | null = null;
@@ -11,6 +12,8 @@
     // --- Modal State ---
     let showEditModal = false;
     let selectedProjectForEdit: ProjectBankItem | null = null;
+    let showOutstandingModal = false;
+    let selectedProjectForOutstanding: ProjectBankItem | null = null;
 
     // --- Filter State ---
     let searchText = '';
@@ -77,6 +80,11 @@
       }
     }
 
+    function handleOutstandingClick(project: ProjectBankItem) {
+      selectedProjectForOutstanding = project;
+      showOutstandingModal = true;
+    }
+
     // --- Reactive Declaration for Sorting ---
     $: sortedProjects = [...$projectBank].sort((a, b) => {
       const valA = a[sortKey];
@@ -123,6 +131,15 @@
       await loadProjectBank(); // Refresh data after save
     }}
   />
+{/if}
+
+{#if showOutstandingModal && selectedProjectForOutstanding}
+    <OutstandingSurveysModal
+        isOpen={showOutstandingModal}
+        projectName={selectedProjectForOutstanding.name}
+        outstandingSurveys={selectedProjectForOutstanding.outstandingSurveys}
+        on:close={() => showOutstandingModal = false}
+    />
 {/if}
 
 <div class="project-bank-container">
@@ -230,7 +247,11 @@
                   </td>
                   <td class="text-center divider-left">{project.instructedCount}</td>
                   <td class="text-center">{project.completedCount}</td>
-                  <td class="text-center">{project.outstandingCount}</td>
+                  <td class="text-center">
+                    <button class="link-button" on:click={() => handleOutstandingClick(project)}>
+                      {project.outstandingCount}
+                    </button>
+                  </td>
                   <td class="text-center">{formatCurrency(project.instructedSpend)}</td>
                   <td class="actions-cell divider-left">
                     <button class="action-btn" on:click={() => handleEditClick(project)}>
@@ -401,5 +422,18 @@
       border: 1px solid #feb2b2;
       color: #c53030;
       border-radius: 6px;
+    }
+    .link-button {
+      background: none;
+      border: none;
+      color: #007bff;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .link-button:hover {
+      color: #0056b3;
     }
   </style>

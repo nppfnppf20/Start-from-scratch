@@ -111,13 +111,77 @@ router.get('/', protect, async (req, res) => {
                                 cond: { $eq: ['$$log.workStatus', 'completed'] }
                             }
                         }
+                    },
+                    outstandingSurveys: {
+                        $map: {
+                            input: {
+                                $filter: {
+                                    input: '$instructedQuotes',
+                                    as: 'quote',
+                                    cond: {
+                                        $not: {
+                                            $in: ['$$quote._id', '$instructedLogs.quoteId']
+                                        }
+                                    }
+                                }
+                            },
+                            as: 'outstandingQuote',
+                            in: {
+                                quoteId: '$$outstandingQuote._id',
+                                organisation: '$$outstandingQuote.organisation',
+                                contactName: '$$outstandingQuote.contactName',
+                                workStatus: 'Not Started'
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    // Combine outstanding from logs and those not in logs yet
+                    outstandingSurveys: {
+                        $concatArrays: [
+                            '$outstandingSurveys',
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: '$instructedLogs',
+                                            as: 'log',
+                                            cond: { $ne: ['$$log.workStatus', 'completed'] }
+                                        }
+                                    },
+                                    as: 'log',
+                                    in: {
+                                        quoteId: '$$log.quoteId',
+                                        organisation: {
+                                            $let: {
+                                                vars: {
+                                                    quote: { $arrayElemAt: [{ $filter: { input: '$instructedQuotes', as: 'q', cond: { $eq: ['$$q._id', '$$log.quoteId'] } } }, 0] }
+                                                },
+                                                in: '$$quote.organisation'
+                                            }
+                                        },
+                                        contactName: {
+                                            $let: {
+                                                vars: {
+                                                    quote: { $arrayElemAt: [{ $filter: { input: '$instructedQuotes', as: 'q', cond: { $eq: ['$$q._id', '$$log.quoteId'] } } }, 0] }
+                                                },
+                                                in: '$$quote.contactName'
+                                            }
+                                        },
+                                        workStatus: '$$log.workStatus'
+                                    }
+                                }
+                            }
+                        ]
                     }
                 }
             },
             {
                 $addFields: {
                     // Outstanding is instructed surveyors minus completed
-                    outstandingCount: { $subtract: ['$instructedCount', '$completedCount'] }
+                    outstandingCount: { $size: '$outstandingSurveys' }
                 }
             },
             // Stage 7: Lookup programme events using a pipeline
@@ -146,6 +210,7 @@ router.get('/', protect, async (req, res) => {
                     instructedCount: 1,
                     completedCount: 1,
                     outstandingCount: 1,
+                    outstandingSurveys: 1, // Pass the new detailed list
                     instructedSpend: 1,
                     createdAt: 1,
                     programmeEvents: 1,

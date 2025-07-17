@@ -105,6 +105,12 @@ export interface ProjectBankItem extends Project {
   instructedCount: number;
   completedCount: number;
   outstandingCount: number;
+  outstandingSurveys: {
+    quoteId: string;
+    organisation: string;
+    contactName: string;
+    workStatus: string;
+  }[];
   instructedSpend: number;
   programmeEvents: {
     id: string; // Add the ID field
