@@ -52,6 +52,8 @@ interface Project {
   name: string;
   // Basic Project Information
   client?: string; // Umbrella client name from the modal
+  projectLead?: string[];
+  projectManager?: string[];
   teamMembers?: string[]; // Team member initials/names
   clientOrSpvName?: string; // Specific client/SPV name from the main form
   detailedDescription?: string;
@@ -230,7 +232,7 @@ import { get } from 'svelte/store';
 // --- Store Manipulation Functions ---
 
 // Function to add a new project via API
-export async function addProject(projectData: { name: string; client?: string; teamMembers?: string[] }) {
+export async function addProject(projectData: { name: string; client?: string; projectLead?: string[]; projectManager?: string[]; teamMembers?: string[] }) {
   if (!browser) return null; // Don't run on server
 
   try {
@@ -255,6 +257,10 @@ export async function addProject(projectData: { name: string; client?: string; t
     // Add to the local store
     projects.update(existing => [...existing, newProject].sort((a, b) => a.name.localeCompare(b.name))); // Keep sorted? Or sort by date? Maybe sort in component
     selectedProject.set(newProject); // Automatically select the new project
+
+    // After adding the project, reload the project bank data to include the new project
+    await loadProjectBank();
+    
   return newProject;
 
   } catch (error) {

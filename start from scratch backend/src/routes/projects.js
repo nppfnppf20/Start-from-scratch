@@ -206,7 +206,8 @@ router.get('/', protect, async (req, res) => {
                 $project: {
                     name: 1,
                     client: '$clientDetails.organisationName', // Use the name from the populated client
-                    teamMembers: 1,
+                    projectLead: 1,
+                    projectManager: 1,
                     instructedCount: 1,
                     completedCount: 1,
                     outstandingCount: 1,
@@ -234,7 +235,7 @@ router.get('/', protect, async (req, res) => {
 // @desc    Create a new project
 // @access  Admin only
 router.post('/', protect, authorize('admin'), async (req, res) => {
-    const { name, client, teamMembers, clientOrSpvName } = req.body;
+    const { name, client, projectLead, projectManager, teamMembers, clientOrSpvName } = req.body;
     try {
         if (!name) {
             return res.status(400).json({ msg: 'Project name is required' });
@@ -242,6 +243,8 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
         const newProject = new Project({
             name,
             client,
+            projectLead,
+            projectManager,
             teamMembers,
             clientOrSpvName
         });

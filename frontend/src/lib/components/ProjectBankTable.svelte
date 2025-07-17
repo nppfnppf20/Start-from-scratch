@@ -111,9 +111,10 @@
       
       const nameMatch = project.name.toLowerCase().includes(lowercasedFilter);
       const clientMatch = project.client?.toLowerCase().includes(lowercasedFilter) || false;
-      const teamMatch = project.teamMembers?.join(', ').toLowerCase().includes(lowercasedFilter) || false;
+      const leadMatch = project.projectLead?.join(', ').toLowerCase().includes(lowercasedFilter) || false;
+      const managerMatch = project.projectManager?.join(', ').toLowerCase().includes(lowercasedFilter) || false;
 
-      return nameMatch || clientMatch || teamMatch;
+      return nameMatch || clientMatch || leadMatch || managerMatch;
     });
 
     function handleEditClick(project: ProjectBankItem) {
@@ -156,7 +157,7 @@
         <input
           type="text"
           bind:value={searchText}
-          placeholder="Filter by Project Name, Client, or Team..."
+          placeholder="Filter by Project Name, Client, Lead, or Manager..."
           class="filter-input"
         />
       </div>
@@ -174,7 +175,8 @@
                   Client {#if sortKey === 'client'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
                 </button>
               </th>
-              <th rowspan="2">Team</th>
+              <th rowspan="2">Project Lead</th>
+              <th rowspan="2">Project Manager</th>
               <th rowspan="2">Key Dates</th>
               <th colspan="4" class="text-center divider-left">Surveyor Totals</th>
               <th rowspan="2" class="divider-left">Actions</th>
@@ -193,7 +195,7 @@
           <tbody>
             {#if finalProjects.length === 0}
               <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="10" class="empty-state">
                   {#if searchText}
                     <p>No projects match your filter "{searchText}".</p>
                   {:else}
@@ -206,7 +208,8 @@
                 <tr>
                   <td>{project.name}</td>
                   <td>{project.client || '-'}</td>
-                  <td>{project.teamMembers?.join(', ') || '-'}</td>
+                  <td>{project.projectLead?.join(', ') || '-'}</td>
+                  <td>{project.projectManager?.join(', ') || '-'}</td>
                   <td class="key-dates-cell">
                     {#if project.programmeEvents && project.programmeEvents.length > 0}
                       <ul>

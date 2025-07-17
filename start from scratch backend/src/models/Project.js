@@ -10,6 +10,14 @@ const ProjectSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ClientOrganisation'
     },
+    projectLead: {
+        type: [String],
+        default: []
+    },
+    projectManager: {
+        type: [String],
+        default: []
+    },
     teamMembers: { // Initials from modal
         type: [String],
         default: []
