@@ -1,10 +1,30 @@
+export const masterTemplate = `
+[Contact name],<br/><br/>We are writing on behalf of [Client (or SPV) Name] to request a fee proposal to support a proposed scheme at [Address].<br/><br/>Please submit fee quote requests at https://trpdashboard.onrender.com/<br/><br/>Please use the primary email address this email was addressed to when logging in, with a password of TRPSurveyor2025. Once logged in please select [Project name] to submit a quote. Any quote documents can be uploaded via the sharepoint link in the quote submission form.<br/><br/>[A red line plan/draft layout] is attached, which will be refined based on feedback from your site visit and survey results.<br/><br/>Site details are as follows. Please note, exact details may be subject to change following design iterations:<br/><br/><ul><li>Client name: [Client (or SPV) Name]</li><li>Project Type: [Project Type]</li><li>Area (ha): [Area (ha)]</li><li>Address: [Address]</li><li>Site Designations: [Site Designations]</li><li>[Include any other relevant details]</li></ul><br/>The client is looking to progress through to a planning submission [Insert Timescales/commitment they have capacity to deliver on time] and so could you confirm fees and timescales for the following surveys:<br/><br/>[Survey Types]<br/><br/>[Discipline-Specific Content]<br/><br/>Reports should be made in the name of [Client (or SPV) name].<br/><br/>Invoicing details are as follows:<br/><br/>[Invoicing details].<br/><br/>Many thanks.
+`;
+
+export const disciplineSections: { [key: string]: string } = {
+  'Ecology': `
+    Please can the fee quote also allow for the following:<br/><br/>
+    <ul>
+      <li>Early advice on protected species surveys/advice on the extent layout mitigation and enhancements and potential overlap with any other disciplines.</li>
+      <li>Early advice on whether off-site mitigation required.</li>
+      <li>Requirement to advise on multiple design iterations as the proposed layout advances.</li>
+      <li>Advise whether you recommend pre-application discussions with the county ecologist.</li>
+      <li>Collaboration with our landscape consultant where neccessary</li>
+      <li>Include fees for any anticipated protected species surveys.</li>
+    </ul>
+  `,
+  'Arboriculture': '',
+  // Other disciplines can be added here with their specific content.
+};
+
 export const emailTemplates: { [key: string]: { subject: string, body: string } } = {
   'Ecology': {
-    subject: 'Fee Quote Request [Project Name]',
-    body: `[Contact name],<br/><br/>We are writing on behalf of [Client (or SPV) Name] to request a fee proposal to support a proposed scheme at [Address].<br/><br/>Please submit fee quote requests at https://trpdashboard.onrender.com/<br/><br/>Please use the primary email address this email was addressed to when logging in, with a password of TRPSurveyor2025. Once logged in please select [Project name] to submit a quote. Any quote documents can be uploaded via the sharepoint link in the quote submission form.<br/><br/>[A red line plan/draft layout] is attached, which will be refined based on feedback from your site visit and survey results.<br/><br/>Site details are as follows. Please note, exact details may be subject to change following design iterations:<br/><br/><ul><li>Client name: [Client (or SPV) Name]</li><li>Project Type: [Project Type]</li><li>Area (ha): [Area (ha)]</li><li>Address: [Address]</li><li>Site Designations: [Site Designations]</li><li>[Include any other relevant details]</li></ul><br/>The client is looking to progress through to a planning submission [Insert Timescales/commitment they have capacity to deliver on time] and so could you confirm fees and timescales for the following surveys:<br/><br/>[Survey Types]<br/>Please can the fee quote also allow for the following:<br/><br/><ul><li>Early advice on protected species surveys/advice on the extent layout mitigation and enhancements and potential overlap with any other disciplines.</li><li>Early advice on whether off-site mitigation required.</li><li>Requirement to advise on multiple design iterations as the proposed layout advances.</li><li>Advise whether you recommend pre-application discussions with the county ecologist.</li><li>Collaboration with our landscape consultant where neccessary</li><li>Include fees for any anticipated protected species surveys.</li></ul><br/>Reports should be made in the name of [Client (or SPV) name].<br/><br/>Invoicing details are as follows:<br/><br/>[Invoicing details].<br/><br/>Many thanks.`
+    subject: '', // Subject will now be generated dynamically on the page
+    body: '' // Body will be constructed from the master template and sections
   },
   'Arboriculture': {
-    subject: 'Fee Quote Request for Arboriculture at [Project Name]',
-    body: `Hi [Contact Name],<br/><br/>Please provide a fee quote for a Tree Survey at [Project Name].<br/><br/>Thanks,`
+    subject: '',
+    body: ''
   }
 }; 

@@ -2,7 +2,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
   import { selectedProject, authorizeSurveyors } from '$lib/stores/projectStore';
-  import { emailTemplates } from '$lib/data/emailTemplates';
+  import { masterTemplate, disciplineSections } from '$lib/data/emailTemplates';
   import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
 
   const disciplines = [
@@ -77,18 +77,18 @@
     : Object.values(surveyTypeMapping).flat();
   
   $: {
-    const disciplineWithTemplate = selectedDisciplines.find(d => emailTemplates[d]);
+    const selectedDiscipline = selectedDisciplines.length > 0 ? selectedDisciplines[0] : null;
 
-    if (disciplineWithTemplate) {
-      const template = emailTemplates[disciplineWithTemplate];
+    if (selectedDiscipline) {
+      const disciplineContent = disciplineSections[selectedDiscipline] || '';
+      let body = masterTemplate.replace('[Discipline-Specific Content]', disciplineContent);
       let subject = '';
-      let body = template.body;
 
       if ($selectedProject) {
-        subject = `${$selectedProject.name} - Fee Quote Request, ${disciplineWithTemplate}`;
+        subject = `${$selectedProject.name} - Fee Quote Request, ${selectedDiscipline}`;
         body = processTemplate(body, $selectedProject);
       } else {
-        subject = `Project Name - Fee Quote Request, ${disciplineWithTemplate}`;
+        subject = `Project Name - Fee Quote Request, ${selectedDiscipline}`;
         body = processTemplate(body, {});
       }
       
