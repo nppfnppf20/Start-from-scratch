@@ -67,38 +67,54 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   PUT /api/client-organisations/:id
-// @desc    Update a client organisation
+// @desc    Update a client organisation and sync user accounts
 // @access  Admin only
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
     const { organisationName, contacts } = req.body;
 
     try {
-        let organisation = await ClientOrganisation.findById(req.params.id);
+        const organisation = await ClientOrganisation.findById(req.params.id);
         if (!organisation) {
             return res.status(404).json({ msg: 'Client organisation not found' });
         }
 
+        const originalEmails = organisation.contacts.map(c => c.email).filter(Boolean);
+        const newContacts = contacts || [];
+        const newEmails = newContacts.map(c => c.email).filter(Boolean);
+
         // Update organisation details
         organisation.organisationName = organisationName;
-        organisation.contacts = contacts;
-
+        organisation.contacts = newContacts;
+        
         const updatedOrganisation = await organisation.save();
 
-        // Handle user accounts for contacts
-        if (contacts && contacts.length > 0) {
-            for (const contact of contacts) {
-                if (contact.email) {
-                    const userExists = await User.findOne({ email: contact.email });
-                    if (!userExists) {
-                        const newUser = new User({
-                            email: contact.email,
-                            name: contact.contactName || organisationName,
-                            role: 'client'
-                        });
-                        await newUser.save();
+        // Sync user accounts for contacts with emails
+        // 1. Upsert users from the new contact list
+        for (const contact of newContacts) {
+            if (contact.email) {
+                let user = await User.findOne({ email: contact.email });
+                if (user) {
+                    // Update user's name if it has changed
+                    if (user.name !== (contact.contactName || organisationName)) {
+                        user.name = contact.contactName || organisationName;
+                        await user.save();
                     }
+                } else {
+                    // Create new user if they don't exist
+                    const newUser = new User({
+                        email: contact.email,
+                        name: contact.contactName || organisationName,
+                        role: 'client'
+                    });
+                    await newUser.save();
                 }
             }
+        }
+
+        // 2. Delete users for contacts that were removed
+        const emailsToDelete = originalEmails.filter(email => !newEmails.includes(email));
+        if (emailsToDelete.length > 0) {
+            await User.deleteMany({ email: { $in: emailsToDelete } });
         }
 
         res.json(updatedOrganisation);
