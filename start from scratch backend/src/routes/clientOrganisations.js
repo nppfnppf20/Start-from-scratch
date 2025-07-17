@@ -47,7 +47,8 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
                             email: contact.email,
                             // Password is not saved, as login is handled by shared role password
                             name: contact.contactName || organisationName,
-                            role: 'client' // Assign client role
+                            role: 'client', // Assign client role
+                            clientOrganisation: savedOrganisation._id
                         });
                         await newUser.save();
                     }
@@ -104,7 +105,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
                     const newUser = new User({
                         email: contact.email,
                         name: contact.contactName || organisationName,
-                        role: 'client'
+                        role: 'client',
+                        clientOrganisation: organisation._id
                     });
                     await newUser.save();
                 }

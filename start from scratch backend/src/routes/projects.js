@@ -19,7 +19,17 @@ router.get('/', protect, async (req, res) => {
         if (req.user.role === 'surveyor') {
             query.authorizedSurveyors = req.user._id;
         } else if (req.user.role === 'client') {
-            query.authorizedClients = req.user._id;
+            // Clients can see projects they are explicitly authorized on,
+            // OR projects linked to their client organisation.
+            const user = await User.findById(req.user._id);
+            if (user && user.clientOrganisation) {
+                query.$or = [
+                    { authorizedClients: req.user._id },
+                    { client: user.clientOrganisation }
+                ];
+            } else {
+                query.authorizedClients = req.user._id;
+            }
         }
 
         const projects = await Project.aggregate([

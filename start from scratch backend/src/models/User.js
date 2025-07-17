@@ -21,6 +21,10 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'surveyor', 'client'],
         default: 'surveyor'
+    },
+    clientOrganisation: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ClientOrganisation'
     }
 }, {
     timestamps: true
