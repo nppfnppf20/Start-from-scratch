@@ -9,7 +9,10 @@
   
   let name: string;
   let client: string;
-  let teamMembersStr: string;
+  let projectLead: string[] = [];
+  let projectManager: string[] = [];
+  const teamMembersList = ['JR', 'AD', 'BM', 'BW', 'RS', 'S Smith', 'S Scott', 'CB', 'PE', 'RM', 'GE', 'RK', 'DH', 'AC'];
+  
   let authorizedSurveyors: string[] = [];
   let allSurveyors: { _id: string; email: string }[] = [];
   let authorizedClients: string[] = [];
@@ -20,7 +23,8 @@
   $: {
     if (project && $clientOrganisations) {
       name = project.name;
-      teamMembersStr = project.teamMembers?.join(', ') || '';
+      projectLead = project.projectLead || [];
+      projectManager = project.projectManager || [];
       authorizedSurveyors = project.authorizedSurveyors || [];
       authorizedClients = project.authorizedClients || [];
       
@@ -71,13 +75,14 @@
     errorMessage = '';
 
     // Convert team members string back to an array
-    const teamMembers = teamMembersStr.split(',').map(s => s.trim()).filter(Boolean);
+    // const teamMembers = teamMembersStr.split(',').map(s => s.trim()).filter(Boolean);
 
     try {
       const success = await updateProject(project.id, {
         name,
         client,
-        teamMembers,
+        projectLead,
+        projectManager,
         authorizedSurveyors,
         authorizedClients,
       });
@@ -101,67 +106,88 @@
 
 <div class="modal-backdrop" on:click={handleClose}>
   <div class="modal-content" on:click|stopPropagation>
-    <h2>Edit Project: {project.name}</h2>
-    
-    <form on:submit|preventDefault={handleSubmit}>
-      <div class="form-group">
-        <label for="name">Project Name</label>
-        <input id="name" type="text" bind:value={name} required />
-      </div>
-
-      <div class="form-group">
-        <label for="client">Client</label>
-        <select id="client" bind:value={client}>
-          <option value="">-- Select a Client --</option>
-          {#each $clientOrganisations as org (org.id)}
-            <option value={org.id}>{org.organisationName}</option>
-          {/each}
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="team">Team Members</label>
-        <input id="team" type="text" bind:value={teamMembersStr} placeholder="e.g., AB, CD, EF" />
-        <small>Enter initials or names separated by commas.</small>
-      </div>
-
-      <div class="form-group">
-        <label for="surveyors">Authorized Surveyors</label>
-        <div class="checkbox-group">
-          {#each allSurveyors as surveyor}
-            <div class="checkbox-item">
-              <input type="checkbox" id="surveyor-{surveyor._id}" value={surveyor._id} bind:group={authorizedSurveyors} />
-              <label for="surveyor-{surveyor._id}">{surveyor.email}</label>
-            </div>
-          {/each}
+    <div class="modal-header">
+      <h2>Edit Project: {project.name}</h2>
+    </div>
+    <div class="modal-body">
+      <form on:submit|preventDefault={handleSubmit}>
+        <div class="form-group">
+          <label for="name">Project Name</label>
+          <input id="name" type="text" bind:value={name} required />
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="clients">Authorized Clients</label>
-        <div class="checkbox-group">
-          {#each allClients as client}
-            <div class="checkbox-item">
-              <input type="checkbox" id="client-{client._id}" value={client._id} bind:group={authorizedClients} />
-              <label for="client-{client._id}">{client.email}</label>
-            </div>
-          {/each}
+        <div class="form-group">
+          <label for="client">Client</label>
+          <select id="client" bind:value={client}>
+            <option value="">-- Select a Client --</option>
+            {#each $clientOrganisations as org (org.id)}
+              <option value={org.id}>{org.organisationName}</option>
+            {/each}
+          </select>
         </div>
-      </div>
 
-      {#if errorMessage}
-        <p class="error-message">{errorMessage}</p>
-      {/if}
+        <div class="form-group">
+          <label>Project Lead</label>
+          <div class="checkbox-group">
+            {#each teamMembersList as member}
+              <label class="checkbox-item">
+                <input type="checkbox" bind:group={projectLead} value={member} />
+                {member}
+              </label>
+            {/each}
+          </div>
+        </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" on:click={handleClose} disabled={isSaving}>
-          Cancel
-        </button>
-        <button type="submit" class="btn-primary" disabled={isSaving}>
-          {#if isSaving}Saving...{:else}Save Changes{/if}
-        </button>
-      </div>
-    </form>
+        <div class="form-group">
+          <label>Project Manager</label>
+          <div class="checkbox-group">
+            {#each teamMembersList as member}
+              <label class="checkbox-item">
+                <input type="checkbox" bind:group={projectManager} value={member} />
+                {member}
+              </label>
+            {/each}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="surveyors">Authorized Surveyors</label>
+          <div class="checkbox-group">
+            {#each allSurveyors as surveyor}
+              <div class="checkbox-item">
+                <input type="checkbox" id="surveyor-{surveyor._id}" value={surveyor._id} bind:group={authorizedSurveyors} />
+                <label for="surveyor-{surveyor._id}">{surveyor.email}</label>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="clients">Authorized Clients</label>
+          <div class="checkbox-group">
+            {#each allClients as client}
+              <div class="checkbox-item">
+                <input type="checkbox" id="client-{client._id}" value={client._id} bind:group={authorizedClients} />
+                <label for="client-{client._id}">{client.email}</label>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        {#if errorMessage}
+          <p class="error-message">{errorMessage}</p>
+        {/if}
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" on:click={handleClose} disabled={isSaving}>
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" disabled={isSaving}>
+            {#if isSaving}Saving...{:else}Save Changes{/if}
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -185,10 +211,23 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     width: 100%;
     max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-header {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 1.5rem;
+  }
+  .modal-body {
+    overflow-y: auto;
+    padding-right: 1rem;
+    flex-grow: 1;
   }
   h2 {
     margin-top: 0;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
   }
   .form-group {
     margin-bottom: 1rem;
@@ -258,15 +297,20 @@
   }
 
   /* Overrides for checkbox elements to fix alignment */
-  .checkbox-item input[type="checkbox"] {
+  .checkbox-group input[type="checkbox"] {
     width: auto; /* Prevent taking full width */
     margin: 0;
     padding: 0;
   }
 
   .checkbox-item label {
-    display: inline; /* Place label next to checkbox */
-    font-weight: normal; /* Use regular font weight */
-    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: normal;
+    white-space: nowrap;
+  }
+  .checkbox-item input[type="checkbox"] {
+      margin: 0;
   }
 </style> 
