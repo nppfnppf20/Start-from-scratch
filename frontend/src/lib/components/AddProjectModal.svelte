@@ -9,7 +9,6 @@
   let selectedClient = '';
   let projectLead: string[] = [];
   let projectManager: string[] = [];
-  let selectedTeamMembers: string[] = [];
   
   const teamMembersList = ['JR', 'AD', 'BM', 'BW', 'RS', 'S Smith', 'S Scott', 'CB', 'PE', 'RM', 'GE', 'RK', 'DH', 'AC'];
 
@@ -34,7 +33,6 @@
     selectedClient = '';
     projectLead = [];
     projectManager = [];
-    selectedTeamMembers = [];
     submitError = '';
   }
 
@@ -53,23 +51,17 @@
     isSubmitting = true;
     submitError = '';
 
-    const projectData = {
-      name: name,
-      client: selectedClient || undefined,
-      projectLead: projectLead.length > 0 ? projectLead : undefined,
-      projectManager: projectManager.length > 0 ? projectManager : undefined,
-      teamMembers: selectedTeamMembers.length > 0 ? selectedTeamMembers : undefined
-    };
-
     try {
-      const addedProject = await addProjectToStore(projectData);
-      if (addedProject) {
-        closeModal();
-      } else {
-        submitError = 'Failed to add project. Please try again.';
-      }
-    } catch (error) {
-        submitError = error instanceof Error ? error.message : 'An unexpected error occurred.';
+      await addProjectToStore({
+        name: newProjectName.trim(),
+        client: selectedClient || undefined,
+        projectLead: projectLead.length > 0 ? projectLead : undefined,
+        projectManager: projectManager.length > 0 ? projectManager : undefined,
+      });
+
+      closeModal();
+    } catch (err) {
+        submitError = err instanceof Error ? err.message : 'An unexpected error occurred.';
     } finally {
         isSubmitting = false;
     }

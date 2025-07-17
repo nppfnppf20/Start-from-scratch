@@ -18,10 +18,6 @@ const ProjectSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    teamMembers: { // Initials from modal
-        type: [String],
-        default: []
-    },
     clientOrSpvName: { // Specific name from main form
         type: String,
         trim: true
@@ -82,14 +78,20 @@ const ProjectSchema = new mongoose.Schema({
     // --- SharePoint Document Link ---
     sharepointLink: { type: String, trim: true },
     // --- NEW FIELD for Surveyor Permissions ---
-    authorizedSurveyors: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    authorizedClients: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }]
+    authorizedSurveyors: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }],
+        default: []
+    },
+    authorizedClients: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }],
+        default: []
+    }
 }, {
     timestamps: true // Automatically add createdAt and updatedAt fields
 });

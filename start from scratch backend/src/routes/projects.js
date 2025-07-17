@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const Document = require('../models/Document');
 const User = require('../models/User');
@@ -9,18 +10,224 @@ const SurveyorFeedback = require('../models/SurveyorFeedback'); // Added for cas
 const InstructionLog = require('../models/InstructionLog');
 const { protect, authorize, checkProjectAccess } = require('../middleware/authMiddleware'); // Import authorize and protect
 
+const getProjectAggregationPipeline = (matchQuery = {}) => {
+    return [
+        { $match: matchQuery },
+        {
+            $lookup: {
+                from: 'clientorganisations',
+                localField: 'client',
+                foreignField: '_id',
+                as: 'clientDetails'
+            }
+        },
+        {
+            $unwind: {
+                path: '$clientDetails',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: 'quotes',
+                localField: '_id',
+                foreignField: 'projectId',
+                as: 'quotes'
+            }
+        },
+        {
+            $addFields: {
+                instructedQuotes: {
+                    $filter: {
+                        input: '$quotes',
+                        as: 'quote',
+                        cond: { $in: ['$$quote.instructionStatus', ['instructed', 'partially instructed']] }
+                    }
+                },
+            }
+        },
+        {
+            $addFields: {
+                instructedCount: { $size: { $ifNull: [{ $setUnion: '$instructedQuotes.organisation' }, []] } },
+                instructedSpend: {
+                    $reduce: {
+                        input: '$instructedQuotes',
+                        initialValue: 0,
+                        in: {
+                            $add: [
+                                '$$value',
+                                { 
+                                    $cond: {
+                                        if: { $eq: ['$$this.instructionStatus', 'instructed'] },
+                                        then: '$$this.total',
+                                        else: '$$this.partiallyInstructedTotal'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: 'instructionlogs',
+                localField: 'instructedQuotes._id',
+                foreignField: 'quoteId',
+                as: 'instructedLogs'
+            }
+        },
+        {
+            $addFields: {
+                completedCount: {
+                    $size: {
+                        $filter: {
+                            input: '$instructedLogs',
+                            as: 'log',
+                            cond: { $eq: ['$$log.workStatus', 'completed'] }
+                        }
+                    }
+                },
+                outstandingSurveys: {
+                    $map: {
+                        input: {
+                            $filter: {
+                                input: '$instructedQuotes',
+                                as: 'quote',
+                                cond: { $not: { $in: ['$$quote._id', '$instructedLogs.quoteId'] } }
+                            }
+                        },
+                        as: 'outstandingQuote',
+                        in: {
+                            quoteId: '$$outstandingQuote._id',
+                            organisation: '$$outstandingQuote.organisation',
+                            contactName: '$$outstandingQuote.contactName',
+                            workStatus: 'Not Started'
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $addFields: {
+                outstandingSurveys: {
+                    $concatArrays: [
+                        '$outstandingSurveys',
+                        {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: '$instructedLogs',
+                                        as: 'log',
+                                        cond: { $ne: ['$$log.workStatus', 'completed'] }
+                                    }
+                                },
+                                as: 'log',
+                                in: {
+                                    quoteId: '$$log.quoteId',
+                                    organisation: {
+                                        $let: {
+                                            vars: {
+                                                quote: { $arrayElemAt: [{ $filter: { input: '$instructedQuotes', as: 'q', cond: { $eq: ['$$q._id', '$$log.quoteId'] } } }, 0] }
+                                            },
+                                            in: '$$quote.organisation'
+                                        }
+                                    },
+                                    contactName: {
+                                        $let: {
+                                            vars: {
+                                                quote: { $arrayElemAt: [{ $filter: { input: '$instructedQuotes', as: 'q', cond: { $eq: ['$$q._id', '$$log.quoteId'] } } }, 0] }
+                                            },
+                                            in: '$$quote.contactName'
+                                        }
+                                    },
+                                    workStatus: '$$log.workStatus'
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            $addFields: {
+                outstandingCount: { $size: '$outstandingSurveys' }
+            }
+        },
+        {
+            $lookup: {
+                from: 'programmeevents',
+                let: { projectIdStr: { $toString: '$_id' } },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: { $eq: ['$projectId', '$$projectIdStr'] }
+                        }
+                    }
+                ],
+                as: 'programmeEvents'
+            }
+        },
+        {
+            $project: {
+                name: 1,
+                client: '$clientDetails.organisationName',
+                projectLead: 1,
+                projectManager: 1,
+                instructedCount: 1,
+                completedCount: 1,
+                outstandingCount: 1,
+                outstandingSurveys: 1,
+                instructedSpend: 1,
+                createdAt: 1,
+                programmeEvents: 1,
+                authorizedSurveyors: 1,
+                authorizedClients: 1,
+                // Add all other fields from the Project model that you need on the frontend
+                clientOrSpvName: 1,
+                detailedDescription: 1,
+                proposedUseDuration: 1,
+                projectType: 1,
+                address: 1,
+                area: 1,
+                localPlanningAuthority: 1,
+                distributionNetwork: 1,
+                siteDesignations: 1,
+                solarExportCapacity: 1,
+                pvMaxPanelHeight: 1,
+                fenceHeight: 1,
+                pvClearanceFromGround: 1,
+                numberOfSolarPanels: 1,
+                panelTilt: 1,
+                panelTiltDirection: 1,
+                bessExportCapacity: 1,
+                bessContainers: 1,
+                gwhPerYear: 1,
+                homesPowered: 1,
+                co2Offset: 1,
+                equivalentCars: 1,
+                accessArrangements: 1,
+                accessContact: 1,
+                parkingDetails: 1,
+                atvUse: 1,
+                additionalNotes: 1,
+                invoicingDetails: 1,
+                sharepointLink: 1,
+                updatedAt: 1
+            }
+        },
+    ];
+};
+
 // @route   GET /api/projects
 // @desc    Get all projects (fetching selected fields)
 // @access  Private
 router.get('/', protect, async (req, res) => {
     try {
         let query = {};
-        // If user is a surveyor, only return projects they are authorized for
         if (req.user.role === 'surveyor') {
             query.authorizedSurveyors = req.user._id;
         } else if (req.user.role === 'client') {
-            // Clients can see projects they are explicitly authorized on,
-            // OR projects linked to their client organisation.
             const user = await User.findById(req.user._id);
             if (user && user.clientOrganisation) {
                 query.$or = [
@@ -32,209 +239,14 @@ router.get('/', protect, async (req, res) => {
             }
         }
 
-        const projects = await Project.aggregate([
-            // Stage 1: Match projects based on user role
-            { $match: query },
-            // Stage 2: Lookup client organisation
-            {
-                $lookup: {
-                    from: 'clientorganisations', // The collection name for ClientOrganisation
-                    localField: 'client',
-                    foreignField: '_id',
-                    as: 'clientDetails'
-                }
-            },
-            // Unwind the clientDetails array to get a single object
-            {
-                $unwind: {
-                    path: '$clientDetails',
-                    preserveNullAndEmptyArrays: true // Keep projects even if client is not set
-                }
-            },
-            // Stage 3: Lookup quotes for each project
-            {
-                $lookup: {
-                    from: 'quotes',
-                    localField: '_id',
-                    foreignField: 'projectId',
-                    as: 'quotes'
-                }
-            },
-            // Stage 4: Add fields with calculated values
-            {
-                $addFields: {
-                    // Filter to get only instructed quotes
-                    instructedQuotes: {
-                        $filter: {
-                            input: '$quotes',
-                            as: 'quote',
-                            cond: { 
-                                $in: ['$$quote.instructionStatus', ['instructed', 'partially instructed']]
-                            }
-                        }
-                    },
-                }
-            },
-            {
-                $addFields: {
-                    // Count unique surveyors instructed
-                    instructedCount: { $size: { $ifNull: [{ $setUnion: '$instructedQuotes.organisation' }, []] } },
-                    
-                    // Calculate total instructed spend
-                    instructedSpend: {
-                        $reduce: {
-                            input: '$instructedQuotes',
-                            initialValue: 0,
-                            in: {
-                                $add: [
-                                    '$$value',
-                                    { 
-                                        $cond: {
-                                            if: { $eq: ['$$this.instructionStatus', 'instructed'] },
-                                            then: '$$this.total',
-                                            else: '$$this.partiallyInstructedTotal'
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                }
-            },
-            // Stage 5: Lookup instruction logs for the instructed quotes
-            {
-                $lookup: {
-                    from: 'instructionlogs',
-                    localField: 'instructedQuotes._id',
-                    foreignField: 'quoteId',
-                    as: 'instructedLogs'
-                }
-            },
-            // Stage 6: Calculate completed and outstanding counts
-            {
-                $addFields: {
-                    completedCount: {
-                        $size: {
-                            $filter: {
-                                input: '$instructedLogs',
-                                as: 'log',
-                                cond: { $eq: ['$$log.workStatus', 'completed'] }
-                            }
-                        }
-                    },
-                    outstandingSurveys: {
-                        $map: {
-                            input: {
-                                $filter: {
-                                    input: '$instructedQuotes',
-                                    as: 'quote',
-                                    cond: {
-                                        $not: {
-                                            $in: ['$$quote._id', '$instructedLogs.quoteId']
-                                        }
-                                    }
-                                }
-                            },
-                            as: 'outstandingQuote',
-                            in: {
-                                quoteId: '$$outstandingQuote._id',
-                                organisation: '$$outstandingQuote.organisation',
-                                contactName: '$$outstandingQuote.contactName',
-                                workStatus: 'Not Started'
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $addFields: {
-                    // Combine outstanding from logs and those not in logs yet
-                    outstandingSurveys: {
-                        $concatArrays: [
-                            '$outstandingSurveys',
-                            {
-                                $map: {
-                                    input: {
-                                        $filter: {
-                                            input: '$instructedLogs',
-                                            as: 'log',
-                                            cond: { $ne: ['$$log.workStatus', 'completed'] }
-                                        }
-                                    },
-                                    as: 'log',
-                                    in: {
-                                        quoteId: '$$log.quoteId',
-                                        organisation: {
-                                            $let: {
-                                                vars: {
-                                                    quote: { $arrayElemAt: [{ $filter: { input: '$instructedQuotes', as: 'q', cond: { $eq: ['$$q._id', '$$log.quoteId'] } } }, 0] }
-                                                },
-                                                in: '$$quote.organisation'
-                                            }
-                                        },
-                                        contactName: {
-                                            $let: {
-                                                vars: {
-                                                    quote: { $arrayElemAt: [{ $filter: { input: '$instructedQuotes', as: 'q', cond: { $eq: ['$$q._id', '$$log.quoteId'] } } }, 0] }
-                                                },
-                                                in: '$$quote.contactName'
-                                            }
-                                        },
-                                        workStatus: '$$log.workStatus'
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                }
-            },
-            {
-                $addFields: {
-                    // Outstanding is instructed surveyors minus completed
-                    outstandingCount: { $size: '$outstandingSurveys' }
-                }
-            },
-            // Stage 7: Lookup programme events using a pipeline
-            {
-                $lookup: {
-                    from: 'programmeevents',
-                    let: { projectIdStr: { $toString: '$_id' } }, // Convert project _id to string
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $eq: ['$projectId', '$$projectIdStr'] // Match on the string versions
-                                }
-                            }
-                        }
-                    ],
-                    as: 'programmeEvents'
-                }
-            },
-            // Stage 8: Project the final fields
-            {
-                $project: {
-                    name: 1,
-                    client: '$clientDetails.organisationName', // Use the name from the populated client
-                    projectLead: 1,
-                    projectManager: 1,
-                    instructedCount: 1,
-                    completedCount: 1,
-                    outstandingCount: 1,
-                    outstandingSurveys: 1, // Pass the new detailed list
-                    instructedSpend: 1,
-                    createdAt: 1,
-                    programmeEvents: 1,
-                    authorizedSurveyors: 1,
-                    authorizedClients: 1
-                }
-            },
-            // Stage 9: Sort by creation date
-            {
-                $sort: { createdAt: -1 }
-            }
-        ]);
-        res.json(projects);
+        const aggregation = getProjectAggregationPipeline(query);
+        const projects = await Project.aggregate([...aggregation, { $sort: { createdAt: -1 } }]);
+        
+        // The aggregation returns an object with an 'id' field, but it's the raw _id.
+        // We need to map it to a string 'id' for the frontend.
+        const projectsWithId = projects.map(p => ({ ...p, id: p._id.toString() }));
+        
+        res.json(projectsWithId);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -245,7 +257,7 @@ router.get('/', protect, async (req, res) => {
 // @desc    Create a new project
 // @access  Admin only
 router.post('/', protect, authorize('admin'), async (req, res) => {
-    const { name, client, projectLead, projectManager, teamMembers, clientOrSpvName } = req.body;
+    const { name, client, projectLead, projectManager, clientOrSpvName } = req.body;
     try {
         if (!name) {
             return res.status(400).json({ msg: 'Project name is required' });
@@ -255,7 +267,6 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
             client,
             projectLead,
             projectManager,
-            teamMembers,
             clientOrSpvName
         });
         const project = await newProject.save();
@@ -367,14 +378,16 @@ router.post('/:id/authorize-surveyors', async (req, res) => {
 
         const users = await User.find({ email: { $in: emails } });
         if (users.length === 0) {
-            // This isn't necessarily an error, maybe none of the emails are registered users yet.
-            // Or we could choose to return a specific message.
-            return res.status(200).json({ msg: 'No registered users found for the provided emails.', project });
+            const aggregation = getProjectAggregationPipeline({ _id: mongoose.Types.ObjectId(id) });
+            const currentProjectState = await Project.aggregate(aggregation);
+            return res.status(200).json({ 
+                msg: 'No registered users found for the provided emails.', 
+                project: currentProjectState.length > 0 ? { ...currentProjectState[0], id: currentProjectState[0]._id.toString() } : null
+            });
         }
 
         const userIds = users.map(user => user._id);
 
-        // Add only new user IDs to the authorizedSurveyors array
         const newSurveyorIds = userIds.filter(userId => !project.authorizedSurveyors.some(existingId => existingId.equals(userId)));
 
         if (newSurveyorIds.length > 0) {
@@ -382,8 +395,14 @@ router.post('/:id/authorize-surveyors', async (req, res) => {
             await project.save();
         }
 
-        const updatedProject = await Project.findById(id).populate('authorizedSurveyors');
+        const aggregation = getProjectAggregationPipeline({ _id: mongoose.Types.ObjectId(id) });
+        const updatedProjectArray = await Project.aggregate(aggregation);
+        
+        if (updatedProjectArray.length === 0) {
+            return res.status(404).json({ msg: 'Project not found after update.' });
+        }
 
+        const updatedProject = { ...updatedProjectArray[0], id: updatedProjectArray[0]._id.toString() };
         res.json(updatedProject);
 
     } catch (error) {
@@ -412,12 +431,16 @@ router.post('/:id/authorize-clients', async (req, res) => {
 
         const users = await User.find({ email: { $in: emails } });
         if (users.length === 0) {
-            return res.status(200).json({ msg: 'No registered users found for the provided emails.', project });
+            const aggregation = getProjectAggregationPipeline({ _id: mongoose.Types.ObjectId(id) });
+            const currentProjectState = await Project.aggregate(aggregation);
+            return res.status(200).json({ 
+                msg: 'No registered users found for the provided emails.', 
+                project: currentProjectState.length > 0 ? { ...currentProjectState[0], id: currentProjectState[0]._id.toString() } : null
+            });
         }
 
         const userIds = users.map(user => user._id);
 
-        // Add only new user IDs to the authorizedClients array
         const newClientIds = userIds.filter(userId => !project.authorizedClients.some(existingId => existingId.equals(userId)));
 
         if (newClientIds.length > 0) {
@@ -425,8 +448,14 @@ router.post('/:id/authorize-clients', async (req, res) => {
             await project.save();
         }
 
-        const updatedProject = await Project.findById(id).populate('authorizedClients');
+        const aggregation = getProjectAggregationPipeline({ _id: mongoose.Types.ObjectId(id) });
+        const updatedProjectArray = await Project.aggregate(aggregation);
+        
+        if (updatedProjectArray.length === 0) {
+            return res.status(404).json({ msg: 'Project not found after update.' });
+        }
 
+        const updatedProject = { ...updatedProjectArray[0], id: updatedProjectArray[0]._id.toString() };
         res.json(updatedProject);
 
     } catch (error) {

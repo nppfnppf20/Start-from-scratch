@@ -232,7 +232,7 @@ import { get } from 'svelte/store';
 // --- Store Manipulation Functions ---
 
 // Function to add a new project via API
-export async function addProject(projectData: { name: string; client?: string; projectLead?: string[]; projectManager?: string[]; teamMembers?: string[] }) {
+export async function addProject(projectData: { name: string; client?: string; projectLead?: string[]; projectManager?: string[] }) {
   if (!browser) return null; // Don't run on server
 
   try {
@@ -1355,13 +1355,25 @@ export async function authorizeSurveyors(projectId: string, emails: string[]): P
 
         if (!response.ok) {
             const errorData = await response.json();
+            // Check for a specific error message format from the backend
+            if (errorData && errorData.msg === 'Invalid Project ID format') {
+                 throw new Error('Invalid Project ID format. Please select a valid project.');
+            }
             throw new Error(errorData.msg || 'Failed to authorize surveyors');
         }
 
-        const updatedProject = await response.json();
+        const result = await response.json();
+        
+        // The backend now returns { msg, project } on some 200 responses,
+        // or just the updated project object on others. We need to handle both.
+        const updatedProject = result.project ? mapMongoId<ProjectBankItem>(result.project) : mapMongoId<ProjectBankItem>(result);
+
+        if (result.msg && result.msg !== 'Surveyors authorized successfully.') { // Adjust success message if needed
+            alert(result.msg); // Show non-critical messages from the backend
+        }
         
         // Update the stores
-        projects.update(ps => ps.map(p => p.id === projectId ? updatedProject : p));
+        projectBank.update(ps => ps.map(p => p.id === projectId ? updatedProject : p));
         selectedProject.update(p => p && p.id === projectId ? updatedProject : p);
 
         return updatedProject;
