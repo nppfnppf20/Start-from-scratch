@@ -24,7 +24,23 @@ router.get('/', protect, async (req, res) => {
         const projects = await Project.aggregate([
             // Stage 1: Match projects based on user role
             { $match: query },
-            // Stage 2: Lookup quotes for each project
+            // Stage 2: Lookup client organisation
+            {
+                $lookup: {
+                    from: 'clientorganisations', // The collection name for ClientOrganisation
+                    localField: 'client',
+                    foreignField: '_id',
+                    as: 'clientDetails'
+                }
+            },
+            // Unwind the clientDetails array to get a single object
+            {
+                $unwind: {
+                    path: '$clientDetails',
+                    preserveNullAndEmptyArrays: true // Keep projects even if client is not set
+                }
+            },
+            // Stage 3: Lookup quotes for each project
             {
                 $lookup: {
                     from: 'quotes',
@@ -98,7 +114,7 @@ router.get('/', protect, async (req, res) => {
             {
                 $project: {
                     name: 1,
-                    client: 1,
+                    client: '$clientDetails.organisationName', // Use the name from the populated client
                     teamMembers: 1,
                     quotesReceived: 1,
                     surveyorsInstructed: 1,

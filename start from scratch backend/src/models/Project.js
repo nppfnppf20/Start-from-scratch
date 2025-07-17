@@ -6,9 +6,9 @@ const ProjectSchema = new mongoose.Schema({
         required: [true, 'Project name is required'],
         trim: true
     },
-    client: { // Umbrella term from modal
-        type: String,
-        trim: true
+    client: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ClientOrganisation'
     },
     teamMembers: { // Initials from modal
         type: [String],
