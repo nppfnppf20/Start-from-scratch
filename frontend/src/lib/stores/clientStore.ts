@@ -109,3 +109,20 @@ export const updateClientOrganisation = async (clientData: ClientOrganisation) =
     return null;
   }
 }; 
+
+export const deleteClientOrganisation = async (clientId: string) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/client-organisations/${clientId}`, {
+      method: 'DELETE',
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete client organisation.');
+    }
+    clientOrganisations.update(clients => clients.filter(c => c.id !== clientId));
+    return true;
+  } catch (error) {
+    console.error('Error deleting client organisation:', error);
+    return false;
+  }
+}; 

@@ -108,4 +108,31 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// @route   DELETE /api/client-organisations/:id
+// @desc    Delete a client organisation and its associated users
+// @access  Admin only
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+    try {
+        const organisation = await ClientOrganisation.findById(req.params.id);
+        if (!organisation) {
+            return res.status(404).json({ msg: 'Client organisation not found' });
+        }
+
+        // Delete associated user accounts
+        if (organisation.contacts && organisation.contacts.length > 0) {
+            const emails = organisation.contacts.map(c => c.email).filter(Boolean);
+            if (emails.length > 0) {
+                await User.deleteMany({ email: { $in: emails } });
+            }
+        }
+
+        await organisation.deleteOne();
+
+        res.json({ msg: 'Client organisation and associated users removed' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router; 

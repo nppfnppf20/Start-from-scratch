@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { clientOrganisations, loadClientOrganisations, type ClientOrganisation } from '$lib/stores/clientStore';
+  import { clientOrganisations, loadClientOrganisations, type ClientOrganisation, deleteClientOrganisation } from '$lib/stores/clientStore';
   import EditClientOrganisationModal from './EditClientOrganisationModal.svelte';
 
   let displayClients: ClientOrganisation[] = [];
@@ -17,6 +17,12 @@
   function handleEditClick(client: ClientOrganisation) {
     selectedClient = client;
     showEditModal = true;
+  }
+
+  async function handleDeleteClick(clientId: string) {
+    if (confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+      await deleteClientOrganisation(clientId);
+    }
   }
 
   $: {
@@ -91,8 +97,9 @@
                                         <span>-</span>
                                     {/if}
                                 </td>
-                                <td>
+                                <td class="actions-cell">
                                     <button class="action-btn" on:click={() => handleEditClick(client)}>Edit</button>
+                                    <button class="action-btn delete-btn" on:click={() => handleDeleteClick(client.id)}>Delete</button>
                                 </td>
                             </tr>
                         {/each}
@@ -243,6 +250,11 @@
     text-decoration: underline;
 }
 
+.actions-cell {
+    width: 15%;
+    text-align: right;
+}
+
 /* Action button styling */
 .action-btn {
     padding: 6px 12px;
@@ -253,10 +265,21 @@
     color: #007bff;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+    margin-right: 5px;
 }
 
 .action-btn:hover {
     background-color: #007bff;
+    color: white;
+}
+
+.delete-btn {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.delete-btn:hover {
+    background-color: #dc3545;
     color: white;
 }
 </style> 
