@@ -1360,11 +1360,14 @@ export async function authorizeSurveyors(projectId: string, emails: string[]): P
 
         const updatedProject = await response.json();
         
+        // Map _id to id for frontend consistency
+        const mappedProject = mapMongoId<Project>(updatedProject);
+        
         // Update the stores
-        projects.update(ps => ps.map(p => p.id === projectId ? updatedProject : p));
-        selectedProject.update(p => p && p.id === projectId ? updatedProject : p);
+        projects.update(ps => ps.map(p => p.id === projectId ? mappedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? mappedProject : p);
 
-        return updatedProject;
+        return mappedProject;
 
     } catch (error) {
         console.error('Error in authorizeSurveyors:', error);
