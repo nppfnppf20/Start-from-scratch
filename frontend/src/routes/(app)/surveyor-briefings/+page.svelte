@@ -16,6 +16,7 @@
     'Glint & Glare',
     'Heritage',
     'Landscape and Visual',
+    'Noise',
     'PR/Communications and Consultation',
     'Topographical',
     'Transport',
@@ -23,10 +24,16 @@
   ];
 
   const surveyTypeMapping: { [key: string]: string[] } = {
+    'Agricultural Land and Soil': [
+      'Agricultural Land Classification Survey'
+    ],
     'Arboriculture': [
       'Arboricultural Impact Assessment',
       'Tree Protection Plan',
       'Tree Survey'
+    ],
+    'Contaminated Land': [
+      'Contaminated Land Survey'
     ],
     'Ecology': [
       'Badger Survey',
@@ -38,6 +45,36 @@
       'Protected Species Surveys',
       'Skylark Survey',
       'Wintering Birds Survey'
+    ],
+    'Fire Safety': [
+      'Fire Safety Management Plan'
+    ],
+    'Flood and Drainage': [
+      'Flood Risk Assessment',
+      'Surface Water Drainage Strategy'
+    ],
+    'Geophys': [
+      'Geophysical Survey'
+    ],
+    'Glint & Glare': [
+      'Glint and Glare Assessment'
+    ],
+    'Heritage': [
+      'Heritage Impact Assessment'
+    ],
+    'Landscape and Visual': [
+      'Landscape and Visual Impact Assessment',
+      'Photomontages'
+    ],
+    'Noise': [
+      'Noise Impact Assessment'
+    ],
+    'Topographical': [
+      'Topographical Survey'
+    ],
+    'Transport': [
+      'Transport Statement',
+      'Construction Traffic Management Plan'
     ]
   };
 
@@ -133,7 +170,19 @@
       .replace(/<[^>]+>/g, '') // strip remaining html tags
       .trim();
 
-    const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
+    // Split emails and check if multiple recipients
+    const emails = emailTo.split(',').map(e => e.trim()).filter(e => e);
+    
+    let mailtoLink;
+    if (emails.length === 1) {
+      // Single email - use TO field (current behavior)
+      mailtoLink = `mailto:${emails[0]}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
+    } else {
+      // Multiple emails - use BCC field, leave TO empty
+      const bccEmails = emails.join(',');
+      mailtoLink = `mailto:?bcc=${encodeURIComponent(bccEmails)}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
+    }
+    
     window.location.href = mailtoLink;
   }
 
