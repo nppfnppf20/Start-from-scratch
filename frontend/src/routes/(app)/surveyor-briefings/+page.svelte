@@ -2,7 +2,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
   import { selectedProject, authorizeSurveyors } from '$lib/stores/projectStore';
-  import { emailTemplates } from '$lib/data/emailTemplates';
+  import { emailTemplates, disciplineSpecificSections } from '$lib/data/emailTemplates';
   import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
 
   const disciplines = [
@@ -61,33 +61,47 @@
     // Perform mail merge for project name
     if ($selectedProject) {
       const projectName = $selectedProject.name;
-      subject = subject.replace(/\[Project\s*Name\]/gi, projectName);
-      body = body.replace(/\[Project\s*Name\]/gi, projectName);
+      subject = subject.replace(/\[Project\s*Name\]/gi, projectName || '<mark>[Insert]</mark>');
+      body = body.replace(/\[Project\s*Name\]/gi, projectName || '<mark>[Insert]</mark>');
 
       // Populate other placeholders
-      body = body.replace(/\[Client \(or SPV\) Name\]/gi, $selectedProject.clientOrSpvName || '');
+      body = body.replace(/\[Client \(or SPV\) Name\]/gi, $selectedProject.clientOrSpvName || '<mark>[Insert]</mark>');
       
       // Format project type - convert "solarBESS" to "Solar & BESS"
       let projectType = $selectedProject.projectType || '';
       if (projectType.toLowerCase() === 'solarbess') {
         projectType = 'Solar & BESS';
       }
-      body = body.replace(/\[Project Type\]/gi, projectType);
+      body = body.replace(/\[Project Type\]/gi, projectType || '<mark>[Insert]</mark>');
       
-      body = body.replace(/\[Area \(ha\)\]/gi, $selectedProject.area?.toString() || '');
-      body = body.replace(/\[Address\]/gi, $selectedProject.address || '');
-      body = body.replace(/\[Site Designations\]/gi, $selectedProject.siteDesignations || '');
-      body = body.replace(/\[Invoicing details\]/gi, $selectedProject.invoicingDetails || '');
+      body = body.replace(/\[Area \(ha\)\]/gi, $selectedProject.area?.toString() || '<mark>[Insert]</mark>');
+      body = body.replace(/\[Address\]/gi, $selectedProject.address || '<mark>[Insert]</mark>');
+      body = body.replace(/\[Site Designations\]/gi, $selectedProject.siteDesignations || '<mark>[Insert]</mark>');
+      body = body.replace(/\[Invoicing details\]/gi, $selectedProject.invoicingDetails || '<mark>[Insert]</mark>');
+    } else {
+      // No project selected - use placeholders for all project-related fields
+      subject = subject.replace(/\[Project\s*Name\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Project\s*Name\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Client \(or SPV\) Name\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Project Type\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Area \(ha\)\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Address\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Site Designations\]/gi, '<mark>[Insert]</mark>');
+      body = body.replace(/\[Invoicing details\]/gi, '<mark>[Insert]</mark>');
     }
     
     const surveyTypesList = selectedSurveyTypes.length > 0
       ? '<ul>' + selectedSurveyTypes.map(st => `<li>${st}</li>`).join('') + '</ul>'
-      : '';
+      : '<mark>[Insert or select surveys]</mark>';
     body = body.replace(/\[Survey Types\]/gi, surveyTypesList);
     
-    // For now, discipline specific content is just a placeholder
-    // Later we'll add logic to insert discipline-specific sections here
-    body = body.replace(/\[Discipline Specific Content\]/gi, '');
+    // Add discipline-specific content based on selected disciplines
+    const disciplineContent = selectedDisciplines
+      .filter(discipline => disciplineSpecificSections[discipline])
+      .map(discipline => disciplineSpecificSections[discipline])
+      .join('<br/>');
+    
+    body = body.replace(/\[Discipline Specific Content\]/gi, disciplineContent);
     
     emailSubject = subject;
     emailBody = body;
