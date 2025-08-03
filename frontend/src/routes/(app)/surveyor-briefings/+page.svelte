@@ -53,39 +53,44 @@
     : Object.values(surveyTypeMapping).flat();
   
   $: {
-    const disciplineWithTemplate = selectedDisciplines.find(d => emailTemplates[d]);
+    // Always use the base template
+    const template = emailTemplates['base'];
+    let subject = template.subject;
+    let body = template.body;
 
-    if (disciplineWithTemplate) {
-      const template = emailTemplates[disciplineWithTemplate];
-      let subject = template.subject;
-      let body = template.body;
+    // Perform mail merge for project name
+    if ($selectedProject) {
+      const projectName = $selectedProject.name;
+      subject = subject.replace(/\[Project\s*Name\]/gi, projectName);
+      body = body.replace(/\[Project\s*Name\]/gi, projectName);
 
-      // Perform mail merge for project name
-      if ($selectedProject) {
-        const projectName = $selectedProject.name;
-        subject = subject.replace(/\[Project\s*Name\]/gi, projectName);
-        body = body.replace(/\[Project\s*Name\]/gi, projectName);
-
-        // Populate other placeholders
-        body = body.replace(/\[Client \(or SPV\) Name\]/gi, $selectedProject.clientOrSpvName || '');
-        body = body.replace(/\[Project Type\]/gi, $selectedProject.projectType || '');
-        body = body.replace(/\[Area \(ha\)\]/gi, $selectedProject.area?.toString() || '');
-        body = body.replace(/\[Address\]/gi, $selectedProject.address || '');
-        body = body.replace(/\[Site Designations\]/gi, $selectedProject.siteDesignations || '');
-        body = body.replace(/\[Invoicing details\]/gi, $selectedProject.invoicingDetails || '');
+      // Populate other placeholders
+      body = body.replace(/\[Client \(or SPV\) Name\]/gi, $selectedProject.clientOrSpvName || '');
+      
+      // Format project type - convert "solarBESS" to "Solar & BESS"
+      let projectType = $selectedProject.projectType || '';
+      if (projectType.toLowerCase() === 'solarbess') {
+        projectType = 'Solar & BESS';
       }
+      body = body.replace(/\[Project Type\]/gi, projectType);
       
-      const surveyTypesList = selectedSurveyTypes.length > 0
-        ? '<ul>' + selectedSurveyTypes.map(st => `<li>${st}</li>`).join('') + '</ul>'
-        : '';
-      body = body.replace(/\[Survey Types\]/gi, surveyTypesList);
-      
-      emailSubject = subject;
-      emailBody = body;
-    } else {
-      emailSubject = '';
-      emailBody = '';
+      body = body.replace(/\[Area \(ha\)\]/gi, $selectedProject.area?.toString() || '');
+      body = body.replace(/\[Address\]/gi, $selectedProject.address || '');
+      body = body.replace(/\[Site Designations\]/gi, $selectedProject.siteDesignations || '');
+      body = body.replace(/\[Invoicing details\]/gi, $selectedProject.invoicingDetails || '');
     }
+    
+    const surveyTypesList = selectedSurveyTypes.length > 0
+      ? '<ul>' + selectedSurveyTypes.map(st => `<li>${st}</li>`).join('') + '</ul>'
+      : '';
+    body = body.replace(/\[Survey Types\]/gi, surveyTypesList);
+    
+    // For now, discipline specific content is just a placeholder
+    // Later we'll add logic to insert discipline-specific sections here
+    body = body.replace(/\[Discipline Specific Content\]/gi, '');
+    
+    emailSubject = subject;
+    emailBody = body;
   }
 
   function handleSelectSurveyor(event: CustomEvent<{ email: string }>) {
