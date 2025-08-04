@@ -1470,3 +1470,37 @@ export async function authorizeSurveyors(projectId: string, emails: string[]): P
         return null;
     }
 }
+
+export async function revokeSurveyorAuthorization(projectId: string, email: string): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/surveyors/${encodeURIComponent(email)}`, {
+            method: 'DELETE',
+            headers: {
+                ...getAuthTokenHeader()
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.msg || 'Failed to revoke surveyor authorization');
+        }
+
+        const updatedProject = await response.json();
+        
+        // Map _id to id for frontend consistency
+        const mappedProject = mapMongoId<Project>(updatedProject);
+        
+        // Update the stores
+        projects.update(ps => ps.map(p => p.id === projectId ? mappedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? mappedProject : p);
+
+        return mappedProject;
+
+    } catch (error) {
+        console.error('Error in revokeSurveyorAuthorization:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}

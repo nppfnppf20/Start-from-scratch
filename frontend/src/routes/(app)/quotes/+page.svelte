@@ -5,6 +5,7 @@
     currentProjectQuotes, 
     updateQuoteInstructionStatus, 
     deleteQuote,
+    revokeSurveyorAuthorization,
     type InstructionStatus, 
     type Quote, 
     type LineItem
@@ -15,6 +16,7 @@
   import PartiallyInstructedModal from '$lib/components/PartiallyInstructedModal.svelte';
   import DocumentUploadModal from '$lib/components/DocumentUploadModal.svelte';
   import InstructionEmailModal from '$lib/components/InstructionEmailModal.svelte';
+  import NotInstructedModal from '$lib/components/NotInstructedModal.svelte';
   
   const instructionStatuses: InstructionStatus[] = [
     'pending', 
@@ -40,6 +42,10 @@
   let quoteForInstruction: Quote | null = null;
   let selectedLineItemsForPartial: LineItem[] = [];
   let isPartialInstruction = false;
+  
+  // Not Instructed Modal state
+  let showNotInstructedModal = false;
+  let quoteForNotInstructed: Quote | null = null;
 
   $: processedQuotes = (() => {
     const sorted = [...$currentProjectQuotes].sort((a, b) => {
@@ -125,6 +131,10 @@
           selectedLineItemsForPartial = [];
           quoteForInstruction = currentQuote;
           showInstructionEmailModal = true;
+      } else if (newStatus === 'will not be instructed') {
+          // NEW: Open not instructed confirmation modal
+          quoteForNotInstructed = currentQuote;
+          showNotInstructedModal = true;
       } else {
           try {
               console.log(`Updating status for quote ${quoteId} to ${newStatus}`);
@@ -215,6 +225,50 @@
     quoteForInstruction = null;
     selectedLineItemsForPartial = [];
     isPartialInstruction = false;
+  }
+
+  async function handleNotInstructedConfirm() {
+    if (quoteForNotInstructed && $selectedProject) {
+      try {
+        console.log(`Confirming not instructed for quote ${quoteForNotInstructed.id}`);
+        
+        // First revoke surveyor authorization if email exists
+        if (quoteForNotInstructed.email) {
+          const authRevoked = await revokeSurveyorAuthorization($selectedProject.id, quoteForNotInstructed.email);
+          if (!authRevoked) {
+            alert('Failed to revoke surveyor authorization.');
+            return;
+          }
+        }
+
+        // Then update quote status
+        const success = await updateQuoteInstructionStatus(quoteForNotInstructed.id, 'will not be instructed', undefined);
+        if (success) {
+          closeNotInstructedModal();
+        } else {
+          alert('Failed to update quote status to will not be instructed.');
+        }
+      } catch (error) {
+        console.error(`Error confirming not instructed for quote ${quoteForNotInstructed.id}:`, error);
+        alert('An error occurred while updating the status.');
+      }
+    }
+  }
+
+  function handleNotInstructedCancel() {
+    if (quoteForNotInstructed) {
+      // Revert dropdown to original status
+      const selectEl = document.getElementById(`status-select-${quoteForNotInstructed.id}`) as HTMLSelectElement | null;
+      if (selectEl) {
+        selectEl.value = quoteForNotInstructed.instructionStatus;
+      }
+    }
+    closeNotInstructedModal();
+  }
+
+  function closeNotInstructedModal() {
+    showNotInstructedModal = false;
+    quoteForNotInstructed = null;
   }
   
   async function handleDeleteQuote(quoteId: string, organisationName: string) { 
@@ -360,6 +414,15 @@
       selectedLineItems={isPartialInstruction ? selectedLineItemsForPartial : quoteForInstruction.lineItems}
       on:confirm={handleInstructionConfirmed}
       on:cancel={handleInstructionCancelled}
+    />
+  {/if}
+
+  {#if showNotInstructedModal && quoteForNotInstructed}
+    <NotInstructedModal
+      quote={quoteForNotInstructed}
+      bind:isOpen={showNotInstructedModal}
+      on:confirm={handleNotInstructedConfirm}
+      on:cancel={handleNotInstructedCancel}
     />
   {/if}
 </div>

@@ -382,6 +382,47 @@ router.post('/:id/authorize-surveyors', async (req, res) => {
     }
 });
 
+// @route   DELETE /api/projects/:id/surveyors/:email
+// @desc    Revoke surveyor authorization from a project by email
+// @access  Private
+router.delete('/:id/surveyors/:email', async (req, res) => {
+    const { id, email } = req.params;
+
+    if (!email) {
+        return res.status(400).json({ msg: 'Email parameter is required.' });
+    }
+
+    try {
+        const project = await Project.findById(id);
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+
+        const user = await User.findOne({ email: decodeURIComponent(email) });
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found with the provided email.' });
+        }
+
+        // Check if user is currently authorized
+        const isAuthorized = project.authorizedSurveyors.some(existingId => existingId.equals(user._id));
+        if (!isAuthorized) {
+            return res.status(400).json({ msg: 'User is not currently authorized for this project.' });
+        }
+
+        // Remove user from authorizedSurveyors array
+        project.authorizedSurveyors = project.authorizedSurveyors.filter(existingId => !existingId.equals(user._id));
+        await project.save();
+
+        const updatedProject = await Project.findById(id).populate('authorizedSurveyors');
+
+        res.json(updatedProject);
+
+    } catch (error) {
+        console.error('Error revoking surveyor authorization:', error);
+        res.status(500).send('Server Error');
+    }
+});
+
 
 // @route   POST /api/projects/:id/authorize-clients
 // @desc    Authorize clients to a project by their email addresses
