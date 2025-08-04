@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import { 
         loadSurveyorOrganisations, 
         surveyorOrganisations, 
@@ -126,6 +126,59 @@
 
         return result;
     })();
+
+    // Variables for scroll synchronization
+    let topScrollContainer: HTMLElement;
+    let tableContainer: HTMLElement;
+    let isScrolling = false;
+
+    // Function to synchronize scroll positions
+    function syncScroll(source: HTMLElement, target: HTMLElement) {
+        if (!isScrolling) {
+            isScrolling = true;
+            target.scrollLeft = source.scrollLeft;
+            // Use requestAnimationFrame to reset the flag after the scroll is complete
+            requestAnimationFrame(() => {
+                isScrolling = false;
+            });
+        }
+    }
+
+    // Event handler functions
+    function onTopScroll() {
+        if (tableContainer) {
+            syncScroll(topScrollContainer, tableContainer);
+        }
+    }
+
+    function onTableScroll() {
+        if (topScrollContainer) {
+            syncScroll(tableContainer, topScrollContainer);
+        }
+    }
+
+    // Set up scroll event listeners when component mounts
+    onMount(() => {
+        // Set up event listeners after a short delay to ensure elements are rendered
+        setTimeout(() => {
+            if (topScrollContainer) {
+                topScrollContainer.addEventListener('scroll', onTopScroll);
+            }
+            if (tableContainer) {
+                tableContainer.addEventListener('scroll', onTableScroll);
+            }
+        }, 100);
+    });
+
+    // Clean up event listeners when component unmounts
+    onDestroy(() => {
+        if (topScrollContainer) {
+            topScrollContainer.removeEventListener('scroll', onTopScroll);
+        }
+        if (tableContainer) {
+            tableContainer.removeEventListener('scroll', onTableScroll);
+        }
+    });
 </script>
 
 <div class="surveyor-bank-container">
@@ -157,7 +210,11 @@
                 <p>No surveyor organisations in your bank yet.</p>
             </div>
         {:else}
-            <div class="table-container">
+            <!-- Top scrollbar -->
+            <div class="top-scrollbar-container" bind:this={topScrollContainer}>
+                <div class="top-scrollbar-content"></div>
+            </div>
+            <div class="table-container" bind:this={tableContainer}>
                 <table class="surveyors-table">
                     <thead>
                         <tr>
@@ -373,10 +430,26 @@
         color: #a0aec0;
     }
 
+    .top-scrollbar-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        border: 1px solid #e2e8f0;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        height: 20px;
+        background: #f7fafc;
+    }
+
+    .top-scrollbar-content {
+        height: 1px;
+        min-width: 800px; /* Same as table min-width */
+    }
+
     .table-container {
         overflow: auto;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
         background: white;
     }
 
