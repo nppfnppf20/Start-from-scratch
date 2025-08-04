@@ -1,10 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { Quote } from '$lib/stores/projectStore';
+  import type { Quote, LineItem } from '$lib/stores/projectStore';
   import { selectedProject } from '$lib/stores/projectStore';
 
   export let quote: Quote;
   export let isOpen: boolean = false;
+  export let isPartialInstruction: boolean = false;
+  export let selectedLineItems: LineItem[] = [];
 
   const dispatch = createEventDispatcher<{
     confirm: void,
@@ -22,16 +24,22 @@
   // Initialize email content when modal opens
   $: if (isOpen && quote && !emailInitialized) {
     emailTo = quote.email || '';
-    emailSubject = `Survey Instruction - ${quote.discipline} - ${$selectedProject?.name || 'Project'}`;
+    const instructionType = isPartialInstruction ? 'Partial Survey Instruction' : 'Survey Instruction';
+    emailSubject = `${instructionType} - ${quote.discipline} - ${$selectedProject?.name || 'Project'}`;
     
-    // Format line items as HTML list
-    const formattedLineItems = '<ul>' + quote.lineItems
+    // Use selectedLineItems instead of quote.lineItems for partial instructions
+    const itemsToUse = isPartialInstruction ? selectedLineItems : quote.lineItems;
+    const formattedLineItems = '<ul>' + itemsToUse
       .map(item => `<li>${item.description} - £${item.cost?.toFixed(2) || '0.00'}</li>`)
       .join('') + '</ul>';
 
+    const instructionText = isPartialInstruction 
+      ? 'partial instruction for the following selected works'
+      : 'formal instruction for the following works';
+
     emailBody = `${quote.contactName} <mark>(please edit as needed)</mark><br/><br/>
 
-Please take this email as formal instruction for the following works for the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
+Please take this email as ${instructionText} for the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
 
 The instruction is for the following works:<br/><br/>
 
@@ -107,8 +115,8 @@ Many thanks.`;
       
       <div class="modal-body">
         <div class="surveyor-summary">
-          <h3>Instruction for: {quote.organisation} ({quote.discipline})</h3>
-          <p><strong>Contact:</strong> {quote.contactName} • <strong>Line Items:</strong> {quote.lineItems.length}</p>
+          <h3>{isPartialInstruction ? 'Partial Instruction' : 'Instruction'} for: {quote.organisation} ({quote.discipline})</h3>
+          <p><strong>Contact:</strong> {quote.contactName} • <strong>Line Items:</strong> {isPartialInstruction ? selectedLineItems.length : quote.lineItems.length}{isPartialInstruction ? ` of ${quote.lineItems.length} selected` : ''}</p>
         </div>
 
         <div class="email-draft">

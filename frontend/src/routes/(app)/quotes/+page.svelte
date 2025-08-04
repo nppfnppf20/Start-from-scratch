@@ -38,6 +38,8 @@
   // Instruction Email Modal state
   let showInstructionEmailModal = false;
   let quoteForInstruction: Quote | null = null;
+  let selectedLineItemsForPartial: LineItem[] = [];
+  let isPartialInstruction = false;
 
   $: processedQuotes = (() => {
     const sorted = [...$currentProjectQuotes].sort((a, b) => {
@@ -119,6 +121,8 @@
           showPartiallyInstructedModal = true;
       } else if (newStatus === 'instructed') {
           // NEW: Open instruction email modal instead of immediate update
+          isPartialInstruction = false;
+          selectedLineItemsForPartial = [];
           quoteForInstruction = currentQuote;
           showInstructionEmailModal = true;
       } else {
@@ -142,16 +146,12 @@
   async function handlePartialInstructionConfirm(event: CustomEvent<{ selectedItems: LineItem[] }>) { 
       const selectedItems = event.detail.selectedItems;
       if (quoteForPartialInstruction && currentlySelectedStatus === 'partially instructed') {
-          const partialTotal = selectedItems.reduce((sum, item) => sum + (item.cost || 0), 0);
-          try {
-              const success = await updateQuoteInstructionStatus(quoteForPartialInstruction.id, currentlySelectedStatus, partialTotal); 
-              if (!success) { alert('Failed to update quote status to partially instructed.'); }
-          } catch(error) {
-               console.error(`Error setting partial status for quote ${quoteForPartialInstruction.id}:`, error);
-               alert('An error occurred while setting the partial status.');
-          } finally {
-              closePartiallyInstructedModal(); 
-          }
+          // Store selected line items and open instruction email modal
+          selectedLineItemsForPartial = selectedItems;
+          isPartialInstruction = true;
+          quoteForInstruction = quoteForPartialInstruction;
+          closePartiallyInstructedModal();
+          showInstructionEmailModal = true;
       } else {
           closePartiallyInstructedModal(); 
       }
@@ -169,13 +169,27 @@
   async function handleInstructionConfirmed() {
     if (quoteForInstruction) {
       try {
-        console.log(`Confirming instruction for quote ${quoteForInstruction.id}`);
-        const success = await updateQuoteInstructionStatus(quoteForInstruction.id, 'instructed', undefined);
-        if (success) {
-          closeInstructionEmailModal();
+        if (isPartialInstruction) {
+          // Handle partially instructed case
+          const partialTotal = selectedLineItemsForPartial.reduce((sum, item) => sum + (item.cost || 0), 0);
+          console.log(`Confirming partial instruction for quote ${quoteForInstruction.id} with ${selectedLineItemsForPartial.length} items`);
+          const success = await updateQuoteInstructionStatus(quoteForInstruction.id, 'partially instructed', partialTotal);
+          if (success) {
+            closeInstructionEmailModal();
+          } else {
+            alert('Failed to update quote status to partially instructed.');
+            // Don't close modal, let user try again or cancel
+          }
         } else {
-          alert('Failed to update quote status to instructed.');
-          // Don't close modal, let user try again or cancel
+          // Handle regular instructed case
+          console.log(`Confirming instruction for quote ${quoteForInstruction.id}`);
+          const success = await updateQuoteInstructionStatus(quoteForInstruction.id, 'instructed', undefined);
+          if (success) {
+            closeInstructionEmailModal();
+          } else {
+            alert('Failed to update quote status to instructed.');
+            // Don't close modal, let user try again or cancel
+          }
         }
       } catch (error) {
         console.error(`Error confirming instruction for quote ${quoteForInstruction.id}:`, error);
@@ -199,6 +213,8 @@
   function closeInstructionEmailModal() {
     showInstructionEmailModal = false;
     quoteForInstruction = null;
+    selectedLineItemsForPartial = [];
+    isPartialInstruction = false;
   }
   
   async function handleDeleteQuote(quoteId: string, organisationName: string) { 
@@ -340,6 +356,8 @@
     <InstructionEmailModal
       quote={quoteForInstruction}
       bind:isOpen={showInstructionEmailModal}
+      isPartialInstruction={isPartialInstruction}
+      selectedLineItems={isPartialInstruction ? selectedLineItemsForPartial : quoteForInstruction.lineItems}
       on:confirm={handleInstructionConfirmed}
       on:cancel={handleInstructionCancelled}
     />
@@ -558,6 +576,7 @@
     cursor: pointer;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
     min-width: 120px;
+    text-align: left;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -580,15 +599,16 @@
     font-weight: 500;
   }
   .status-partially-instructed {
-    background-color: var(--status-in-progress-bg);
-    color: var(--status-in-progress-color);
-    border-color: var(--status-in-progress-bg);
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+    border-color: var(--status-completed-bg);
     font-weight: 500;
   }
   .status-pending {
     background-color: #e2e8f0;
     color: #4a5568;
     border-color: #e2e8f0;
+    font-weight: 500;
   }
   .status-will-not-be-instructed {
     background-color: var(--status-not-started-bg);
