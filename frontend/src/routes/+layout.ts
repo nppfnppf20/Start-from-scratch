@@ -8,7 +8,7 @@ import { loadProjects } from '$lib/stores/projectStore';
 
 // This load function runs on both the server and the client.
 // It's the main entry point for protecting routes and loading initial data.
-export const load: LayoutLoad = async ({ url }) => {
+export const load: LayoutLoad = async ({ url, fetch }) => {
     if (!browser) {
         // On the server, we don't have access to localStorage, so we can't
         // know the auth state yet. We'll let the client-side handle redirects.
@@ -36,7 +36,7 @@ export const load: LayoutLoad = async ({ url }) => {
         // making sure this doesn't run multiple times unnecessarily.
         // NOTE: This will still fail until we update projectStore.ts
         try {
-            await loadProjects();
+            await loadProjects(fetch);
         } catch (error) {
             console.error("Failed to load projects in layout:", error);
             // We might want to handle this more gracefully, e.g., by logging out

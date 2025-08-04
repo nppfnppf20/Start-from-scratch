@@ -258,7 +258,7 @@
         </div>
         <div class="email-actions">
           <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
-          <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Fee Quote Request Sent</button>
+          <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Request Sent and Grant Permission</button>
         </div>
       </div>
       <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>

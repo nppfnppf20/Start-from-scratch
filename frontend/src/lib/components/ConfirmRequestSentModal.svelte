@@ -34,7 +34,7 @@
         <h2>Confirmed</h2>
       </div>
     {:else}
-      <h2>Confirm Fee Quote Request Sent</h2>
+      <h2>Confirm Request Sent and Grant Permission</h2>
       <p>Please confirm that you have sent the fee quote request email.</p>
       <div class="modal-actions">
         <button class="confirm" on:click={handleConfirm}>Confirm</button>

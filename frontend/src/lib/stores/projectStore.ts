@@ -158,13 +158,13 @@ export async function loadProjectBank() {
 }
 
 // Function to load projects from the API
-export async function loadProjects() {
+export async function loadProjects(fetchFn: typeof fetch = fetch) {
   // Only run fetch in the browser environment
   if (!browser) return;
 
   try {
     console.log('Fetching projects from API...');
-    const response = await fetch(`${API_BASE_URL}/projects`, {
+    const response = await fetchFn(`${API_BASE_URL}/projects`, {
       headers: getAuthTokenHeader()
     });
     if (!response.ok) {
@@ -179,7 +179,7 @@ export async function loadProjects() {
     projects.set(fetchedProjects);
 
     // New call to load all quotes
-    await loadAllQuotes();
+    await loadAllQuotes(fetchFn);
 
     // Optionally, automatically select the first project if the list isn't empty
     // But only if no project is currently selected
@@ -201,12 +201,12 @@ export async function loadProjects() {
 }
 
 // New function to fetch all quotes
-export async function loadAllQuotes() {
+export async function loadAllQuotes(fetchFn: typeof fetch = fetch) {
   if (!browser) return;
   
   try {
     console.log('Loading all quotes...');
-    const response = await fetch(`${API_BASE_URL}/quotes`, {
+    const response = await fetchFn(`${API_BASE_URL}/quotes`, {
       headers: getAuthTokenHeader()
     });
     if (!response.ok) {
