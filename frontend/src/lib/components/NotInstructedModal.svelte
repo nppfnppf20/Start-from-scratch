@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Quote } from '$lib/stores/projectStore';
+  import { selectedProject } from '$lib/stores/projectStore';
 
   export let quote: Quote;
   export let isOpen = false;
@@ -9,6 +10,53 @@
     confirm: void;
     cancel: void;
   }>();
+
+  // Editable email fields
+  let emailTo = '';
+  let emailSubject = '';
+  let emailBody = '';
+
+  // Track if email has been initialized to prevent re-initialization
+  let emailInitialized = false;
+
+  // Initialize email content when modal opens
+  $: if (isOpen && quote && !emailInitialized) {
+    emailTo = quote.email || '';
+    emailSubject = `Project Update - ${quote.discipline} - ${$selectedProject?.name || 'Project'}`;
+    
+    emailBody = `<mark>${quote.contactName}</mark><br/><br/>
+
+I wanted to let you know that unfortunately the client has chosen not to instruct the quoted works on the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
+
+Please do let us know if you have any questions. We look forward to working with you again in the future.<br/><br/>
+
+Many thanks.`;
+    
+    emailInitialized = true;
+  }
+
+  // Reset initialization flag when modal closes
+  $: if (!isOpen) {
+    emailInitialized = false;
+  }
+
+  function handleOpenEmail() {
+    if (!emailTo) {
+      alert('Email address is required.');
+      return;
+    }
+
+    // Convert HTML body to plain text for mailto link
+    const plainTextBody = emailBody
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<mark[^>]*>/gi, '') // remove opening mark tag
+      .replace(/<\/mark>/gi, '') // remove closing mark tag
+      .replace(/<[^>]+>/g, '') // strip remaining html tags
+      .trim();
+
+    const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
+    window.open(mailtoLink, '_self');
+  }
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
@@ -31,7 +79,7 @@
   <div class="modal-overlay" on:click={handleCancel} on:keydown={handleKeydown}>
     <div class="modal-content" on:click|stopPropagation>
       <div class="modal-header">
-        <h2>Confirm Not Instructed</h2>
+        <h2>Not Instructed Email</h2>
         <button type="button" class="close-btn" on:click={handleCancel} aria-label="Close">
           &times;
         </button>
@@ -47,14 +95,50 @@
           <p><strong>Discipline:</strong> {quote.discipline}</p>
         </div>
 
-        <!-- Warning Message -->
-        <div class="warning-message">
-          <p>
-            <strong>Confirm surveyor will not be instructed?</strong>
-          </p>
-          <p>
-            This will remove their permission to access the project and set the instruction status to "will not be instructed".
-          </p>
+        <!-- Email Draft Section -->
+        <div class="email-draft">
+          <h3>Email Draft</h3>
+          
+          <div class="email-field">
+            <label for="email-to">To:</label>
+            <input
+              id="email-to"
+              type="email"
+              bind:value={emailTo}
+              placeholder="Enter email address"
+            />
+          </div>
+
+          <div class="email-field">
+            <label for="email-subject">Subject:</label>
+            <input
+              id="email-subject"
+              type="text"
+              bind:value={emailSubject}
+              placeholder="Enter subject"
+            />
+          </div>
+
+          <div class="email-field">
+            <label for="email-body">Email Body:</label>
+            <div
+              id="email-body"
+              class="email-body-editor"
+              contenteditable="true"
+              bind:innerHTML={emailBody}
+            ></div>
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+          <p><strong>Instructions:</strong></p>
+          <ul>
+            <li>Click "Open Email Client" below to open the email in your default client</li>
+            <li>Edit the email content as needed in your email client (or alternatively edit the email here in the browser before clicking the 'Open Email' button)</li>
+            <li>Items highlighted in <mark>yellow</mark> and within [ ] may need your attention</li>
+            <li>Click "Confirm Not Instructed" button below when done. This will remove the surveyor's project access and set status to 'Will Not Be Instructed'</li>
+          </ul>
         </div>
       </div>
 
@@ -62,8 +146,11 @@
         <button type="button" class="cancel-btn" on:click={handleCancel}>
           Cancel
         </button>
+        <button type="button" class="email-btn" on:click={handleOpenEmail}>
+          Open Email Client
+        </button>
         <button type="button" class="confirm-btn" on:click={handleConfirm}>
-          Confirm
+          Confirm Not Instructed
         </button>
       </div>
     </div>
@@ -150,22 +237,92 @@
     color: #6c757d;
   }
 
-  /* Warning Message */
-  .warning-message {
+  /* Email Draft Section */
+  .email-draft {
+    margin-bottom: 1.5rem;
+  }
+
+  .email-draft h3 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+    color: #495057;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+  }
+
+  .email-field {
+    margin-bottom: 1rem;
+  }
+
+  .email-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #495057;
+  }
+
+  .email-field input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  .email-field input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+
+  .email-body-editor {
+    min-height: 200px;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: white;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    overflow-y: auto;
+  }
+
+  .email-body-editor:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+
+  /* Instructions Section */
+  .instructions {
     padding: 1rem;
     background-color: #fff3cd;
     border-radius: 4px;
     border-left: 4px solid #ffc107;
+    margin-bottom: 1rem;
   }
 
-  .warning-message p {
-    margin: 0.5rem 0;
+  .instructions p {
+    margin: 0 0 0.5rem 0;
+    color: #856404;
+    font-weight: 600;
+  }
+
+  .instructions ul {
+    margin: 0;
+    padding-left: 1.5rem;
     color: #856404;
   }
 
-  .warning-message p:first-child {
-    font-weight: 600;
-    color: #721c24;
+  .instructions li {
+    margin-bottom: 0.25rem;
+  }
+
+  /* Global styles for mark elements in the email editor */
+  :global(.email-body-editor mark) {
+    background-color: yellow;
+    padding: 0.1em;
+    border-radius: 3px;
   }
 
   /* Modal Footer */
@@ -178,7 +335,7 @@
   }
 
   /* Button Styles */
-  .cancel-btn, .confirm-btn {
+  .cancel-btn, .email-btn, .confirm-btn {
     padding: 0.6rem 1.5rem;
     border-radius: 4px;
     cursor: pointer;
@@ -197,6 +354,17 @@
   .cancel-btn:hover {
     background-color: #f8f9fa;
     border-color: #5a6268;
+  }
+
+  .email-btn {
+    border-color: #007bff;
+    background-color: #007bff;
+    color: white;
+  }
+
+  .email-btn:hover {
+    background-color: #0056b3;
+    border-color: #004085;
   }
 
   .confirm-btn {
