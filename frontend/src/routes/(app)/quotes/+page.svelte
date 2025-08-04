@@ -14,6 +14,7 @@
   import LineItemsModal from '$lib/components/LineItemsModal.svelte';
   import PartiallyInstructedModal from '$lib/components/PartiallyInstructedModal.svelte';
   import DocumentUploadModal from '$lib/components/DocumentUploadModal.svelte';
+  import InstructionEmailModal from '$lib/components/InstructionEmailModal.svelte';
   
   const instructionStatuses: InstructionStatus[] = [
     'pending', 
@@ -33,6 +34,10 @@
   let showDocumentUploadModal = false;
   let quoteForDocumentUpload: Quote | null = null;
   let documentUploadType: 'quote' | 'instruction' | null = null;
+  
+  // Instruction Email Modal state
+  let showInstructionEmailModal = false;
+  let quoteForInstruction: Quote | null = null;
 
   $: processedQuotes = (() => {
     const sorted = [...$currentProjectQuotes].sort((a, b) => {
@@ -112,6 +117,10 @@
           quoteForPartialInstruction = currentQuote;
           currentlySelectedStatus = newStatus; 
           showPartiallyInstructedModal = true;
+      } else if (newStatus === 'instructed') {
+          // NEW: Open instruction email modal instead of immediate update
+          quoteForInstruction = currentQuote;
+          showInstructionEmailModal = true;
       } else {
           try {
               console.log(`Updating status for quote ${quoteId} to ${newStatus}`);
@@ -154,6 +163,42 @@
            selectElement.value = quoteForPartialInstruction.instructionStatus; 
        }
       closePartiallyInstructedModal();
+  }
+
+  // Instruction Email Modal handlers
+  async function handleInstructionConfirmed() {
+    if (quoteForInstruction) {
+      try {
+        console.log(`Confirming instruction for quote ${quoteForInstruction.id}`);
+        const success = await updateQuoteInstructionStatus(quoteForInstruction.id, 'instructed', undefined);
+        if (success) {
+          closeInstructionEmailModal();
+        } else {
+          alert('Failed to update quote status to instructed.');
+          // Don't close modal, let user try again or cancel
+        }
+      } catch (error) {
+        console.error(`Error confirming instruction for quote ${quoteForInstruction.id}:`, error);
+        alert('An error occurred while updating the status.');
+        // Don't close modal, let user try again or cancel
+      }
+    }
+  }
+
+  function handleInstructionCancelled() {
+    if (quoteForInstruction) {
+      // Revert dropdown to original status
+      const selectEl = document.getElementById(`status-select-${quoteForInstruction.id}`) as HTMLSelectElement | null;
+      if (selectEl) {
+        selectEl.value = quoteForInstruction.instructionStatus;
+      }
+    }
+    closeInstructionEmailModal();
+  }
+
+  function closeInstructionEmailModal() {
+    showInstructionEmailModal = false;
+    quoteForInstruction = null;
   }
   
   async function handleDeleteQuote(quoteId: string, organisationName: string) { 
@@ -288,6 +333,15 @@
       documentType={documentUploadType}
       on:close={closeDocumentUploadModal}
       on:uploaded={handleDocumentUploaded}
+    />
+  {/if}
+
+  {#if showInstructionEmailModal && quoteForInstruction}
+    <InstructionEmailModal
+      quote={quoteForInstruction}
+      bind:isOpen={showInstructionEmailModal}
+      on:confirm={handleInstructionConfirmed}
+      on:cancel={handleInstructionCancelled}
     />
   {/if}
 </div>
