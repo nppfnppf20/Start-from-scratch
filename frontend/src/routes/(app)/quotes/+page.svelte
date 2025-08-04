@@ -293,6 +293,20 @@
 </div>
 
 <style>
+  /* CSS Variables for status colors */
+  :root {
+    --status-not-started-bg: #fff5f5;
+    --status-not-started-color: #c53030;
+    --status-in-progress-bg: #fff3cd;
+    --status-in-progress-color: #856404;
+    --status-completed-bg: #d4edda;
+    --status-completed-color: #155724;
+    --status-trp-reviewing-bg: #cce5ff;
+    --status-trp-reviewing-color: #004085;
+    --status-client-reviewing-bg: #e2d9f3;
+    --status-client-reviewing-color: #493267;
+  }
+
   /* General page styling (assumed globally applied) */
 
   .quotes-container {
@@ -404,7 +418,7 @@
   
   .quotes-table th,
   .quotes-table td {
-    padding: 0.9rem 1.2rem;
+    padding: 0.6rem 0.8rem;
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
@@ -416,11 +430,11 @@
   }
   
   .quotes-table th {
-    background-color: #f7fafc; 
+    background-color: #f8f9fa; 
     font-weight: 600;
     color: #4a5568;
     text-transform: uppercase;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     letter-spacing: 0.05em;
   }
 
@@ -460,12 +474,13 @@
     background-color: #f1f3f5;
     border: 1px solid #dee2e6;
     border-radius: 9999px; /* Pill shape */
-    padding: 0.3rem 0.8rem;
+    padding: 0.2rem 0.6rem;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     transition: background-color 0.2s, border-color 0.2s;
+    font-size: 0.75rem;
   }
   .line-items-button:hover {
     background-color: #e9ecef;
@@ -481,38 +496,50 @@
 
   /* Instruction Status Select */
   .instruction-status-select {
-    padding: 0.4rem 0.6rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #cbd5e0;
+    font-size: 0.85rem;
     background-color: white;
     cursor: pointer;
-    min-width: 150px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    min-width: 120px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em 1em;
   }
   .instruction-status-select:focus {
-      border-color: #80bdff; 
-      outline: 0;
-      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); 
+      border-color: #4299e1; 
+      box-shadow: 0 0 0 1px #4299e1; 
+      outline: none;
   }
 
   /* Status-specific Select Styling */
   .status-instructed {
-    background-color: #c6f6d5;
-    color: #2f855a;
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+    border-color: var(--status-completed-bg);
     font-weight: 500;
   }
   .status-partially-instructed {
-    background-color: #faf089;
-    color: #b7791f;
+    background-color: var(--status-in-progress-bg);
+    color: var(--status-in-progress-color);
+    border-color: var(--status-in-progress-bg);
     font-weight: 500;
   }
   .status-pending {
     background-color: #e2e8f0;
     color: #4a5568;
+    border-color: #e2e8f0;
   }
   .status-will-not-be-instructed {
-    background-color: #fed7d7;
-    color: #c53030;
+    background-color: var(--status-not-started-bg);
+    color: var(--status-not-started-color);
+    border-color: var(--status-not-started-bg);
     font-weight: 500;
   }
   
@@ -523,12 +550,12 @@
   }
   
   .action-btn {
-    padding: 0.3rem 0.7rem;
-    margin-left: 0.4rem;
+    padding: 0.25rem 0.5rem;
+    margin-left: 0.3rem;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     transition: background-color 0.2s;
   }
   .action-btn:hover {
