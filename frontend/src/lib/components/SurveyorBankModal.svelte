@@ -452,7 +452,11 @@
 
     .contacts-cell {
         max-width: 250px;
-        white-space: normal;
+        white-space: normal !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        line-height: 1.4;
     }
 
     .contacts-cell ul {
@@ -468,10 +472,18 @@
     .contacts-cell a {
         color: #3182ce;
         text-decoration: none;
+        word-break: break-all; /* Allow breaking at any character for long emails */
     }
 
     .contacts-cell a:hover {
         text-decoration: underline;
+    }
+
+    /* Ensure contact names can wrap too */
+    .contacts-cell strong {
+        display: inline-block;
+        word-wrap: break-word;
+        max-width: 100%;
     }
 
     .text-center {
