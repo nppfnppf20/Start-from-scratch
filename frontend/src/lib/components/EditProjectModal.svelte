@@ -9,18 +9,22 @@
   
   let name: string;
   let client: string;
-  let teamMembersStr: string;
+  let projectLead: string[] = [];
+  let projectManager: string[] = [];
   let authorizedSurveyors: string[] = [];
   let allSurveyors: { _id: string; email: string }[] = [];
   let authorizedClients: string[] = [];
   let allClients: { _id: string; email: string }[] = [];
+  
+  const teamMembersList = ['JR', 'AD', 'BM', 'BW', 'RS', 'S Smith', 'S Scott', 'CB', 'PE', 'RM', 'GE', 'RK', 'DH', 'AC'];
 
   // This reactive block ensures that when the project data or the list of clients loads,
   // the form is correctly populated, including finding the right client ID for the dropdown.
   $: {
     if (project && $clientOrganisations) {
       name = project.name;
-      teamMembersStr = project.teamMembers?.join(', ') || '';
+      projectLead = project.projectLead || [];
+      projectManager = project.projectManager || [];
       authorizedSurveyors = project.authorizedSurveyors || [];
       authorizedClients = project.authorizedClients || [];
       
@@ -70,14 +74,12 @@
     isSaving = true;
     errorMessage = '';
 
-    // Convert team members string back to an array
-    const teamMembers = teamMembersStr.split(',').map(s => s.trim()).filter(Boolean);
-
     try {
       const success = await updateProject(project.id, {
         name,
         client,
-        teamMembers,
+        projectLead,
+        projectManager,
         authorizedSurveyors,
         authorizedClients,
       });
@@ -120,9 +122,27 @@
       </div>
 
       <div class="form-group">
-        <label for="team">Team Members</label>
-        <input id="team" type="text" bind:value={teamMembersStr} placeholder="e.g., AB, CD, EF" />
-        <small>Enter initials or names separated by commas.</small>
+        <label for="project-lead">Project Lead</label>
+        <div class="checkbox-group">
+          {#each teamMembersList as member}
+            <div class="checkbox-item">
+              <input type="checkbox" id="project-lead-{member}" value={member} bind:group={projectLead} />
+              <label for="project-lead-{member}">{member}</label>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="project-manager">Project Manager</label>
+        <div class="checkbox-group">
+          {#each teamMembersList as member}
+            <div class="checkbox-item">
+              <input type="checkbox" id="project-manager-{member}" value={member} bind:group={projectManager} />
+              <label for="project-manager-{member}">{member}</label>
+            </div>
+          {/each}
+        </div>
       </div>
 
       <div class="form-group">
@@ -216,11 +236,7 @@
     border-radius: 4px;
     border: 1px solid #ccc;
   }
-  .form-group small {
-    display: block;
-    margin-top: 0.25rem;
-    color: #666;
-  }
+
   .error-message {
     color: #d9534f;
     margin-bottom: 1rem;
