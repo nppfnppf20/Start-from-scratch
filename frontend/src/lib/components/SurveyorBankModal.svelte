@@ -207,7 +207,7 @@
                         {#each displaySurveyors as surveyor (surveyor.id)}
                             <tr>
                                 <td class="organisation-cell">{surveyor.organisation}</td>
-                                <td>{surveyor.discipline}</td>
+                                <td class="discipline-cell">{surveyor.discipline}</td>
                                 <td class="contacts-cell">
                                     {#if surveyor.contacts && surveyor.contacts.length > 0}
                                         <ul>
@@ -448,7 +448,19 @@
     .organisation-cell {
         font-weight: 600;
         color: #2d3748;
+        max-width: 180px; /* Approx width of "Cotswold Archaeology" */
+        white-space: normal !important; /* Force wrapping to override td style */
+        word-wrap: break-word; /* Allow breaking long words */
+        overflow-wrap: break-word; /* Modern property for word-wrap */
     }
+
+    .discipline-cell {
+        max-width: 150px; /* Approx width of "Landscape and Visual" */
+        white-space: normal !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
 
     .contacts-cell {
         max-width: 250px;

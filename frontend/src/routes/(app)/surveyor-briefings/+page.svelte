@@ -230,14 +230,14 @@
             <li>
               <label>
                 <input type="checkbox" bind:group={selectedDisciplines} value={discipline} />
-                {discipline}
+                <span>{discipline}</span>
               </label>
             </li>
           {/each}
         </ul>
       </div>
       <div class="survey-type-filter">
-        <h2>Survey Type</h2>
+        <h2>Survey Type(s)</h2>
         <ul>
           {#each availableSurveyTypes as surveyType}
             <li>
@@ -333,6 +333,14 @@
     display: flex;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+  
+  /* NEW: Style for the discipline text to control wrapping */
+  .discipline-filter ul li label span {
+    display: inline-block;
+    word-break: break-word; /* Break long words if necessary */
+    max-width: 170px; /* Approx width of "Flood and Drainage" */
+    line-height: 1.3;
   }
 
   .discipline-filter ul li label input, .survey-type-filter ul li label input {
