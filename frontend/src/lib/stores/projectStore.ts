@@ -656,6 +656,7 @@ export interface CustomDate {
   id: string; // Unique ID for the custom date entry
   title: string;
   date: string; // ISO date string (YYYY-MM-DD)
+  color?: string; // Optional color for the custom date
 }
 
 export interface SurveyorReview {

@@ -25,6 +25,7 @@
   import { derived } from 'svelte/store';
   import { startOfWeek, addMonths, addWeeks, format, isBefore, min, parseISO, isWithinInterval, endOfWeek, compareAsc } from 'date-fns';
   import TimelineKeyDateModal from '$lib/components/TimelineKeyDateModal.svelte'; // Import the modal
+  import SurveyorDateModal from '$lib/components/SurveyorDateModal.svelte';
   import NotesDisplayModal from '$lib/components/NotesDisplayModal.svelte';
   
   // CSS imports removed from here
@@ -163,8 +164,8 @@
               items.push({
                 id: `log-${log.id}-cd-${cd.id}`,
                 date: cd.date,
-                title: `${cd.title} - ${orgName}`,
-                color: '#7030A0', // Example color (Purple)
+                title: cd.title, // Just use the title without organization name
+                color: cd.color || '#6c757d', // Use saved color or default to grey
                 type: 'log-custom',
                 projectId,
                 quoteId: log.quoteId,
@@ -258,6 +259,13 @@
   let selectedWeekStartDateForModal: Date | null = null;
   let eventBeingEdited: ProgrammeEvent | null = null;
 
+  // State for surveyor date modal
+  let showSurveyorDateModal = false;
+  let selectedSurveyorQuoteId: string = '';
+  let selectedSurveyorWeekDate: Date | null = null;
+  let selectedSurveyorName: string = '';
+  let customDateBeingEdited: any = null;
+
   // State for the hold-up notes display modal
   let showDependenciesNotesDisplayModal = false;
   let currentNotesContent = '';
@@ -322,6 +330,94 @@
     showTimelineKeyDateModal = false;
     selectedWeekStartDateForModal = null;
     eventBeingEdited = null;
+  }
+
+  // --- Surveyor Date Modal Handlers ---
+  function handleSurveyorCellClick(quoteId: string, weekDate: Date, surveyorName: string) {
+    selectedSurveyorQuoteId = quoteId;
+    selectedSurveyorWeekDate = weekDate;
+    selectedSurveyorName = surveyorName;
+    showSurveyorDateModal = true;
+  }
+
+  function handleEditCustomDate(customDate: any, quoteId: string, surveyorName: string) {
+    selectedSurveyorQuoteId = quoteId;
+    selectedSurveyorName = surveyorName;
+    customDateBeingEdited = customDate;
+    selectedSurveyorWeekDate = null; // Not used when editing
+    showSurveyorDateModal = true;
+  }
+
+  function handleSurveyorDateCancel() {
+    showSurveyorDateModal = false;
+    selectedSurveyorQuoteId = '';
+    selectedSurveyorWeekDate = null;
+    selectedSurveyorName = '';
+    customDateBeingEdited = null;
+  }
+
+  async function handleSurveyorDateSave(event: CustomEvent<{ title: string; date: string; color: string; quoteId: string; id?: string }>) {
+    if (!browser || !$selectedProject) return;
+    
+    const { title, date, color, quoteId, id } = event.detail;
+    
+    // Get existing custom dates for this quote
+    const existingLog = $currentInstructionLogs.find(log => log.quoteId === quoteId);
+    const existingDates = existingLog?.customDates || [];
+    
+    let updatedDatesArray;
+    
+    if (id) {
+      // Editing existing custom date
+      updatedDatesArray = existingDates.map(cd => 
+        cd.id === id 
+          ? { ...cd, title, date, color }
+          : cd
+      );
+    } else {
+      // Adding new custom date
+      const newDateId = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
+      const newCustomDate = {
+        id: newDateId,
+        title,
+        date,
+        color
+      };
+      updatedDatesArray = [...existingDates, newCustomDate];
+    }
+    
+    // Save to instruction log
+    await upsertInstructionLog(quoteId, { customDates: updatedDatesArray });
+    
+    // Close modal
+    showSurveyorDateModal = false;
+    selectedSurveyorQuoteId = '';
+    selectedSurveyorWeekDate = null;
+    selectedSurveyorName = '';
+    customDateBeingEdited = null;
+  }
+
+  async function handleSurveyorDateDelete(event: CustomEvent<{ id: string; quoteId: string }>) {
+    if (!browser || !$selectedProject) return;
+    
+    const { id, quoteId } = event.detail;
+    
+    // Get existing custom dates for this quote
+    const existingLog = $currentInstructionLogs.find(log => log.quoteId === quoteId);
+    if (!existingLog || !existingLog.customDates) return;
+    
+    // Remove the custom date with the matching ID
+    const updatedDatesArray = existingLog.customDates.filter(cd => cd.id !== id);
+    
+    // Save to instruction log
+    await upsertInstructionLog(quoteId, { customDates: updatedDatesArray });
+    
+    // Close modal
+    showSurveyorDateModal = false;
+    selectedSurveyorQuoteId = '';
+    selectedSurveyorWeekDate = null;
+    selectedSurveyorName = '';
+    customDateBeingEdited = null;
   }
 
   function openDependenciesNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
@@ -452,15 +548,37 @@
                     {/if}
                 </td>
                 {#each weeks as weekDate (format(weekDate, 'yyyy-MM-dd'))}
-                  <td class="data-cell week-col">
+                  <td class="data-cell week-col surveyor-cell-clickable" 
+                      on:click={() => handleSurveyorCellClick(quote.id, weekDate, `${quote.discipline} - ${quote.organisation}`)}
+                      title="Click to add date for this week">
                       <div class="cell-content">
                         <!-- Iterate through items relevant to this quote -->
                         {#each relevantLogItems as item (item.id)}
                             {#if isDateInWeek(item.date, weekDate)}
                                 <div 
-                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}" 
+                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date clickable-custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}" 
                                     style="background-color: {item.color}1A; border-left: 3px solid {item.color}; color: {item.color};" 
-                                    title="{item.title} ({format(parseISO(item.date), 'd MMM')})"
+                                    title="{item.type === 'log-custom' ? 'Click to edit: ' : ''}{item.title} ({format(parseISO(item.date), 'd MMM')})"
+                                    on:click={item.type === 'log-custom' ? (e) => {
+                                      e.stopPropagation();
+                                      const log = $currentInstructionLogs.find(l => l.quoteId === item.quoteId);
+                                      const customDate = log?.customDates?.find(cd => cd.id === item.customDateId);
+                                      if (customDate && item.quoteId) {
+                                        handleEditCustomDate(customDate, item.quoteId, `${quote.discipline} - ${quote.organisation}`);
+                                      }
+                                    } : undefined}
+                                    role={item.type === 'log-custom' ? 'button' : undefined}
+                                    tabindex={item.type === 'log-custom' ? 0 : undefined}
+                                    on:keydown={item.type === 'log-custom' ? (e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.stopPropagation();
+                                        const log = $currentInstructionLogs.find(l => l.quoteId === item.quoteId);
+                                        const customDate = log?.customDates?.find(cd => cd.id === item.customDateId);
+                                        if (customDate && item.quoteId) {
+                                          handleEditCustomDate(customDate, item.quoteId, `${quote.discipline} - ${quote.organisation}`);
+                                        }
+                                      }
+                                    } : undefined}
                                 >
                                     {item.title}
                                     </div>
@@ -495,6 +613,20 @@
       on:save={handleKeyDateSave} 
       on:cancel={handleKeyDateCancel} 
       on:delete={handleKeyDateDelete}
+    />
+  {/if}
+
+  <!-- Render Surveyor Date Modal -->
+  {#if showSurveyorDateModal}
+    <SurveyorDateModal
+      bind:showModal={showSurveyorDateModal}
+      initialDate={selectedSurveyorWeekDate}
+      quoteId={selectedSurveyorQuoteId}
+      surveyorName={selectedSurveyorName}
+      customDateToEdit={customDateBeingEdited}
+      on:save={handleSurveyorDateSave}
+      on:cancel={handleSurveyorDateCancel}
+      on:delete={handleSurveyorDateDelete}
     />
   {/if}
 
@@ -756,16 +888,15 @@
 
   /* Base style for timeline items in surveyor rows */
   .timeline-item {
-      display: block; /* Ensure it takes full width for truncation */
+      display: block; /* Ensure it takes full width */
       padding: 2px 5px; /* Reduced padding */
       margin-bottom: 3px; /* Space between items */
       border-radius: 4px; 
       font-size: 0.8rem; /* Slightly smaller font */
       line-height: 1.3; 
       border: 1px solid transparent; /* Base border */
-      white-space: nowrap; /* Prevent wrapping */
-      overflow: hidden; /* Hide overflow */
-      text-overflow: ellipsis; /* Show ellipsis */
+      white-space: normal; /* Allow text wrapping */
+      word-wrap: break-word; /* Break long words if needed */
       cursor: default; /* Indicate non-interactive unless specifically made so */
   }
 
@@ -829,5 +960,37 @@
   .add-event-btn {
     background-color: #dbeafe;
     color: #2563eb;
+  }
+
+  /* Clickable surveyor cells */
+  .surveyor-cell-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .surveyor-cell-clickable:hover {
+    background-color: #f8f9fa !important; /* Light grey hover effect */
+  }
+
+  /* Ensure completed rows still show hover effect but maintain their green background */
+  tbody tr.row-completed .surveyor-cell-clickable:hover {
+    background-color: #d4edda !important; /* Slightly darker green on hover for completed rows */
+  }
+
+  /* Clickable custom date styling */
+  .clickable-custom-date {
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  .clickable-custom-date:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    opacity: 0.9;
+  }
+
+  .clickable-custom-date:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
   }
 </style> 
