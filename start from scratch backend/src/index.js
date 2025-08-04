@@ -23,6 +23,7 @@ const { protect, authorize } = require('./middleware/authMiddleware'); // Import
 const User = require('./models/User'); // Import User model for seeding
 const userRoutes = require('./routes/users');
 const clientOrganisationsRoutes = require('./routes/clientOrganisations');
+const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
 console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -126,6 +127,7 @@ app.use('/api/documents', protect, documentRoutes);
 app.use('/api/programme-events', protect, programmeEventRoutes);
 app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
 app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
+app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/client-organisations', clientOrganisationsRoutes);
 

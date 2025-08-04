@@ -185,10 +185,22 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     width: 100%;
     max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
   }
   h2 {
     margin-top: 0;
     margin-bottom: 1.5rem;
+    flex-shrink: 0;
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
   .form-group {
     margin-bottom: 1rem;
@@ -218,6 +230,10 @@
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    background: white;
   }
   .btn-primary, .btn-secondary {
     padding: 0.5rem 1rem;

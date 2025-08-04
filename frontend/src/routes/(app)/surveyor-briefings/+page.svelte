@@ -1,9 +1,10 @@
 <script lang="ts">
   import PageHeader from '$lib/components/PageHeader.svelte';
   import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
-  import { selectedProject, authorizeSurveyors } from '$lib/stores/projectStore';
+  import { selectedProject, authorizeSurveyors, createFeeQuoteLog } from '$lib/stores/projectStore';
   import { emailTemplates, disciplineSpecificSections } from '$lib/data/emailTemplates';
   import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
+  import FeeQuoteHistoryModal from '$lib/components/FeeQuoteHistoryModal.svelte';
 
   const disciplines = [
     'Agricultural Land and Soil',
@@ -84,6 +85,7 @@
   let emailSubject = '';
   let emailBody = '';
   let showConfirmModal = false;
+  let showFeeQuoteHistoryModal = false;
 
   $: availableSurveyTypes = selectedDisciplines.length > 0
     ? selectedDisciplines.flatMap(d => surveyTypeMapping[d] || [])
@@ -190,6 +192,10 @@
     if ($selectedProject && emailTo) {
       const emails = emailTo.split(',').map(e => e.trim()).filter(e => e);
       if (emails.length > 0) {
+        // 1. CREATE FEE QUOTE LOG (NEW)
+        await createFeeQuoteLog($selectedProject.id, emails);
+        
+        // 2. AUTHORIZE SURVEYORS (EXISTING)
         await authorizeSurveyors($selectedProject.id, emails);
       }
     }
@@ -201,6 +207,12 @@
   bind:showModal={showConfirmModal} 
   on:close={() => showConfirmModal = false}
   on:confirmed={handleConfirmation}
+/>
+
+<FeeQuoteHistoryModal 
+  bind:showModal={showFeeQuoteHistoryModal}
+  projectName={$selectedProject?.name || 'No Project Selected'}
+  on:close={() => showFeeQuoteHistoryModal = false}
 />
 
 <div class="briefings-page-container">
@@ -258,6 +270,7 @@
         </div>
         <div class="email-actions">
           <button class="action-btn" on:click={handleOpenEmail}>Open Email</button>
+          <button class="action-btn history-btn" on:click={() => showFeeQuoteHistoryModal = true}>View Sent Requests</button>
           <button class="action-btn confirm-btn" on:click={() => showConfirmModal = true}>Confirm Request Sent and Grant Permission</button>
         </div>
       </div>
@@ -352,6 +365,17 @@
       background-color: #28a745;
       color: white;
       border-color: #28a745;
+  }
+
+  .action-btn.history-btn {
+      background-color: #6c757d;
+      color: white;
+      border-color: #6c757d;
+  }
+
+  .action-btn.history-btn:hover {
+      background-color: #5a6268;
+      border-color: #5a6268;
   }
 
   .form-group {

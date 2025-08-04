@@ -328,6 +328,7 @@ export async function selectProjectById(id: string | null) {
         currentInstructionLogs.set([]);
         surveyorFeedbacks.set([]); // Clear feedback too
         allProgrammeEvents.set([]); // *** CLEAR PROGRAMME EVENTS ***
+        currentProjectFeeQuoteLogs.set([]); // Clear fee quote logs
         return true;
    }
 
@@ -355,7 +356,8 @@ export async function selectProjectById(id: string | null) {
            loadQuotesForProject(id),
            loadInstructionLogsForProject(id),
            loadSurveyorFeedback(id),
-           loadProgrammeEvents(id) // Load programme events alongside other data
+           loadProgrammeEvents(id), // Load programme events alongside other data
+           loadFeeQuoteLogsForProject(id) // Load fee quote logs
        ]);
 
        return true;
@@ -367,6 +369,7 @@ export async function selectProjectById(id: string | null) {
        currentInstructionLogs.set([]);
        surveyorFeedbacks.set([]);
        allProgrammeEvents.set([]); // Ensure programme events are cleared on error
+       currentProjectFeeQuoteLogs.set([]); // Clear fee quote logs on error
        alert(`Error loading project details: ${error}`);
        return false;
    }
@@ -1338,6 +1341,98 @@ export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> 
 export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
+}
+
+// --- Fee Quote Log Interface and Store ---
+export interface FeeQuoteLog {
+  id: string;
+  projectId: string;
+  emails: string[];
+  sentDate: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Store for fee quote logs for the *currently selected* project
+export const currentProjectFeeQuoteLogs = writable<FeeQuoteLog[]>([]);
+
+// --- Fee Quote Log API Functions ---
+
+// Function to load Fee Quote Logs for a specific project
+async function loadFeeQuoteLogsForProject(projectId: string | null) {
+  if (!browser || !projectId) {
+    currentProjectFeeQuoteLogs.set([]); // Clear if no project or SSR
+    return;
+  }
+
+  console.log(`Fetching fee quote logs for project ID: ${projectId}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/fee-quote-logs?projectId=${projectId}`, {
+      headers: getAuthTokenHeader()
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch fee quote logs'}`);
+    }
+    let logs: any[] = await response.json();
+
+    // Map _id to id deeply
+    const mappedLogs = logs.map(log => mapMongoId<FeeQuoteLog>(log));
+
+    currentProjectFeeQuoteLogs.set(mappedLogs);
+    console.log('Fee quote logs loaded:', mappedLogs);
+  } catch (error) {
+    console.error(`Failed to load fee quote logs for project ${projectId}:`, error);
+    currentProjectFeeQuoteLogs.set([]); // Clear store on error
+  }
+}
+
+// Function to create a new Fee Quote Log
+export async function createFeeQuoteLog(projectId: string, emails: string[]): Promise<FeeQuoteLog | null> {
+    if (!browser) return null;
+
+    if (!projectId) {
+        console.error('Cannot create fee quote log without projectId');
+        alert('Error: Project ID is missing.');
+        return null;
+    }
+
+    if (!emails || emails.length === 0) {
+        console.error('Cannot create fee quote log without emails');
+        alert('Error: At least one email address is required.');
+        return null;
+    }
+
+    try {
+        console.log('Creating fee quote log:', { projectId, emails });
+        const response = await fetch(`${API_BASE_URL}/fee-quote-logs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthTokenHeader()
+            },
+            body: JSON.stringify({ projectId, emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to create fee quote log'}`);
+        }
+
+        let newLog = await response.json();
+        const mappedLog = mapMongoId<FeeQuoteLog>(newLog);
+
+        // Add to the local store (prepend to show newest first)
+        currentProjectFeeQuoteLogs.update(existing => [mappedLog, ...existing]);
+
+        console.log('Fee quote log created:', mappedLog);
+        return mappedLog;
+
+    } catch (error) {
+        console.error('Failed to create fee quote log:', error);
+        alert(`Error logging fee quote request: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
 }
 
 export async function authorizeSurveyors(projectId: string, emails: string[]): Promise<Project | null> {
