@@ -361,27 +361,7 @@
           <button type="button" on:click={addLineItem} class="add-line-item-btn" title="Add Line Item">+ Add Line Item</button>
           <p class="modal-total">Calculated Total: £{quoteTotal.toFixed(2)}</p>
 
-          <!-- SharePoint Upload Section -->
-          <div class="form-row sharepoint-row">
-             <label>Upload quote files via SharePoint:</label>
-             {#if $selectedProject?.sharepointLink}
-               <div class="sharepoint-link-container">
-                 <span 
-                   class="sharepoint-link-text"
-                   on:click={() => window.open($selectedProject.sharepointLink, '_blank')}
-                   title="Click to open SharePoint link"
-                 >
-                   {$selectedProject.sharepointLink}
-                 </span>
-               </div>
-               <div class="sharepoint-spacing"></div>
-             {:else}
-               <div class="sharepoint-link-container">
-                 <span class="no-link-text">No upload link configured</span>
-               </div>
-               <div class="sharepoint-spacing"></div>
-             {/if}
-          </div>
+
 
           <!-- Notes Section -->
           <div class="form-row notes-row">
@@ -592,78 +572,6 @@
     background-color: #e3f2fd;
   }
 
-  .sharepoint-row {
-    grid-column: 1 / -1; /* Span full width */
-    margin-top: 15px;
-    margin-bottom: 25px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
-  }
 
-  .sharepoint-link {
-    color: #007bff; /* Link color */
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .sharepoint-link:hover {
-    text-decoration: underline;
-  }
-
-  .no-link-message {
-    color: #6c757d;
-    font-style: italic;
-  }
-
-  .sharepoint-input {
-    width: 100%;
-    padding: 9px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 0.95em;
-    background-color: #f8f9fa; /* Light background for readability */
-    color: #333;
-  }
-
-  .sharepoint-input:read-only {
-    background-color: #e9ecef; /* Slightly darker background for read-only */
-    cursor: not-allowed;
-  }
-
-  .sharepoint-input.clickable {
-    cursor: pointer;
-    background-color: #f8f9fa; /* Keep lighter background for clickable */
-  }
-
-  .sharepoint-input.clickable:hover {
-    background-color: #e2e6ea; /* Hover effect */
-    border-color: #007bff; /* Blue border on hover */
-  }
-
-  .sharepoint-spacing {
-    height: 10px; /* Space between input and label */
-  }
-
-  .sharepoint-link-container {
-    position: relative;
-    display: inline-block; /* Allow text to be clickable */
-  }
-
-  .sharepoint-link-text {
-    color: #007bff; /* Blue color for the text */
-    text-decoration: none;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .sharepoint-link-text:hover {
-    text-decoration: underline;
-  }
-
-  .no-link-text {
-    color: #6c757d;
-    font-style: italic;
-  }
 
 </style> 
