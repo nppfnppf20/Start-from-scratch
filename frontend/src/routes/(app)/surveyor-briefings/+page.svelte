@@ -275,6 +275,19 @@
         </div>
       </div>
       <div contenteditable="true" class="email-body-editor" bind:innerHTML={emailBody}></div>
+      
+      <div class="instructions">
+        <p><strong>Instructions:</strong></p>
+        <ul>
+          <li>Select discipline, survey types and a chosen surveyor in the selection boxes at the top of the page</li>
+          <li>Click "Open Email" button to open the email in your default client</li>
+          <li>Edit the email content as needed in your email client (or alternatively edit the email here in the browser before clicking the 'Open Email' button)</li>
+          <li>Items highlighted in <mark>yellow</mark> and within [ ] may need your attention</li>
+          <li>Preferably send separate emails to each surveyor organisation, or use BCC if emailing multiple organisations together</li>
+          <li>Click "Confirm Request Sent and Grant Permission" button when done. This will grant project access to the selected surveyor.</li>
+          <li>Repeat process for each fee quote request</li>
+        </ul>
+      </div>
     </div>
   </div>
 </div>
@@ -419,6 +432,31 @@
       background-color: yellow;
       padding: 0.1em;
       border-radius: 3px;
+  }
+
+  /* Instructions */
+  .instructions {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .instructions p {
+    margin: 0 0 0.5rem 0;
+    color: #856404;
+    font-weight: 600;
+  }
+
+  .instructions ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #856404;
+  }
+
+  .instructions li {
+    margin-bottom: 0.25rem;
   }
 
   h2 {

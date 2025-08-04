@@ -37,7 +37,7 @@
       ? 'partial instruction for the following selected works'
       : 'formal instruction for the following works';
 
-    emailBody = `${quote.contactName} <mark>(please edit as needed)</mark><br/><br/>
+    emailBody = `${quote.contactName} <mark>[please edit as needed]</mark><br/><br/>
 
 Please take this email as ${instructionText} for the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
 
@@ -45,11 +45,11 @@ The instruction is for the following works:<br/><br/>
 
 ${formattedLineItems}
 
-<mark>(Please add any other specific instructions if relevant)</mark><br/><br/>
+<mark>[Please add any other specific instructions if relevant]</mark><br/><br/>
 
 Please refer to trpprojectdashboard.onrender.com for up to date project information. This may be updated as the scheme progresses, so please ensure final reports are consistent with the information contained on the dashboard. Invoicing and access details can also be found here.<br/><br/>
 
-Can you please confirm receipt of this instruction as well as indicative timescales for reports and site visits (if site visit is required).<br/><br/>
+Can you please confirm receipt of this instruction as well as indicative timescales for reports and site visits [if site visit is required].<br/><br/>
 
 Please do get in touch if you have any further queries.<br/><br/>
 
@@ -138,8 +138,8 @@ Many thanks.`;
           <p><strong>Instructions:</strong></p>
           <ul>
             <li>Click "Open Email Client" below to open the email in your default client</li>
-            <li>Edit the email content above as needed, either here or in your email client</li>
-            <li>Items highlighted in <mark>yellow</mark> may need your attention</li>
+            <li>Edit the email content as needed in your email client (or alternatively edit the email here in the browser before clicking the 'Open Email Client' button)</li>
+            <li>Items highlighted in <mark>yellow</mark> and within [ ] may need your attention</li>
             <li>Once you have sent the email, save a copy in the relevant project folder</li>
             <li>Click "Confirm Instruction Sent" button below when done</li>
           </ul>
