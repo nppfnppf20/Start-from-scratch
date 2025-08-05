@@ -4,6 +4,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Import the cors package
+const helmet = require('helmet');
 
 // +++ Correct dotenv path +++
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -103,6 +104,14 @@ const corsOptions = {
   optionsSuccessStatus: 200 // For legacy browser support
 };
 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
 app.use(cors(corsOptions));
 
 // Middleware to parse JSON bodies
@@ -136,6 +145,15 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
 
 
+if (process.env.NODE_ENV === 'production') {
+  const __dirname = path.resolve();
+  app.use(express.static(path.join(__dirname, '/frontend/build')));
+
+  app.get('*', (req, res) =>
+    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
+  );
+}
+
+
 // --- Start Server ---\n
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
