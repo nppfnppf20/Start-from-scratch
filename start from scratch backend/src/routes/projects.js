@@ -341,7 +341,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @route   POST /api/projects/:id/authorize-surveyors
 // @desc    Authorize surveyors to a project by their email addresses
 // @access  Private
-router.post('/:id/authorize-surveyors', async (req, res) => {
+router.post('/:id/authorize-surveyors', protect, authorize('admin'), async (req, res) => {
     const { id } = req.params;
     const { emails } = req.body;
 
@@ -427,7 +427,7 @@ router.delete('/:id/surveyors/:email', async (req, res) => {
 // @route   POST /api/projects/:id/authorize-clients
 // @desc    Authorize clients to a project by their email addresses
 // @access  Private
-router.post('/:id/authorize-clients', async (req, res) => {
+router.post('/:id/authorize-clients', protect, authorize('admin'), async (req, res) => {
     const { id } = req.params;
     const { emails } = req.body;
 
