@@ -2,8 +2,10 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import type { ProjectBankItem } from '$lib/stores/projectStore';
   import { updateProject } from '$lib/stores/projectStore';
-  import { authStore } from '$lib/stores/authStore';
+  import { authStore, getAuthTokenHeader } from '$lib/stores/authStore';
   import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
   export let project: ProjectBankItem;
   
@@ -42,22 +44,21 @@
   onMount(async () => {
     loadClientOrganisations();
     try {
-        const token = $authStore.token;
         const [surveyorsRes, clientsRes] = await Promise.all([
-            fetch('/api/users/surveyors', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('/api/users/clients', { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch(`${API_BASE_URL}/api/users/surveyors`, { headers: getAuthTokenHeader() }),
+            fetch(`${API_BASE_URL}/api/users/clients`, { headers: getAuthTokenHeader() })
         ]);
 
         if (surveyorsRes.ok) {
             allSurveyors = await surveyorsRes.json();
         } else {
-            console.error('Failed to fetch surveyors');
+            console.error('Failed to fetch surveyors:', surveyorsRes.status, surveyorsRes.statusText);
         }
 
         if (clientsRes.ok) {
             allClients = await clientsRes.json();
         } else {
-            console.error('Failed to fetch clients');
+            console.error('Failed to fetch clients:', clientsRes.status, clientsRes.statusText);
         }
     } catch (error) {
         console.error('Error fetching users:', error);
