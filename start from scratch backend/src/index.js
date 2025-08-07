@@ -138,11 +138,20 @@ app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
 app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
 app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
 app.use('/api/users', userRoutes);
+console.log("Successfully registered /api/users");
+
+console.log("Registering /api/client-organisations...");
 app.use('/api/client-organisations', clientOrganisationsRoutes);
+console.log("Successfully registered /api/client-organisations");
 
 // Public routes
+console.log("Registering /api/uploads...");
 app.use('/api/uploads', uploadRoutes);
+console.log("Successfully registered /api/uploads");
+
+console.log("Registering /api/auth...");
 app.use('/api/auth', authRoutes);
+console.log("Successfully registered /api/auth");
 
 
 if (process.env.NODE_ENV === 'production') {
