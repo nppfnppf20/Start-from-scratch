@@ -24,16 +24,12 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ msg: 'User already exists' });
         }
 
-        // Determine role based on email
-        const role = determineRole(email);
-
-        // Validate that they're using the correct password for their role
-        if (!validateRolePassword(role, password)) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
-
-        // Create new user (without storing password)
-        user = new User({ email, role });
+        // Create new user
+        user = new User({ 
+            email, 
+            password, // Password will be hashed by the pre-save hook
+            role 
+        });
         await user.save();
         res.status(201).json({ msg: 'User registered successfully', role });
     } catch (err) {
