@@ -138,6 +138,7 @@ app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
 app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
 app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
 app.use('/api/users', userRoutes);
+console.log('Users routes registered at /api/users');
 app.use('/api/client-organisations', clientOrganisationsRoutes);
 
 // Public routes

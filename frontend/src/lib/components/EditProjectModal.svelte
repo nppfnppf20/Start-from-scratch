@@ -30,6 +30,8 @@
       authorizedSurveyors = project.authorizedSurveyors || [];
       authorizedClients = project.authorizedClients || [];
       
+      console.log('DEBUG: Project authorized surveyors:', authorizedSurveyors);
+      
       // Find the client organisation that matches the project's client name
       const matchingOrg = $clientOrganisations.find(org => org.organisationName === project.client);
       // Set the client variable to the ID of the matching org, which the dropdown will use
@@ -45,12 +47,13 @@
     loadClientOrganisations();
     try {
         const [surveyorsRes, clientsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/users/surveyors`, { headers: getAuthTokenHeader() }),
-            fetch(`${API_BASE_URL}/api/users/clients`, { headers: getAuthTokenHeader() })
+            fetch(`${API_BASE_URL}/users/surveyors`, { headers: getAuthTokenHeader() }),
+            fetch(`${API_BASE_URL}/users/clients`, { headers: getAuthTokenHeader() })
         ]);
 
         if (surveyorsRes.ok) {
             allSurveyors = await surveyorsRes.json();
+            console.log('DEBUG: Fetched surveyors:', allSurveyors);
         } else {
             console.error('Failed to fetch surveyors:', surveyorsRes.status, surveyorsRes.statusText);
         }

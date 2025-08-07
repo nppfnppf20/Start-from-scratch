@@ -10,17 +10,7 @@ function determineRole(email) {
     return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
 }
 
-// Helper function to validate password for role
-function validateRolePassword(role, password) {
-    if (role === 'admin') {
-        return password === process.env.ADMIN_PASSWORD;
-    } else if (role === 'surveyor') {
-        return password === process.env.SURVEYOR_PASSWORD;
-    } else if (role === 'client') {
-        return password === process.env.CLIENT_DEFAULT_PASSWORD;
-    }
-    return false;
-}
+
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -59,13 +49,14 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         // Find user by email
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        // Validate password against role-based shared password
-        if (!validateRolePassword(user.role, password)) {
+        // Use the matchPassword method to compare hashed password
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
@@ -80,9 +71,10 @@ router.post('/login', async (req, res) => {
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
+            { expiresIn: '1h' }, // Optional: add token expiration
             (err, token) => {
                 if (err) throw err;
-                res.json({ token });
+                res.json({ token, user: { email: user.email, role: user.role } });
             }
         );
     } catch (err) {

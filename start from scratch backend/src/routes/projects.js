@@ -341,7 +341,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @route   POST /api/projects/:id/authorize-surveyors
 // @desc    Authorize surveyors to a project by their email addresses
 // @access  Private
-router.post('/:id/authorize-surveyors', protect, authorize('admin'), async (req, res) => {
+router.post('/:id/authorize-surveyors', protect, async (req, res) => {
     const { id } = req.params;
     const { emails } = req.body;
 
@@ -355,14 +355,21 @@ router.post('/:id/authorize-surveyors', protect, authorize('admin'), async (req,
             return res.status(404).json({ msg: 'Project not found' });
         }
 
-        const users = await User.find({ email: { $in: emails } });
-        if (users.length === 0) {
-            // This isn't necessarily an error, maybe none of the emails are registered users yet.
-            // Or we could choose to return a specific message.
-            return res.status(200).json({ msg: 'No registered users found for the provided emails.', project });
-        }
+        const userIds = [];
+        for (const email of emails) {
+            let user = await User.findOne({ email: email.toLowerCase() });
 
-        const userIds = users.map(user => user._id);
+            if (!user) {
+                // If user doesn't exist, create a new one
+                user = new User({
+                    email: email.toLowerCase(),
+                    role: 'surveyor',
+                    password: process.env.SURVEYOR_PASSWORD 
+                });
+                await user.save();
+            }
+            userIds.push(user._id);
+        }
 
         // Add only new user IDs to the authorizedSurveyors array
         const newSurveyorIds = userIds.filter(userId => !project.authorizedSurveyors.some(existingId => existingId.equals(userId)));
