@@ -39,6 +39,42 @@
       'Protected Species Surveys',
       'Skylark Survey',
       'Wintering Birds Survey'
+    ],
+    'Contaminated Land': [
+      'Contaminated Land Assessment'
+    ],
+    'Fire Safety': [
+      'Fire Safety Assessment'
+    ],
+    'Flood and Drainage': [
+      'Flood Risk Assessment',
+      'Surface Water Drainage Strategy'
+    ],
+    'Geophys': [
+      'Geophysical Survey'
+    ],
+    'Glint & Glare': [
+      'Glint & Glare Assessment'
+    ],
+    'Heritage': [
+      'Heritage Impact Assessment'
+    ],
+    'Landscape and Visual': [
+      'Landscape and Visual Impact Assessment',
+      'Residential Visual Impact Assessment',
+      'Photomontages',
+      'Landscaping Strategy'
+    ],
+    'Topographical': [
+      'Topographical Survey'
+    ],
+    'Transport': [
+      'Transport Statement',
+      'Construction Traffic Management Plan'
+    ],
+    'Agricultural Land and Soil': [
+      'Agricultural Land Classification Survey',
+      'Soil Management Plan'
     ]
   };
 
