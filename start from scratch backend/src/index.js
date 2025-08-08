@@ -10,22 +10,21 @@ const helmet = require('helmet');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // +++ Import Routes +++
-// Temporarily commenting out imports to isolate path-to-regexp error
-// const projectRoutes = require('./routes/projects');
-// const quoteRoutes = require('./routes/quotes'); // Import quote routes
-// const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
-// const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** FIX: Destructure router from export ***
-// const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
-// const uploadRoutes = require('./routes/uploads');
-// const documentRoutes = require('./routes/documents');
-// const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
+const projectRoutes = require('./routes/projects');
+const quoteRoutes = require('./routes/quotes'); // Import quote routes
+const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
+const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** Destructure router from export ***
+const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
+const uploadRoutes = require('./routes/uploads');
+const documentRoutes = require('./routes/documents');
+const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
 const authRoutes = require('./routes/auth');
-// const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
+const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
 const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
-// const userRoutes = require('./routes/users');
-// const clientOrganisationsRoutes = require('./routes/clientOrganisations');
-// const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
+const userRoutes = require('./routes/users');
+const clientOrganisationsRoutes = require('./routes/clientOrganisations');
+const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
 // console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -129,33 +128,21 @@ app.get('/api', (req, res) => {
 });
 
 // Apply JWT protection to all data-related routes
-// Temporarily commenting out routes to isolate path-to-regexp error
-// app.use('/api/projects', protect, projectRoutes);
-// app.use('/api/quotes', protect, quoteRoutes);
-// app.use('/api/instruction-logs', protect, instructionLogRoutes);
-// app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
-// app.use('/api/documents', protect, documentRoutes);
-// app.use('/api/programme-events', protect, programmeEventRoutes);
-// app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
-// app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
-// app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/client-organisations', clientOrganisationsRoutes);
+app.use('/api/projects', protect, projectRoutes);
+app.use('/api/quotes', protect, quoteRoutes);
+app.use('/api/instruction-logs', protect, instructionLogRoutes);
+app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
+app.use('/api/documents', protect, documentRoutes);
+app.use('/api/programme-events', protect, programmeEventRoutes);
+app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
+app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
+app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/client-organisations', clientOrganisationsRoutes);
 
-// Public routes - testing one by one
-// app.use('/api/uploads', uploadRoutes);
+// Public routes
+app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
-
-
-if (process.env.NODE_ENV === 'production') {
-  const __dirname = path.resolve();
-  app.use(express.static(path.join(__dirname, '/frontend/build')));
-
-  // Use a RegExp catch-all for Express 5 compatibility
-  app.get(/.*/, (req, res) =>
-    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
-  );
-}
 
 
 // --- Start Server ---
