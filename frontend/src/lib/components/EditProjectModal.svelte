@@ -20,6 +20,44 @@
   
   const teamMembersList = ['JR', 'AD', 'BM', 'BW', 'RS', 'S Smith', 'S Scott', 'CB', 'PE', 'RM', 'GE', 'RK', 'DH', 'AC'];
 
+  // Filters for quick search in lists
+  let surveyorFilter: string = '';
+  let clientFilter: string = '';
+
+  // Visible (filtered) lists
+  $: visibleSurveyors = allSurveyors.filter(s =>
+    s.email.toLowerCase().includes(surveyorFilter.toLowerCase())
+  );
+  $: visibleClients = allClients.filter(c =>
+    c.email.toLowerCase().includes(clientFilter.toLowerCase())
+  );
+
+  async function copyAuthorizedSurveyorEmails() {
+    const selectedEmails = authorizedSurveyors
+      .map(id => allSurveyors.find(s => s._id === id)?.email)
+      .filter((e): e is string => Boolean(e));
+
+    if (selectedEmails.length === 0) {
+      alert('No authorized surveyors selected.');
+      return;
+    }
+
+    const text = selectedEmails.join(', ');
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Copied surveyor emails to clipboard');
+    } catch (err) {
+      // Fallback for environments where Clipboard API might not be available
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand('copy'); } catch {}
+      document.body.removeChild(textarea);
+      alert('Copied surveyor emails to clipboard');
+    }
+  }
+
   // This reactive block ensures that when the project data or the list of clients loads,
   // the form is correctly populated, including finding the right client ID for the dropdown.
   $: {
@@ -151,8 +189,12 @@
 
       <div class="form-group">
         <label for="surveyors">Authorized Surveyors</label>
+        <div class="list-controls">
+          <input type="text" placeholder="Filter surveyors by email..." bind:value={surveyorFilter} />
+          <button type="button" class="btn-tertiary" on:click={copyAuthorizedSurveyorEmails}>Copy to clipboard</button>
+        </div>
         <div class="checkbox-group">
-          {#each allSurveyors as surveyor}
+          {#each visibleSurveyors as surveyor}
             <div class="checkbox-item">
               <input type="checkbox" id="surveyor-{surveyor._id}" value={surveyor._id} bind:group={authorizedSurveyors} />
               <label for="surveyor-{surveyor._id}">{surveyor.email}</label>
@@ -163,8 +205,9 @@
 
       <div class="form-group">
         <label for="clients">Authorized Clients</label>
+        <input type="text" placeholder="Filter clients by email..." bind:value={clientFilter} />
         <div class="checkbox-group">
-          {#each allClients as client}
+          {#each visibleClients as client}
             <div class="checkbox-item">
               <input type="checkbox" id="client-{client._id}" value={client._id} bind:group={authorizedClients} />
               <label for="client-{client._id}">{client.email}</label>
@@ -262,6 +305,15 @@
     cursor: pointer;
     font-weight: 500;
   }
+  .btn-tertiary {
+    padding: 0 0.6rem; /* width padding only; height controlled explicitly */
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background: #f6f6f6;
+    cursor: pointer;
+    font-size: 0.9rem;
+    height: 32px; /* match input height */
+  }
   .btn-primary {
     background-color: #007bff;
     color: white;
@@ -281,6 +333,19 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     padding: 0.5rem;
+  }
+
+  .list-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .list-controls input[type="text"] {
+    flex: 1;
+    font-size: 0.9rem;
+    height: 32px; /* fixed to match button */
+    padding: 0 0.5rem;
   }
 
   .checkbox-item {
