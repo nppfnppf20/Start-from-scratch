@@ -128,17 +128,18 @@ app.get('/api', (req, res) => {
 });
 
 // Apply JWT protection to all data-related routes
-app.use('/api/projects', protect, projectRoutes);
-app.use('/api/quotes', protect, quoteRoutes);
-app.use('/api/instruction-logs', protect, instructionLogRoutes);
-app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
-app.use('/api/documents', protect, documentRoutes);
-app.use('/api/programme-events', protect, programmeEventRoutes);
-app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
-app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
-app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/client-organisations', clientOrganisationsRoutes);
+// Temporarily commenting out routes to isolate path-to-regexp error
+// app.use('/api/projects', protect, projectRoutes);
+// app.use('/api/quotes', protect, quoteRoutes);
+// app.use('/api/instruction-logs', protect, instructionLogRoutes);
+// app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
+// app.use('/api/documents', protect, documentRoutes);
+// app.use('/api/programme-events', protect, programmeEventRoutes);
+// app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
+// app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
+// app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/client-organisations', clientOrganisationsRoutes);
 
 // Public routes
 app.use('/api/uploads', uploadRoutes);
