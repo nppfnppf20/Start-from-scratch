@@ -1,6 +1,6 @@
 <script lang="ts">
   import PageHeader from '$lib/components/PageHeader.svelte';
-  import SurveyorBankTable from '$lib/components/SurveyorBankModal.svelte';
+  import SurveyorBankTable from '$lib/components/SurveyorBankTableBriefings.svelte';
   import { selectedProject, authorizeSurveyors, createFeeQuoteLog } from '$lib/stores/projectStore';
   import { emailTemplates, disciplineSpecificSections } from '$lib/data/emailTemplates';
   import ConfirmRequestSentModal from '$lib/components/ConfirmRequestSentModal.svelte';
@@ -128,11 +128,11 @@
 
     // Convert HTML body to plain text for mailto link
     const plainTextBody = emailBody
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<li[^>]*>/gi, '\n• ') // bullet point for list items
-      .replace(/<mark[^>]*>/gi, '') // remove opening mark tag
-      .replace(/<\/mark>/gi, '') // remove closing mark tag
-      .replace(/<[^>]+>/g, '') // strip remaining html tags
+      .replace(/<br\s*\/?>(?=\s*\n?)/gi, '\n')
+      .replace(/<li[^>]*>/gi, '\n• ')
+      .replace(/<mark[^>]*>/gi, '')
+      .replace(/<\/mark>/gi, '')
+      .replace(/<[^>]+>/g, '')
       .trim();
 
     const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
@@ -399,26 +399,14 @@
     border: 1px solid #ffeeba;
     border-radius: 4px;
     padding: 1rem;
-    margin-top: 1.5rem;
-  }
-
-  .instructions p {
-    margin: 0 0 0.5rem 0;
-    color: #856404;
-    font-weight: 600;
+    margin-top: 1rem;
   }
 
   .instructions ul {
-    margin: 0;
-    padding-left: 1.5rem;
-    color: #856404;
+    margin: 0.5rem 0 0 1rem;
   }
 
   .instructions li {
     margin-bottom: 0.25rem;
-  }
-
-  h2 {
-    margin-top: 0;
   }
 </style> 
