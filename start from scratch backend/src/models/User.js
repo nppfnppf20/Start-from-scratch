@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: function() { return this.role !== 'client'; }
+        required: false
     },
     name: {
         type: String,

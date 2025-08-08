@@ -10,7 +10,25 @@ function determineRole(email) {
     return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
 }
 
+function validateRolePassword(role, password) {
+    // NOTE: Ensure these env vars are set in Render!
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+    const SURVEYOR_PASSWORD = process.env.SURVEYOR_PASSWORD;
+    const CLIENT_PASSWORD = process.env.CLIENT_PASSWORD; // Assuming clients also have a shared password
 
+    if (!password) return false;
+
+    switch (role) {
+        case 'admin':
+            return password === ADMIN_PASSWORD;
+        case 'surveyor':
+            return password === SURVEYOR_PASSWORD;
+        case 'client':
+            return password === CLIENT_PASSWORD;
+        default:
+            return false; // Deny by default
+    }
+}
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -54,9 +72,8 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        // Use the matchPassword method to compare hashed password
-        const isMatch = await user.matchPassword(password);
-        if (!isMatch) {
+        // Use role-based password validation instead of individual passwords
+        if (!validateRolePassword(user.role, password)) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
