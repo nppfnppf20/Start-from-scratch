@@ -38,7 +38,7 @@
       .filter((e): e is string => Boolean(e));
 
     if (selectedEmails.length === 0) {
-      alert('No authorized surveyors selected.');
+      alert('No authorised surveyors selected.');
       return;
     }
 
@@ -188,7 +188,7 @@
       </div>
 
       <div class="form-group">
-        <label for="surveyors">Authorized Surveyors</label>
+        <label for="surveyors">Authorised Surveyors</label>
         <div class="list-controls">
           <input type="text" placeholder="Filter surveyors by email..." bind:value={surveyorFilter} />
           <button type="button" class="btn-tertiary" on:click={copyAuthorizedSurveyorEmails}>Copy to clipboard</button>
@@ -204,7 +204,7 @@
       </div>
 
       <div class="form-group">
-        <label for="clients">Authorized Clients</label>
+        <label for="clients">Authorised Clients</label>
         <input type="text" placeholder="Filter clients by email..." bind:value={clientFilter} />
         <div class="checkbox-group">
           {#each visibleClients as client}

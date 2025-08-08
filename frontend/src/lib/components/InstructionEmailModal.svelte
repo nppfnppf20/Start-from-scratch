@@ -41,7 +41,7 @@
 
 Please take this email as ${instructionText} for the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
 
-The instruction is for the following works:<br/><br/>
+The instruction is for the following works:<br/>
 
 ${formattedLineItems}
 
@@ -51,7 +51,7 @@ Please refer to trpprojectdashboard.onrender.com for up to date project informat
 
 Please upload all reports to the relevant TRP Sharepoint folder. A link to the sharepoint can be found on the dashboard.<br/><br/>
 
-Can you please confirm receipt of this instruction as well as indicative timescales for reports and site visits [if site visit is required].<br/><br/>
+Can you please confirm receipt of this instruction as well as indicative timescales for reports and site visits <mark>[if site visit is required]</mark>.<br/><br/>
 
 Please do get in touch if you have any further queries.<br/><br/>
 
