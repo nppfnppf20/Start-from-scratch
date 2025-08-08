@@ -10,22 +10,23 @@ const helmet = require('helmet');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // +++ Import Routes +++
-const projectRoutes = require('./routes/projects');
-const quoteRoutes = require('./routes/quotes'); // Import quote routes
-const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
-const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** FIX: Destructure router from export ***
-const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
-const uploadRoutes = require('./routes/uploads');
-const documentRoutes = require('./routes/documents');
-const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
+// Temporarily commenting out imports to isolate path-to-regexp error
+// const projectRoutes = require('./routes/projects');
+// const quoteRoutes = require('./routes/quotes'); // Import quote routes
+// const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
+// const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** FIX: Destructure router from export ***
+// const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
+// const uploadRoutes = require('./routes/uploads');
+// const documentRoutes = require('./routes/documents');
+// const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
 const authRoutes = require('./routes/auth');
-const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
+// const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
 const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
-const userRoutes = require('./routes/users');
-const clientOrganisationsRoutes = require('./routes/clientOrganisations');
-const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
-console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
+// const userRoutes = require('./routes/users');
+// const clientOrganisationsRoutes = require('./routes/clientOrganisations');
+// const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
+// console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -141,8 +142,8 @@ app.get('/api', (req, res) => {
 // app.use('/api/users', userRoutes);
 // app.use('/api/client-organisations', clientOrganisationsRoutes);
 
-// Public routes
-app.use('/api/uploads', uploadRoutes);
+// Public routes - testing one by one
+// app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
 
 
