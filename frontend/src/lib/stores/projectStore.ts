@@ -1087,6 +1087,18 @@ export function deleteCustomDateFromReview(quoteId: string, customDateId: string
 // +++ Add store for Instruction Logs +++
 export const currentInstructionLogs = writable<InstructionLog[]>([]);
 
+// Fast lookup map of logs by quoteId for UI components
+export const instructionLogsByQuoteId = derived(
+  currentInstructionLogs,
+  ($logs) => {
+    const mapping: Record<string, InstructionLog> = Object.create(null);
+    for (const instructionLog of $logs) {
+      if (instructionLog && instructionLog.quoteId) mapping[instructionLog.quoteId] = instructionLog;
+    }
+    return mapping;
+  }
+);
+
 // --- Instruction Log Interface (Matches backend) ---
 export interface InstructionLog {
   id: string; // Corresponds to _id from backend
