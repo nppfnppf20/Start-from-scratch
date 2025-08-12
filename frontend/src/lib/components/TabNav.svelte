@@ -5,7 +5,7 @@
   
   // Define all available tabs
   const allTabs = [
-    { id: 'general', label: 'General Project Information', path: '/', roles: ['admin', 'surveyor', 'client'] },
+    { id: 'general', label: 'General Project Information', path: '/projectinfo', roles: ['admin', 'surveyor', 'client'] },
     { id: 'surveyor-briefings', label: 'Surveyor Briefings', path: '/surveyor-briefings', roles: ['admin'] },
     { id: 'fee-submission', label: 'Fee Quote Submission', path: '/fee-quote-submission', roles: ['surveyor'] },
     { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes', roles: ['admin', 'client'] },
@@ -67,7 +67,7 @@
   }
 </script>
 
-<div class="tabs" on:click={closeDropdowns}>
+<div class="tabs" role="navigation" aria-label="Project sections">
   <nav class="navigation-menu">
     <ul class="navigation-menu-list">
       {#each tabs as tab}
@@ -98,7 +98,7 @@
             </button>
             
             {#if openDropdownId === tab.id}
-              <div class="dropdown-menu" on:click|stopPropagation>
+              <div class="dropdown-menu" role="menu" tabindex="-1" on:keydown={(e) => e.key === 'Escape' && closeDropdowns()}>
                 {#each tab.dropdown as item}
                   <button
                     class="dropdown-item"

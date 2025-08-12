@@ -20,29 +20,14 @@
   // Format last saved date
   function formatLastSaved(updatedAt: string | undefined): string {
     if (!updatedAt) return "";
-    
     const date = new Date(updatedAt);
     const today = new Date();
-    
-    // Check if it's today
     if (date.toDateString() === today.toDateString()) {
-      return `Last saved today at ${date.toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })}`;
+      return `Last saved today at ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
     } else {
-      return `Last saved ${date.toLocaleDateString('en-GB', { 
-        day: 'numeric', 
-        month: 'short', 
-        year: 'numeric' 
-      })} at ${date.toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })}`;
+      return `Last saved ${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} at ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
     }
   }
-
-  
 
   // Local form model & dirty tracking
   let formData: any = null;
@@ -366,9 +351,9 @@
   }
 
   /* General page styling */
-  :global(body) { /* Apply to body for overall background */
-    background-color: #f8f9fa; /* Light grey background like the dashboard */
-    font-family: 'Inter', sans-serif; /* Common modern sans-serif font */
+  :global(body) {
+    background-color: #f8f9fa;
+    font-family: 'Inter', sans-serif;
   }
 
   .last-saved-info {
@@ -381,7 +366,7 @@
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
-    background-color: #2f855a; /* Green matching the theme */
+    background-color: #2f855a;
     color: white;
     border: none;
     border-radius: 6px;
@@ -391,7 +376,7 @@
   }
 
   .save-button-header:hover:not(:disabled) {
-    background-color: #276749; /* Darker green */
+    background-color: #276749;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
@@ -405,148 +390,36 @@
     cursor: not-allowed;
   }
 
-  .save-button-header.saving {
-    background-color: #4a5568; /* Grey during saving */
-  }
+  .save-button-header.saving { background-color: #4a5568; }
+  .save-button-header.saved { background-color: #38a169; }
 
-  .save-button-header.saved {
-    background-color: #38a169; /* Brighter green when saved */
-  }
-
-  /* General Info Container */
   .general-info {
     padding: 1.5rem;
     background-color: #ffffff;
     border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
-  
-  /* removed unused h1 styling */
-  
-  /* h2 styling now comes from shared forms.css in FormSection */
-  
-  .project-form {
-    display: flex;
-    flex-direction: column;
-    gap: 2.5rem; /* Increased gap between sections */
-  }
-  
-  /* form-section base styles now come from shared forms.css */
-  
-  /* form-grid and form-group now come from shared forms.css */
-  
-  /* label styling now comes from shared forms.css */
 
-  .group-label {
-    font-weight: 500;
-    color: #4a5568;
-    font-size: 0.9rem;
-  }
-  
-  /* input/select/textarea focus styling now comes from shared forms.css */
+  .project-form { display: flex; flex-direction: column; gap: 2.5rem; }
 
-  /* readonly styling now comes from shared forms.css */
-  
-  /* radio-group and radio-label now from shared forms.css */
+  .group-label { font-weight: 500; color: #4a5568; font-size: 0.9rem; }
 
-  /* radio input styles from shared forms.css */
-  
-  /* textarea sizing from shared forms.css */
-  
-  .read-only-notice {
-    display: inline-block;
-    background-color: #f7fafc; /* Light, neutral grey */
-    color: #4a5568;            /* Darker grey for text, matches labels */
-    border: 1px solid #e2e8f0; /* Subtle grey border, matches other elements */
-    padding: 0.5rem 1rem;      /* More fitting padding for a smaller element */
-    border-radius: 6px;        /* Consistent with buttons */
-    margin-bottom: 1.5rem;
-    font-weight: 500;
-  }
+  .read-only-notice { display: inline-block; background-color: #f7fafc; color: #4a5568; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; font-weight: 500; }
+  .read-only-notice p { margin: 0; }
 
-  .read-only-notice p {
-    margin: 0; /* Remove default paragraph margin */
-  }
-
-  /* Form Section and Grid Layout */
   .no-project-selected {
-    text-align: center;
-    margin: 3rem auto; /* More margin */
-    padding: 2.5rem;
-    background-color: #ffffff; /* White background */
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    color: #718096; /* Softer text color */
-  }
-  
-  /* disabled field styling from shared forms.css */
-  
-  /* .radio-group input[type="radio"]:disabled + * { color: #a0aec0; cursor: not-allowed; } */
-  
-  input[type="radio"]:disabled {
-    border-color: #e2e8f0;
-    background-color: #edf2f7;
-    cursor: not-allowed;
-  }
-  input[type="radio"]:disabled:checked::before {
-     background-color: #a0aec0; /* Grey dot for disabled checked */
+    text-align: center; margin: 3rem auto; padding: 2.5rem; background-color: #ffffff;
+    border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); color: #718096;
   }
 
-  /* number input spinner styling from shared forms.css */
+  .bottom-save-container { text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; }
 
-  /* Bottom Save Button Container */
-  .bottom-save-container {
-    text-align: center;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e2e8f0;
-  }
-
-  /* removed old bottom save-button styles now handled by SaveBar */
-
-  /* SharePoint Link Styles */
-  .sharepoint-link-container {
-    position: relative;
-    display: inline-block;
-  }
-
-  .sharepoint-link-text {
-    color: #007bff;
-    text-decoration: none;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-
-  .sharepoint-link-text:hover {
-    text-decoration: underline;
-  }
-
-  .no-link-text {
-    color: #6c757d;
-    font-style: italic;
-    font-size: 0.9rem;
-  }
-
-  input[type="url"] {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    background-color: #ffffff;
-  }
-
-  input[type="url"]:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
-    outline: none;
-  }
-
-  input[type="url"][readonly] {
-    background-color: #f9fafb;
-    color: #6b7280;
-  }
+  .sharepoint-link-container { position: relative; display: inline-block; }
+  .sharepoint-link-text { color: #007bff; text-decoration: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+  .sharepoint-link-text:hover { text-decoration: underline; }
+  .no-link-text { color: #6c757d; font-style: italic; font-size: 0.9rem; }
+  input[type="url"] { width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; background-color: #ffffff; }
+  input[type="url"]:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; outline: none; }
+  input[type="url"][readonly] { background-color: #f9fafb; color: #6b7280; }
 </style>
+
