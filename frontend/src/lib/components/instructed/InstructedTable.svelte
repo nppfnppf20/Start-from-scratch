@@ -28,7 +28,6 @@
           <th>Line Items</th>
           <th>Quote Amt.</th>
           <th>Work Status</th>
-          <th>Dates</th>
           <th>Dependencies</th>
           <th>Notes</th>
         </tr>

@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Quote, InstructionLog, WorkStatus } from '$lib/stores/projectStore';
   import WorkStatusSelect from './WorkStatusSelect.svelte';
-  import StandardDates from './StandardDates.svelte';
-  import CustomDatesEditor from './CustomDatesEditor.svelte';
+  // Dates temporarily managed in Programme view. Keeping imports commented for future reuse.
+  // import StandardDates from './StandardDates.svelte';
+  // import CustomDatesEditor from './CustomDatesEditor.svelte';
   import NotesButtonWithModal from './NotesButtonWithModal.svelte';
   import LineItemsButton from './LineItemsButton.svelte';
 
@@ -34,16 +35,6 @@
     <WorkStatusSelect quoteId={quote.id} current={currentWorkStatus} />
   </td>
   <td>
-    <div class="date-cell-group">
-      <StandardDates
-        quoteId={quote.id}
-        siteVisitDate={log?.siteVisitDate}
-        reportDraftDate={log?.reportDraftDate}
-      />
-    </div>
-    <CustomDatesEditor quoteId={quote.id} customDates={log?.customDates} />
-  </td>
-  <td>
     <NotesButtonWithModal quote={quote} field="dependencies" value={log?.dependencies} />
   </td>
   <td>
@@ -58,6 +49,6 @@
   .contact-email { font-size: 0.9em; color: #718096; text-decoration: none; }
   .contact-email:hover { text-decoration: underline; }
   .text-center { text-align: center; }
-  .date-cell-group { margin-bottom: 0.75rem; }
+  /* .date-cell-group { margin-bottom: 0.75rem; } */
 </style>
 

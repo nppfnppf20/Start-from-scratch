@@ -40,10 +40,16 @@
     });
     isEditing = false;
   }
+
+  function deleteNotes() {
+    // Dispatch delete event to parent component
+    dispatch('delete', { quoteId });
+    isEditing = false;
+  }
 </script>
 
-<div class="modal-backdrop" on:click={closeModal}>
-  <div class="modal-content" on:click|stopPropagation>
+<div class="modal-backdrop" role="dialog" aria-modal="true" tabindex="-1" on:click={closeModal} on:keydown={(e) => { if (e.key === 'Escape') closeModal(); }}>
+  <div class="modal-content" role="document" on:click|stopPropagation tabindex="0">
     <div class="modal-header">
       <h2>{modalTitle}</h2>
       <div class="header-buttons">
@@ -54,7 +60,7 @@
             </svg>
           </button>
         {/if}
-        <button on:click={closeModal} class="close-button">&times;</button>
+        <button on:click={closeModal} class="close-button" aria-label="Close modal">&times;</button>
       </div>
     </div>
     <div class="modal-body">
@@ -75,11 +81,19 @@
     <div class="modal-footer">
       {#if isEditing}
         <div class="edit-buttons">
+          {#if editable}
+            <button on:click={deleteNotes} class="delete-button" title="Delete notes">Delete</button>
+          {/if}
           <button on:click={cancelEditing} class="cancel-button">Cancel</button>
           <button on:click={saveNotes} class="save-button">Save</button>
         </div>
       {:else}
-        <button on:click={closeModal}>Close</button>
+        <div class="view-buttons">
+          {#if editable}
+            <button on:click={deleteNotes} class="delete-button" title="Delete notes" aria-label="Delete notes">Delete</button>
+          {/if}
+          <button on:click={closeModal} aria-label="Close">Close</button>
+        </div>
       {/if}
     </div>
   </div>
@@ -206,11 +220,18 @@
   .modal-footer {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     border-top: 1px solid #e5e7eb;
     padding-top: 1rem;
+    gap: 0.75rem; /* add spacing between buttons */
   }
 
   .edit-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .view-buttons {
     display: flex;
     gap: 0.75rem;
   }
@@ -249,5 +270,14 @@
 
   .save-button:hover {
     background-color: #059669;
+  }
+
+  .modal-footer .delete-button {
+    background-color: #ef4444;
+    color: white;
+  }
+
+  .modal-footer .delete-button:hover {
+    background-color: #dc2626;
   }
 </style> 

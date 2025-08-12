@@ -16,7 +16,27 @@
 </script>
 
 {#each items as item (item.id)}
-  <div class={classFor(item)} style={`background-color: ${item.color}1A; border-left: 3px solid ${item.color}; color: ${item.color};`} title={`${isCustom(item) ? 'Click to edit: ' : ''}${item.title} (${format(parseISO(item.date), 'd MMM')})`} on:click={() => { if (isCustom(item) && item.quoteId && item.customDateId) dispatch('editCustomDate', { quoteId: item.quoteId, customDateId: item.customDateId }); }} role={isCustom(item) ? 'button' : undefined}>
+  <div
+    class={classFor(item)}
+    style={`background-color: ${item.color}1A; border-left: 3px solid ${item.color}; color: ${item.color};`}
+    title={`${isCustom(item) ? 'Click to edit: ' : ''}${item.title} (${format(parseISO(item.date), 'd MMM')})`}
+    on:click={(e) => {
+      if (isCustom(item) && item.quoteId && item.customDateId) {
+        e.stopPropagation();
+        dispatch('editCustomDate', { quoteId: item.quoteId, customDateId: item.customDateId });
+      }
+    }}
+    role={isCustom(item) ? 'button' : undefined}
+    on:keydown={(e) => {
+      if (isCustom(item) && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (item.quoteId && item.customDateId) {
+          dispatch('editCustomDate', { quoteId: item.quoteId, customDateId: item.customDateId });
+        }
+      }
+    }}
+  >
     {item.title}
   </div>
 {/each}

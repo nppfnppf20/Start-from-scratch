@@ -18,6 +18,7 @@
   let notesModalContent = '';
   let notesModalTitle = '';
   let notesModalPrefix = '';
+  let notesTarget: 'operationalNotes' | 'dependencies' = 'dependencies';
 
   function openAdd(weekDate: Date) { selectedWeekDate = weekDate; customDateToEdit = null; showSurveyorDateModal = true; }
   function openEdit(quoteId: string, customDateId: string) {
@@ -61,10 +62,24 @@
     <div style="font-weight: bold; font-size: 0.9em; margin-bottom: 2px; display: flex; align-items: center;">
       <span>{row.quote.discipline}</span>
       {#if row.log && row.log.operationalNotes && row.log.operationalNotes.trim() !== ''}
-        <button type="button" class="icon-btn" aria-label="View notes" title={`Surveyor Notes: ${row.log.operationalNotes}`} on:click={() => { notesModalContent = row.log!.operationalNotes || ''; notesModalTitle = `Notes for ${row.quote.organisation}`; notesModalPrefix = 'Notes:'; showNotesModal = true; }}>📝</button>
+        <button type="button" class="icon-btn" aria-label="View notes" title={`Surveyor Notes: ${row.log.operationalNotes}`}
+          on:click={() => { notesModalContent = row.log!.operationalNotes || ''; notesModalTitle = `Notes for ${row.quote.organisation}`; notesModalPrefix = 'Notes:'; notesTarget = 'operationalNotes'; showNotesModal = true; }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+            <title>Surveyor Notes: {row.log.operationalNotes}</title>
+            <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z"/>
+            <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V11h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
+            <path d="M6 4h6v1H6V4zm0 3h6v1H6V7zm0 3h6v1H6v-1z"/>
+          </svg>
+        </button>
       {/if}
       {#if row.log && row.log.dependencies && row.log.dependencies.trim() !== ''}
-        <button type="button" class="icon-btn" aria-label="View dependencies" title={`Dependencies: ${row.log.dependencies}`} on:click={() => { notesModalContent = row.log!.dependencies || ''; notesModalTitle = `Dependencies for ${row.quote.organisation}`; notesModalPrefix = 'Dependencies:'; showNotesModal = true; }}>⚠️</button>
+        <button type="button" class="icon-btn" aria-label="View dependencies" title={`Dependencies: ${row.log.dependencies}`}
+          on:click={() => { notesModalContent = row.log!.dependencies || ''; notesModalTitle = `Dependencies for ${row.quote.organisation}`; notesModalPrefix = 'Dependencies:'; notesTarget = 'dependencies'; showNotesModal = true; }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+            <title>Dependencies: {row.log.dependencies}</title>
+            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 4a.905.905 0 0 1 .9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6.022a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+          </svg>
+        </button>
       {/if}
     </div>
     <div style="font-size: 0.85em;">
@@ -104,8 +119,10 @@
     notes={notesModalContent}
     organisationName={row.quote.organisation}
     quoteId={row.quote.id}
+      editable={true}
     on:close={() => (showNotesModal = false)}
-    on:save={async (e) => { await upsertInstructionLog(row.quote.id, { dependencies: e.detail.notes }); showNotesModal = false; }}
+      on:save={async (e) => { await upsertInstructionLog(row.quote.id, { [notesTarget]: e.detail.notes } as any); showNotesModal = false; }}
+      on:delete={async () => { await upsertInstructionLog(row.quote.id, { [notesTarget]: '' } as any); showNotesModal = false; }}
   />
 {/if}
 
