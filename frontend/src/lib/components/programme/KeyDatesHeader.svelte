@@ -55,10 +55,35 @@
 {/if}
 
 <style>
-  .key-date-cell { padding: 0.1rem; vertical-align: top; position: relative; min-height: 40px; }
+  .key-date-cell { padding: 0.1rem; vertical-align: top; position: relative; min-height: 40px; border-left: 1px solid #dee2e6; }
+  .key-dates-header { border-left: 1px solid #dee2e6; }
+  /* Make the first Key Dates column sticky under the week header row */
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    z-index: 4; /* above other headers */
+    top: 38px; /* aligns below the first header row */
+  }
   .key-dates-container { margin-bottom: 2px; min-height: 20px; }
   .timeline-key-event { font-size: 0.75em; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px; white-space: normal; color: #333; border: 1px solid rgba(0,0,0,0.1); line-height: 1.3; display: block; cursor: pointer; }
-  .add-key-date-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #adb5bd; background: #e9ecef; cursor: pointer; font-size: 0.9rem; font-weight: bold; color: #495057; display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 1; margin-top: 2px; }
+  .add-key-date-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px; /* rounded corners, not a circle */
+    border: 1px solid #adb5bd;
+    background: #e9ecef;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #495057;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center; /* ensure + is centered */
+    padding: 0;
+    line-height: 1;
+    margin-top: 2px;
+  }
   .add-key-date-btn:hover { background: #ced4da; border-color: #6c757d; }
 </style>
 
