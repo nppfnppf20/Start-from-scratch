@@ -1,0 +1,28 @@
+.form-section { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:2rem; box-shadow:0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06); }
+.form-section h2 { font-size:1.3rem; font-weight:500; margin-bottom:1.5rem; color:#2d3748; border-bottom:1px solid #e2e8f0; padding-bottom:.75rem; }
+.form-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:1.5rem; }
+.form-group { display:flex; flex-direction:column; gap:0.6rem; }
+label,.group-label { font-weight:500; color:#4a5568; font-size:.9rem; }
+
+input[type="text"], input[type="number"], textarea, select {
+  padding:.75rem; border:1px solid #cbd5e0; border-radius:6px; font-size:1rem; width:100%;
+  transition:border-color .2s ease-in-out, box-shadow .2s ease-in-out; background:#fff;
+  font-family: inherit;
+}
+input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+  border-color:#4299e1; box-shadow:0 0 0 1px #4299e1; outline:none;
+}
+input[readonly], textarea[readonly] { background:#f9fafb; color:#6b7280; }
+textarea { resize:vertical; min-height:80px; }
+
+.radio-group { display:flex; flex-wrap:wrap; gap:1rem; margin-top:.25rem; }
+.radio-label { display:flex; align-items:center; gap:.5rem; color:#4a5568; font-weight:normal; }
+input[type="radio"] { appearance:none; -webkit-appearance:none; width:16px; height:16px; border:1px solid #cbd5e0; border-radius:50%; position:relative; cursor:pointer; transition:border-color .2s; }
+input[type="radio"]:checked { border-color:#3182ce; }
+input[type="radio"]:checked::before { content:''; width:8px; height:8px; background:#3182ce; border-radius:50%; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+
+input:disabled, textarea:disabled, select:disabled { background:#e2e8f0; color:#718096; cursor:not-allowed; border-color:#cbd5e0; }
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+input[type=number] { -moz-appearance:textfield; appearance:textfield; }
+
+.section-desc { margin-bottom:1rem; color:#718096; }
