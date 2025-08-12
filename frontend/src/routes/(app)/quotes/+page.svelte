@@ -17,6 +17,7 @@
   import DocumentUploadModal from '$lib/components/DocumentUploadModal.svelte';
   import InstructionEmailModal from '$lib/components/InstructionEmailModal.svelte';
   import NotInstructedModal from '$lib/components/NotInstructedModal.svelte';
+  import QuotesTable from '$lib/components/quotes/QuotesTable.svelte';
   
   const instructionStatuses: InstructionStatus[] = [
     'pending', 
@@ -47,41 +48,9 @@
   let showNotInstructedModal = false;
   let quoteForNotInstructed: Quote | null = null;
 
-  $: processedQuotes = (() => {
-    const sorted = [...$currentProjectQuotes].sort((a, b) => {
-      const disciplineA = a.discipline || '';
-      const disciplineB = b.discipline || '';
-      return disciplineA.localeCompare(disciplineB);
-    });
+  import { processedQuotes } from '$lib/stores/selectors/quotesSelectors';
 
-    let groupCounter = 0;
-    let lastDiscipline: string | null = null;
-
-    return sorted.map(quote => {
-      if (quote.discipline !== lastDiscipline) {
-        groupCounter++;
-        lastDiscipline = quote.discipline;
-      }
-      return { ...quote, group: groupCounter };
-    });
-  })();
-
-  // --- New: Reference to the scrollable table container ---
-  let tableContainerElement: HTMLDivElement;
-
-  // --- New: Scroll functions ---
-  function scrollLeft() {
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' }); // Scroll 150px left
-    }
-  }
-
-  function scrollRight() {
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' }); // Scroll 150px right
-    }
-  }
-  // ---------
+  // Table rendering moved into QuotesTable component
 
   function openNewQuoteModal() {
     currentQuoteToEdit = null;
@@ -297,77 +266,13 @@
   </PageHeader>
   
   {#if $selectedProject}
-    <div class="table-scroll-wrapper">
-      <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
-      <div class="quotes-table-container" bind:this={tableContainerElement}>
-        <table class="quotes-table">
-          <thead>
-            <tr>
-              <th>Discipline</th>
-              <th>Organisation</th>
-              <th>Contact Name</th>
-              <th>Email</th>
-              <th>Line Items</th>
-              <th>Total (excl. VAT)</th>
-              <th>Instruction Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each processedQuotes as quote (quote.id)}
-              <tr class:group-odd={quote.group % 2 !== 0}>
-                <td>{quote.discipline}</td>
-                <td>{quote.organisation}</td>
-                <td>{quote.contactName}</td>
-                <td><a href="mailto:{quote.email}">{quote.email}</a></td>
-                <td class="text-center">
-                  <button 
-                      type="button" 
-                      class="line-items-button" 
-                      title="View Line Items" 
-                      on:click={() => openLineItemsModal(quote)}
-                      aria-label={`View ${quote.lineItems.length} line items`}
-                  >
-                    {quote.lineItems.length}
-                    <span class="plus-sign">+</span>
-                  </button>
-                </td>
-                <td class="text-right">£{quote.total.toFixed(2)}</td>
-                <td>
-                  <select 
-                    class="instruction-status-select"
-                    class:status-instructed={quote.instructionStatus === 'instructed'}
-                    class:status-partially-instructed={quote.instructionStatus === 'partially instructed'}
-                    class:status-pending={quote.instructionStatus === 'pending'}
-                    class:status-will-not-be-instructed={quote.instructionStatus === 'will not be instructed'}
-                    value={quote.instructionStatus}
-                    id={`status-select-${quote.id}`}
-                    on:change={(e) => handleStatusChange(quote.id, e.currentTarget.value as InstructionStatus, quote)}
-                  >
-                    {#each instructionStatuses as status}
-                      <option value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
-                    {/each}
-                  </select>
-                </td>
-                <td class="action-cell">
-                  <button 
-                    class="action-btn delete-btn" 
-                    title="Delete Quote" 
-                    on:click={() => handleDeleteQuote(quote.id, quote.organisation)}
-                  >Delete</button>
-                  <button 
-                    class="action-btn edit-btn" 
-                    title="Edit Quote"
-                    on:click={() => openEditQuoteModal(quote)} 
-                  >Edit</button>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-      <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
-    </div>
+    <QuotesTable
+      rows={$processedQuotes}
+      onStatusChange={(quote, status) => handleStatusChange(quote.id, status as InstructionStatus, quote)}
+      onViewLineItems={(quote) => openLineItemsModal(quote)}
+      onEdit={(quote) => openEditQuoteModal(quote)}
+      onDelete={(quote) => handleDeleteQuote(quote.id, quote.organisation)}
+    />
   {:else}
     <!-- Message is now in the subtitle -->
   {/if}
@@ -448,23 +353,7 @@
     padding: 1rem 2rem; /* Consistent padding */
   }
   
-  h1 {
-    font-size: 1.8rem; 
-    font-weight: 600; 
-    margin-bottom: 0.5rem;
-  }
-
-  .quotes-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-
-  h2 {
-    font-size: 1.25rem;
-    color: #4a5568;
-  }
+  /* Removed unused legacy header styles */
 
   .add-quote-btn {
     background-color: #3182ce;
@@ -495,252 +384,27 @@
     box-shadow: none;
   }
   
-  .table-scroll-wrapper {
-    position: relative;
-    margin-bottom: 2rem; /* Keep space below */
-  }
-
-  .scroll-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%); /* Center vertically */
-    z-index: 10;
-    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
-    border: 1px solid #cbd5e0;
-    border-radius: 50%; /* Circle */
-    width: 36px;
-    height: 36px;
-    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
-    cursor: pointer;
-    color: #4a5568;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    display: inline-flex; /* Use inline-flex */
-    align-items: center;    /* Flexbox: Vertically center content */
-    justify-content: center; /* Flexbox: Horizontally center content */
-    padding: 0; /* Remove padding if flex is centering */
-  }
-
-  .scroll-btn:hover {
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-  }
-
-  .scroll-btn-left {
-    left: -18px; /* Position halfway outside the container */
-  }
-
-  .scroll-btn-right {
-    right: -18px; /* Position halfway outside the container */
-  }
+  /* Scroll controls moved to QuotesTable component */
   /* ------------------------------------------- */
 
-  .quotes-table-container {
-    overflow-x: auto; /* Changed from auto to scroll for persistent visibility */
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e2e8f0;
-    margin-bottom: 2rem; /* Space below table */
-  }
-  
-  .quotes-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    white-space: nowrap; /* Prevent wrapping in cells initially */
-  }
-  
-  .quotes-table th,
-  .quotes-table td {
-    padding: 0.6rem 0.8rem;
-    text-align: left;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: middle;
-    white-space: nowrap; /* Keep cells from wrapping */
-  }
-
-  .quotes-table td {
-    color: #4a5568; /* Slightly softer text color for data */
-  }
-  
-  .quotes-table th {
-    background-color: #f8f9fa; 
-    font-weight: 600;
-    color: #4a5568;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.05em;
-  }
-
-  .quotes-table tbody tr:last-child td {
-    border-bottom: none; 
-  }
-
-  .quotes-table tbody tr:hover {
-    background-color: #f7fafc; 
-  }
-
-  tr.group-odd {
-    background-color: #f8f9fa; /* zebra striping for groups */
-  }
+  /* Table styles moved into QuotesTable / QuoteRow */
 
   /* Specific Cell Alignments */
-  .text-center {
-    text-align: center;
-  }
-  .text-right {
-    text-align: right;
-  }
+  /* Alignment helpers moved into QuoteRow */
 
   /* Email Link */
-  td a[href^="mailto:"] {
-      color: #3182ce;
-      text-decoration: none;
-      transition: color 0.2s ease-in-out;
-  }
-  td a[href^="mailto:"]:hover {
-      color: #2b6cb0;
-      text-decoration: underline;
-  }
+  /* Email link styles moved into QuoteRow if needed */
 
-  /* Line Items Button */
-  .line-items-button {
-    background-color: #f1f3f5;
-    border: 1px solid #dee2e6;
-    border-radius: 9999px; /* Pill shape */
-    padding: 0.2rem 0.6rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    transition: background-color 0.2s, border-color 0.2s;
-    font-size: 0.75rem;
-  }
-  .line-items-button:hover {
-    background-color: #e9ecef;
-    border-color: #adb5bd;
-  }
-  .line-items-button .plus-sign {
-    /* display: none; Remove hiding */
-    display: inline; /* Show the plus sign */
-    font-size: 0.8em; /* Make plus slightly smaller */
-    font-weight: bold;
-    line-height: 1; /* Ensure it doesn't affect button height much */
-  }
+  /* Line Items Button styles moved into QuoteRow */
 
   /* Instruction Status Select */
-  .instruction-status-select {
-    padding: 0.3rem 0.5rem;
-    border-radius: 5px;
-    border: 1px solid #cbd5e0;
-    font-size: 0.85rem;
-    background-color: white;
-    cursor: pointer;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
-    min-width: 120px;
-    text-align: left;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1em 1em;
-  }
-  .instruction-status-select:focus {
-      border-color: #4299e1; 
-      box-shadow: 0 0 0 1px #4299e1; 
-      outline: none;
-  }
-
-  /* Status-specific Select Styling */
-  .status-instructed {
-    background-color: var(--status-completed-bg);
-    color: var(--status-completed-color);
-    border-color: var(--status-completed-bg);
-    font-weight: 500;
-  }
-  .status-partially-instructed {
-    background-color: var(--status-completed-bg);
-    color: var(--status-completed-color);
-    border-color: var(--status-completed-bg);
-    font-weight: 500;
-  }
-  .status-pending {
-    background-color: #e2e8f0;
-    color: #4a5568;
-    border-color: #e2e8f0;
-    font-weight: 500;
-  }
-  .status-will-not-be-instructed {
-    background-color: var(--status-not-started-bg);
-    color: var(--status-not-started-color);
-    border-color: var(--status-not-started-bg);
-    font-weight: 500;
-  }
+  /* Status select styles moved into QuoteRow */
   
   /* Action Buttons in Table */
-  .action-cell {
-    text-align: right; /* Center align actions */
-    white-space: nowrap;
-  }
-  
-  .action-btn {
-    padding: 0.25rem 0.5rem;
-    margin-left: 0.3rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: background-color 0.2s;
-  }
-  .action-btn:hover {
-     background-color: #edf2f7; /* Light grey background on hover */
-     color: #2d3748; /* Darker text on hover */
-  }
-
-  /* Specific Button Styles */
-  .edit-btn {
-    background-color: #3182ce;
-    color: white;
-  }
-  .edit-btn:hover {
-    background-color: #2b6cb0;
-  }
-  .delete-btn {
-    background-color: #e53e3e;
-    color: white;
-  }
-  .delete-btn:hover {
-      background-color: #c53030; /* Light red background on hover */
-      color: #c53030; /* Red text on hover */
-  }
+  /* Action button styles moved into QuoteRow */
 
   /* Icon Buttons */
-  .icon-cell {
-    width: 40px; /* Fixed width for icon cells */
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-  .icon-btn {
-    font-size: 1.1rem; /* Larger emoji */
-    padding: 0.2rem 0.4rem;
-    border: none;
-  }
-  .icon-btn:hover {
-    background-color: #e2e8f0;
-  }
+  /* Icon styles moved */
 
-  /* No Project State */
-  .quotes-container > p {
-    text-align: center;
-    margin: 3rem auto;
-    padding: 2.5rem;
-    background-color: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    color: #718096;
-  }
+  /* No Project State message handled in PageHeader subtitle */
 </style> 

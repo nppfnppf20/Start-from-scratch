@@ -103,6 +103,7 @@
       align-items: center;
       padding: 0.6rem 0;
       border-bottom: 1px solid #f0f0f0;
+      text-align: left; /* ensure left alignment */
   }
   
   .item:last-child {
@@ -136,6 +137,7 @@
       font-size: 1.1rem;
       gap: 0.5rem;
       padding-top: 0.5rem;
+      text-align: left; /* left alignment for text elements */
   }
 
   .close-footer-btn {
