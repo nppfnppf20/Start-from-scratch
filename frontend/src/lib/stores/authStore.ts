@@ -17,6 +17,7 @@ interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   token: string | null;
+  hydrated: boolean; // indicates local auth state has been initialized on client
 }
 
 // Helper function to decode a JWT.
@@ -41,10 +42,11 @@ function decodeJwt(token: string): User | null {
 
 // --- The Main Auth Store ---
 function createAuthStore() {
-  const { subscribe, set } = writable<AuthState>({
+  const { subscribe, set, update } = writable<AuthState>({
     isAuthenticated: false,
     user: null,
     token: null,
+    hydrated: false,
   });
 
   // This function runs when the store is first created.
@@ -60,12 +62,16 @@ function createAuthStore() {
           isAuthenticated: true,
           user: user,
           token: token,
+          hydrated: true,
         });
+        return;
       } else {
         // The token was invalid or expired, so clean up.
         localStorage.removeItem('jwt_token');
       }
     }
+    // No token or invalid token → mark as hydrated unauthenticated
+    update((state) => ({ ...state, isAuthenticated: false, user: null, token: null, hydrated: true }));
   }
 
      // --- Login Function ---
@@ -86,7 +92,7 @@ function createAuthStore() {
 
         if (token && user) {
           localStorage.setItem('jwt_token', token);
-          set({ isAuthenticated: true, user, token });
+          set({ isAuthenticated: true, user, token, hydrated: true });
           return { success: true };
         }
         return { success: false, error: 'Invalid token received.' };
@@ -108,6 +114,7 @@ function createAuthStore() {
       isAuthenticated: false,
       user: null,
       token: null,
+      hydrated: true,
     });
     // Redirect to login page to ensure a clean state
     await goto('/login');

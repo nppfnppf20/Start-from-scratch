@@ -15,8 +15,13 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
         return {};
     }
 
-    const { isAuthenticated } = get(authStore);
+    const { isAuthenticated, hydrated } = get(authStore);
     const isLoginPage = url.pathname === '/login';
+
+    // Avoid redirect decisions until auth state is hydrated client-side
+    if (!hydrated) {
+        return {};
+    }
 
     if (!isAuthenticated && !isLoginPage) {
         // If the user is not logged in and not trying to access the login page,
