@@ -23,7 +23,7 @@
       if (user && user.role === 'surveyor') {
         goto('/fee-quote-submission'); // Redirect surveyors
       } else {
-        goto('/'); // Redirect other users
+        goto('/projectinfo'); // Redirect other users directly to project info
       }
     } else {
       errorMessage = result.error || 'An unknown error occurred.';
