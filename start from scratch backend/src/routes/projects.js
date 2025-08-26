@@ -457,7 +457,7 @@ router.post('/:id/authorize-clients', protect, authorize('admin'), async (req, r
                 user = new User({
                     email,
                     role: 'client',
-                    password: process.env.CLIENT_PASSWORD
+                    password: process.env.CLIENT_PASSWORD || process.env.CLIENT_DEFAULT_PASSWORD
                 });
                 await user.save();
             }

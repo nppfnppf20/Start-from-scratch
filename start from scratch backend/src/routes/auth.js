@@ -14,7 +14,8 @@ function validateRolePassword(role, password) {
     // NOTE: Ensure these env vars are set in Render!
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
     const SURVEYOR_PASSWORD = process.env.SURVEYOR_PASSWORD;
-    const CLIENT_PASSWORD = process.env.CLIENT_PASSWORD; // Assuming clients also have a shared password
+    // Support legacy/alternate env var name for client password
+    const CLIENT_PASSWORD = process.env.CLIENT_PASSWORD || process.env.CLIENT_DEFAULT_PASSWORD; // Assuming clients also have a shared password
 
     if (!password) return false;
 

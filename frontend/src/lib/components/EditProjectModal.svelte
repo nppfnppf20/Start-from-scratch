@@ -1,9 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import type { ProjectBankItem } from '$lib/stores/projectStore';
-  import { updateProject } from '$lib/stores/projectStore';
+  import { updateProject, authorizeClients } from '$lib/stores/projectStore';
   import { authStore, getAuthTokenHeader } from '$lib/stores/authStore';
   import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
+  import { get } from 'svelte/store';
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -15,21 +16,21 @@
   let projectManager: string[] = [];
   let authorizedSurveyors: string[] = [];
   let allSurveyors: { _id: string; email: string }[] = [];
-  let authorizedClients: string[] = [];
-  let allClients: { _id: string; email: string }[] = [];
+  // New: select organisations for client authorization
+  let selectedClientOrgIds: string[] = [];
   
   const teamMembersList = ['JR', 'AD', 'BM', 'BW', 'RS', 'S Smith', 'S Scott', 'CB', 'PE', 'RM', 'GE', 'RK', 'DH', 'AC'];
 
   // Filters for quick search in lists
   let surveyorFilter: string = '';
-  let clientFilter: string = '';
+  let clientOrgFilter: string = '';
 
   // Visible (filtered) lists
   $: visibleSurveyors = allSurveyors.filter(s =>
     s.email.toLowerCase().includes(surveyorFilter.toLowerCase())
   );
-  $: visibleClients = allClients.filter(c =>
-    c.email.toLowerCase().includes(clientFilter.toLowerCase())
+  $: visibleClientOrgs = ($clientOrganisations || []).filter(org =>
+    org.organisationName.toLowerCase().includes(clientOrgFilter.toLowerCase())
   );
 
   async function copyAuthorizedSurveyorEmails() {
@@ -66,7 +67,6 @@
       projectLead = project.projectLead || [];
       projectManager = project.projectManager || [];
       authorizedSurveyors = project.authorizedSurveyors || [];
-      authorizedClients = project.authorizedClients || [];
       
       console.log('DEBUG: Project authorized surveyors:', authorizedSurveyors);
       
@@ -74,6 +74,10 @@
       const matchingOrg = $clientOrganisations.find(org => org.organisationName === project.client);
       // Set the client variable to the ID of the matching org, which the dropdown will use
       client = matchingOrg ? matchingOrg.id : '';
+      // Preselect the project's client organisation in the authorised clients (by org) list
+      if (matchingOrg && selectedClientOrgIds.length === 0) {
+        selectedClientOrgIds = [matchingOrg.id];
+      }
     }
   }
 
@@ -84,9 +88,8 @@
   onMount(async () => {
     loadClientOrganisations();
     try {
-        const [surveyorsRes, clientsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/users/surveyors`, { headers: getAuthTokenHeader() }),
-            fetch(`${API_BASE_URL}/users/clients`, { headers: getAuthTokenHeader() })
+        const [surveyorsRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/users/surveyors`, { headers: getAuthTokenHeader() })
         ]);
 
         if (surveyorsRes.ok) {
@@ -95,16 +98,12 @@
         } else {
             console.error('Failed to fetch surveyors:', surveyorsRes.status, surveyorsRes.statusText);
         }
-
-        if (clientsRes.ok) {
-            allClients = await clientsRes.json();
-        } else {
-            console.error('Failed to fetch clients:', clientsRes.status, clientsRes.statusText);
-        }
     } catch (error) {
         console.error('Error fetching users:', error);
     }
   });
+
+  // No separate button; client authorization will be triggered on save
 
   async function handleSubmit() {
     if (isSaving) return;
@@ -122,11 +121,23 @@
         client,
         projectLead,
         projectManager,
-        authorizedSurveyors,
-        authorizedClients,
+        authorizedSurveyors
       });
 
       if (success) {
+        // Authorize all contacts for selected client organisations
+        if (selectedClientOrgIds && selectedClientOrgIds.length > 0) {
+          const orgs = get(clientOrganisations);
+          const emails = Array.from(new Set(
+            selectedClientOrgIds
+              .map(id => orgs.find(o => o.id === id))
+              .filter((org): org is NonNullable<typeof org> => Boolean(org))
+              .flatMap(org => (org.contacts || []).map(c => c.email).filter((e): e is string => Boolean(e)))
+          ));
+          if (emails.length > 0) {
+            await authorizeClients(project.id, emails);
+          }
+        }
         dispatch('save');
       } else {
         errorMessage = 'Failed to save project. Please try again.';
@@ -204,13 +215,13 @@
       </div>
 
       <div class="form-group">
-        <label for="clients">Authorised Clients</label>
-        <input type="text" placeholder="Filter clients by email..." bind:value={clientFilter} />
+        <label for="client-orgs">Authorised Clients (by organisation)</label>
+        <input id="client-orgs" type="text" placeholder="Filter organisations by name..." bind:value={clientOrgFilter} />
         <div class="checkbox-group">
-          {#each visibleClients as client}
+          {#each visibleClientOrgs as org}
             <div class="checkbox-item">
-              <input type="checkbox" id="client-{client._id}" value={client._id} bind:group={authorizedClients} />
-              <label for="client-{client._id}">{client.email}</label>
+              <input type="checkbox" id="org-{org.id}" value={org.id} bind:group={selectedClientOrgIds} />
+              <label for="org-{org.id}">{org.organisationName}</label>
             </div>
           {/each}
         </div>
