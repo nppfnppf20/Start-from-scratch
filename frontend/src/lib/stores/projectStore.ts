@@ -1472,6 +1472,39 @@ export async function authorizeSurveyors(projectId: string, emails: string[]): P
     }
 }
 
+export async function authorizeClients(projectId: string, emails: string[]): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/authorize-clients`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthTokenHeader()
+            },
+            body: JSON.stringify({ emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.msg || 'Failed to authorize clients');
+        }
+
+        const updatedProject = await response.json();
+        const mappedProject = mapMongoId<Project>(updatedProject);
+
+        projects.update(ps => ps.map(p => p.id === projectId ? mappedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? mappedProject : p);
+
+        return mappedProject;
+
+    } catch (error) {
+        console.error('Error in authorizeClients:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}
+
 export async function revokeSurveyorAuthorization(projectId: string, email: string): Promise<Project | null> {
     if (!browser) return null;
 

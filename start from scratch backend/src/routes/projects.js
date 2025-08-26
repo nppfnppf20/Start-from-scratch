@@ -448,14 +448,23 @@ router.post('/:id/authorize-clients', protect, authorize('admin'), async (req, r
             return res.status(404).json({ msg: 'Project not found' });
         }
 
-        const users = await User.find({ email: { $in: emails } });
-        if (users.length === 0) {
-            return res.status(200).json({ msg: 'No registered users found for the provided emails.', project });
+        // Ensure a client User exists for each email; create if missing
+        const userIds = [];
+        for (const rawEmail of emails) {
+            const email = String(rawEmail).toLowerCase();
+            let user = await User.findOne({ email });
+            if (!user) {
+                user = new User({
+                    email,
+                    role: 'client',
+                    password: process.env.CLIENT_PASSWORD
+                });
+                await user.save();
+            }
+            userIds.push(user._id);
         }
 
-        const userIds = users.map(user => user._id);
-
-        // Add only new user IDs to the authorizedClients array
+        // Add only new client IDs to the authorizedClients array
         const newClientIds = userIds.filter(userId => !project.authorizedClients.some(existingId => existingId.equals(userId)));
 
         if (newClientIds.length > 0) {

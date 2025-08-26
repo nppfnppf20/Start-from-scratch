@@ -1,7 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
-  import { addProject as addProjectToStore } from '$lib/stores/projectStore';
+  import { addProject as addProjectToStore, authorizeClients } from '$lib/stores/projectStore';
   import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
+  import { get } from 'svelte/store';
 
   export let isOpen = false;
 
@@ -64,6 +65,19 @@
     try {
       const addedProject = await addProjectToStore(projectData);
       if (addedProject) {
+        // If a client was selected, authorize its contact emails as client users for this project
+        if (selectedClient) {
+          const orgs = get(clientOrganisations);
+          const selectedOrg = orgs.find(org => org.id === selectedClient);
+          if (selectedOrg && Array.isArray(selectedOrg.contacts)) {
+            const emails = Array.from(new Set(
+              selectedOrg.contacts.map(c => c.email).filter((e): e is string => Boolean(e))
+            ));
+            if (emails.length > 0) {
+              await authorizeClients(addedProject.id, emails);
+            }
+          }
+        }
         closeModal();
       } else {
         submitError = 'Failed to add project. Please try again.';
