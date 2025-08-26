@@ -11,7 +11,7 @@ export const load: LayoutLoad = async () => {
         // If the user is not an admin or a client, redirect them.
         if (user?.role !== 'admin' && user?.role !== 'client') {
             // Redirect to the homepage as a safe default.
-            throw redirect(307, '/'); 
+            throw redirect(307, '/projectinfo'); 
         }
     }
     // No data needs to be returned.

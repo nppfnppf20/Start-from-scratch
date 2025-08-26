@@ -11,7 +11,7 @@ export const load: LayoutLoad = async () => {
         // If the user is not a surveyor, or not logged in, redirect them.
         if (user?.role !== 'surveyor') {
             // Redirect to the homepage as a safe default.
-            throw redirect(307, '/'); 
+            throw redirect(307, '/projectinfo'); 
         }
     }
     // No data needs to be returned.

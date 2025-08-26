@@ -10,8 +10,8 @@ export const load: LayoutLoad = async () => {
         // This page is for admins and clients only.
         // If the user is not an admin or a client, redirect them.
         if (user?.role !== 'admin' && user?.role !== 'client') {
-            // Redirect to the homepage as a safe default.
-            throw redirect(307, '/'); 
+            // Redirect to project info as a safe default.
+            throw redirect(307, '/projectinfo'); 
         }
     }
     // No data needs to be returned.
