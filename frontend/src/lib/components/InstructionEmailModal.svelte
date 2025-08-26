@@ -47,7 +47,7 @@ ${formattedLineItems}
 
 <mark>[Please add any other specific instructions if relevant]</mark><br/><br/>
 
-Please refer to trpprojectdashboard.onrender.com for up to date project information. This may be updated as the scheme progresses, so please ensure final reports are consistent with the information contained on the dashboard. Invoicing and access details can also be found here.<br/><br/>
+Please visit trpprojectdashboard.onrender.com and select your project from the drop-down at the top of the page for the most up-to-date project information. The dashboard will be updated as the scheme progresses; please ensure final reports are consistent with the information shown there. Invoicing and access details are also available on the dashboard.<br/><br/>
 
 Please upload all reports to the relevant TRP Sharepoint folder. A link to the sharepoint can be found on the dashboard.<br/><br/>
 
