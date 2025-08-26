@@ -163,6 +163,54 @@
     quoteForm.lineItems = [...quoteForm.lineItems];
   }
 
+  // --- Price input restrictions ---
+  function handleCostKeyDown(event: KeyboardEvent, index: number) {
+    const allowedControlKeys = [
+      'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'
+    ];
+    const key = event.key;
+    const input = event.currentTarget as HTMLInputElement;
+
+    // Block non-numeric characters including exponent and signs
+    if (key === 'e' || key === 'E' || key === '+' || key === '-') {
+      event.preventDefault();
+      return;
+    }
+
+    if (allowedControlKeys.includes(key)) {
+      return; // allow navigation/editing keys
+    }
+
+    if (key === '.') {
+      // Allow only a single decimal point
+      if (input.value.includes('.')) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    // Allow digits only
+    if (!/^[0-9]$/.test(key)) {
+      event.preventDefault();
+    }
+  }
+
+  function handleCostInput(event: Event, index: number) {
+    const input = event.currentTarget as HTMLInputElement;
+    // Keep only digits and at most one dot
+    let sanitized = input.value.replace(/[^0-9.]/g, '');
+    sanitized = sanitized.replace(/\.(?=.*\.)/g, '');
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+    }
+
+    const numericValue = sanitized === '' ? 0 : Number(sanitized);
+    quoteForm.lineItems[index].cost = isNaN(numericValue) ? 0 : numericValue;
+    // Trigger reactivity
+    quoteForm.lineItems = [...quoteForm.lineItems];
+  }
+
   // --- Modal Functions ---
   function closeModal() {
     isOpen = false; // Update prop locally (binding handles parent)
@@ -354,7 +402,14 @@
                   {/if}
                 </div>
                 <input class="line-item-description" type="text" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
-                <input type="number" placeholder="0.00" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <input 
+                  type="text" 
+                  inputmode="decimal" 
+                  placeholder="0.00" 
+                  on:keydown={(e) => handleCostKeyDown(e, index)} 
+                  on:input={(e) => handleCostInput(e, index)} 
+                  required={index === 0 || quoteForm.lineItems.length > 1}
+                >
                 <button type="button" on:click={() => removeLineItem(index)} disabled={quoteForm.lineItems.length <= 1} title="Remove Line Item">-</button>
              </div>
           {/each}
