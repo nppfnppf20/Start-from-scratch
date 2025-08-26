@@ -39,12 +39,8 @@
 
   {#if $selectedProject}
     <p class="current-project">Current Project: {$selectedProject.name}</p>
-  {:else if !browser}
-    <p class="current-project">Initializing...</p>
-  {:else if $projects === null}
-    <p class="current-project">Initializing...</p>
-  {:else if $projects.length > 0}
-    <p class="current-project">Select a project</p>
+  {:else}
+    <p class="current-project">No project selected. To view general project information, please select a project from the dropdown menu.</p>
   {/if}
 </div>
 

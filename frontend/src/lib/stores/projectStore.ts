@@ -181,14 +181,13 @@ export async function loadProjects(fetchFn: typeof fetch = fetch) {
     // New call to load all quotes
     await loadAllQuotes(fetchFn);
 
-    // Optionally, automatically select the first project if the list isn't empty
-    // But only if no project is currently selected
-    const currentSelectedProject = get(selectedProject); // Need to get current value
-    if (fetchedProjects.length > 0 && !currentSelectedProject) {
-       // Fetch full details for the first project to ensure selectedProject has all data
-       await selectProjectById(fetchedProjects[0].id);
-    } else if (fetchedProjects.length === 0) {
-        selectedProject.set(null); // Clear selection if no projects exist
+    // Do not auto-select a project on initial load; require explicit user selection
+    const currentSelectedProject = get(selectedProject);
+    if (fetchedProjects.length === 0) {
+        selectedProject.set(null); // Ensure cleared when none exist
+    } else if (!currentSelectedProject) {
+        // Leave unselected until user chooses from dropdown
+        selectedProject.set(null);
     }
 
   } catch (error) {

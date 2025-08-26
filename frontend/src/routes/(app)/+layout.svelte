@@ -5,6 +5,7 @@
     import TabNav from "$lib/components/TabNav.svelte";
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
+    import { page } from '$app/stores';
     import { authStore } from '$lib/stores/authStore';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
@@ -33,12 +34,12 @@
     </header>
 
     <main>
-        {#if $selectedProject}
+        {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission')}
             <slot />
         {:else}
             <div class="no-project-selected">
                 <h2>No Project Selected</h2>
-                <p>Please select a project from the dropdown above to continue.</p>
+                <p>General project information is hidden until you select a project from the dropdown above.</p>
             </div>
         {/if}
     </main>
