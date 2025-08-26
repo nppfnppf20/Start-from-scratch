@@ -294,7 +294,6 @@
               <th>Line Items</th>
               <th>Quote Amt.</th>
               <th>Work Status</th>
-              <th>Dates</th>
               <th>Dependencies</th>
               <th>Notes</th>
             </tr>
@@ -345,71 +344,6 @@
                         {/each}
                      </select>
                   </div>
-                </td>
-                <td>
-                  <div class="date-cell-group">
-                    <label for="site-visit-{quote.id}" class="date-label standard-date-label">Site Visit</label>
-                    <input
-                        id="site-visit-{quote.id}"
-                        type="date"
-                        class="date-input"
-                        value={formatDateForInput(log?.siteVisitDate)}
-                        on:change={(e: Event & { currentTarget: HTMLInputElement }) => handleDateUpdate(quote.id, 'siteVisitDate', e.currentTarget.value)}
-                        title="Set site visit date"
-                    />
-                  </div>
-                  <div class="date-cell-group">
-                    <label for="report-draft-{quote.id}" class="date-label standard-date-label">Draft Report Expected</label>
-                    <input
-                        id="report-draft-{quote.id}"
-                        type="date"
-                        class="date-input"
-                        value={formatDateForInput(log?.reportDraftDate)}
-                        on:change={(e: Event & { currentTarget: HTMLInputElement }) => handleDateUpdate(quote.id, 'reportDraftDate', e.currentTarget.value)}
-                        title="Set report draft date"
-                    />
-                  </div>
-                  <!-- Show new custom date inputs when adding -->
-                  {#if log?.customDates && log.customDates.length > 0}
-                    {#each log.customDates as customDate (customDate.id)}
-                                             <div class="date-cell-group custom-date-group">
-                         <div class="custom-date-title-row">
-                           <input
-                             type="text"
-                             placeholder="Date Title"
-                             class="custom-date-title-input"
-                             value={customDate.title}
-                             on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'title', e.currentTarget.value)}
-                             title="Edit custom date title"
-                           />
-                         </div>
-                         <div class="custom-date-input-row">
-                           <input
-                             type="date"
-                             class="date-input"
-                             value={formatDateForInput(customDate.date)}
-                             on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'date', e.currentTarget.value)}
-                             title="Edit custom date"
-                           />
-                           <button
-                             class="delete-custom-date-button"
-                             title="Delete custom date"
-                             on:click={() => handleDeleteCustomDate(quote.id, customDate.id)}
-                           >
-                             &times;
-                           </button>
-                         </div>
-                       </div>
-                    {/each}
-                  {/if}
-                  
-                  <button 
-                      class="add-custom-date-button"
-                      on:click={() => handleAddCustomDate(quote.id)}
-                      title="Add a new custom date entry"
-                   >
-                     + Add Date
-                  </button>
                 </td>
                 <td>
                   <button class="notes-button" on:click={() => openDependenciesNotesModal(quote)} title="Edit dependencies notes">
