@@ -86,7 +86,7 @@
   }
   
   // Work status options for dropdown
-  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed', 'TRP Reviewing', 'Client reviewing'];
+  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'TRP Reviewing', 'Client reviewing', 'Back with author', 'completed'];
 
   // --- Notes Modal Functions ---
   function openNotesModal(quote: Quote) {
@@ -424,6 +424,8 @@
     --status-trp-reviewing-color: #004085;
     --status-client-reviewing-bg: #e2d9f3;
     --status-client-reviewing-color: #493267;
+    --status-back-with-author-bg: #fff0e6;
+    --status-back-with-author-color: #a75d00;
   }
 
   /* General page styling (assumed globally applied) */
@@ -599,6 +601,11 @@
   background-color: var(--status-client-reviewing-bg);
   color: var(--status-client-reviewing-color);
   border-color: var(--status-client-reviewing-bg);
+}
+.work-status-dropdown.back-with-author {
+  background-color: var(--status-back-with-author-bg);
+  color: var(--status-back-with-author-color);
+  border-color: var(--status-back-with-author-bg);
 }
 
   /* Date Inputs Styling */
