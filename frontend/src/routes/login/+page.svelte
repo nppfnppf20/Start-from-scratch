@@ -1,7 +1,6 @@
 <script lang="ts">
   import { authStore } from '$lib/stores/authStore';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
   import { get } from 'svelte/store';
 
   let email = '';
@@ -9,18 +8,7 @@
   let errorMessage = '';
   let isLoading = false;
 
-  // If a user who is already logged in navigates to this page,
-  // redirect them to the main application.
-  onMount(() => {
-    const unsubscribe = authStore.subscribe(state => {
-      if (state.isAuthenticated) {
-        goto('/', { replaceState: true });
-      }
-    });
-
-    // Clean up the subscription when the component is destroyed.
-    return unsubscribe;
-  });
+  
 
   async function handleLogin() {
     isLoading = true;

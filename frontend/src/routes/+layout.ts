@@ -27,7 +27,7 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
     if (isAuthenticated && isLoginPage) {
         // If a logged-in user tries to visit the login page,
         // send them back to the main application.
-        throw redirect(307, '/');
+        throw redirect(307, '/projectinfo');
     }
 
     if (isAuthenticated) {
