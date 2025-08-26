@@ -129,7 +129,7 @@
     }
     
     const surveyTypesList = selectedSurveyTypes.length > 0
-      ? '<ul>' + selectedSurveyTypes.map(st => `<li>${st}</li>`).join('') + '</ul>'
+      ? '<ul style="margin:0; padding-left:1.25em;">' + selectedSurveyTypes.map(st => `<li>${st}</li>`).join('') + '</ul>'
       : '<mark>[Insert or select surveys]</mark>';
     body = body.replace(/\[Survey Types\]/gi, surveyTypesList);
     
