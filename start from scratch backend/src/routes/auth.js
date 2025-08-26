@@ -89,7 +89,6 @@ router.post('/login', async (req, res) => {
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            { expiresIn: '3d' }, // Increased token expiration to 3 days
             (err, token) => {
                 if (err) throw err;
                 res.json({ token, user: { email: user.email, role: user.role } });
