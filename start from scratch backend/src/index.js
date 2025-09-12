@@ -80,7 +80,11 @@ const RENDER_FRONTEND_URLS = process.env.RENDER_FRONTEND_URLS; // You'll set thi
 
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = [];
+    const allowedOrigins = [
+      'https://trpdashboard.co.uk',
+      'https://www.trpdashboard.co.uk'
+    ];
+    
     if (RENDER_FRONTEND_URLS) {
       // Split the comma-separated string into an array of origins
       allowedOrigins.push(...RENDER_FRONTEND_URLS.split(',').map(url => url.trim()));
@@ -101,6 +105,9 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200 // For legacy browser support
 };
 
