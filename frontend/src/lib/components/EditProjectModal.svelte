@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import type { ProjectBankItem } from '$lib/stores/projectStore';
   import { updateProject, authorizeClients } from '$lib/stores/projectStore';
-  import { authStore, getAuthTokenHeader } from '$lib/stores/authStore';
+  import { getAuthTokenHeader } from '$lib/stores/auth0Store';
   import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
   import { get } from 'svelte/store';
 

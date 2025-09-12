@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/authStore';
+  import { auth0Store } from '$lib/stores/auth0Store';
 
   function handleLogout() {
-    authStore.logout();
+    auth0Store.logout();
   }
 </script>
 
@@ -13,11 +13,11 @@
   </div>
   
   <div class="user-section">
-    {#if $authStore.user}
+    {#if $auth0Store.user}
       <div class="user-info">
-        <span class="user-email">{$authStore.user.email}</span>
-        <span class="role-badge" class:admin={$authStore.user.role === 'admin'} class:surveyor={$authStore.user.role === 'surveyor'} class:client={$authStore.user.role === 'client'}>
-          {$authStore.user.role}
+        <span class="user-email">{$auth0Store.user.email}</span>
+        <span class="role-badge" class:admin={$auth0Store.user.role === 'admin'} class:surveyor={$auth0Store.user.role === 'surveyor'} class:client={$auth0Store.user.role === 'client'}>
+          {$auth0Store.user.role}
         </span>
       </div>
       <button class="logout-btn" on:click={handleLogout}>

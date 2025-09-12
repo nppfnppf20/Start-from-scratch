@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: false
+        required: false // No longer required for Auth0 users
     },
     name: {
         type: String,
@@ -22,6 +22,15 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'surveyor', 'client'],
         default: 'surveyor'
+    },
+    auth0Id: {
+        type: String,
+        sparse: true, // Allows multiple null values but unique non-null values
+        index: true
+    },
+    isAuth0User: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

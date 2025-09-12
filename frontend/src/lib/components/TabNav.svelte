@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { authStore } from '$lib/stores/authStore';
+  import { auth0Store } from '$lib/stores/auth0Store';
   import { goto } from '$app/navigation';
   
   // Define all available tabs
@@ -26,7 +26,7 @@
 
   // Filter tabs based on user role
   $: tabs = allTabs.filter(tab => {
-    const userRole = $authStore.user?.role;
+    const userRole = $auth0Store.user?.role;
     return userRole && tab.roles.includes(userRole);
   });
 

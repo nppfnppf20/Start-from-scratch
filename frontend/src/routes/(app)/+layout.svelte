@@ -6,17 +6,17 @@
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    import { authStore } from '$lib/stores/authStore';
+    import { auth0Store } from '$lib/stores/auth0Store';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
     import { get } from 'svelte/store';
 
     onMount(async () => {
         if (browser) {
-            const { user, token } = get(authStore);
-            if (!user || !token) {
+            const currentStore = get(auth0Store);
+            if (!currentStore.isAuthenticated && !currentStore.isLoading) {
                 await goto('/login');
-            } else {
+            } else if (currentStore.isAuthenticated) {
                 await loadProjects();
             }
         }
