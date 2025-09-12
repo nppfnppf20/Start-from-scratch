@@ -1,7 +1,7 @@
 // File: frontend/src/routes/+layout.ts
 import type { LayoutLoad } from './$types';
 import { browser } from '$app/environment';
-import { authStore } from '$lib/stores/authStore';
+import { auth0Store } from '$lib/stores/auth0Store';
 import { redirect } from '@sveltejs/kit';
 import { get } from 'svelte/store';
 import { loadProjects } from '$lib/stores/projectStore';
@@ -15,7 +15,7 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
         return {};
     }
 
-    const { isAuthenticated } = get(authStore);
+    const { isAuthenticated } = get(auth0Store);
     const isLoginPage = url.pathname === '/login';
 
     if (!isAuthenticated && !isLoginPage) {

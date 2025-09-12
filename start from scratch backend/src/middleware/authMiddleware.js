@@ -1,7 +1,18 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { verifyAuth0Token, isAuth0Token } = require('../utils/auth0');
 
-// Protect routes
+// Determine user role based on email (same logic as before)
+function determineUserRole(email) {
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
+    if (adminEmails.includes(email.toLowerCase())) return 'admin';
+    
+    // You can add more sophisticated role determination logic here
+    // For now, default to surveyor
+    return 'surveyor';
+}
+
+// Protect routes - handles both Auth0 and legacy tokens
 exports.protect = async (req, res, next) => {
     let token;
 
@@ -17,11 +28,46 @@ exports.protect = async (req, res, next) => {
     }
 
     try {
-        // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.user.id).select('-password');
+        let user;
+
+        if (isAuth0Token(token)) {
+            // Handle Auth0 token
+            const decoded = await verifyAuth0Token(token);
+            
+            // Find user by Auth0 ID first, then by email
+            user = await User.findOne({ auth0Id: decoded.sub }).select('-password');
+            
+            if (!user) {
+                // Auto-create user if they don't exist
+                const email = decoded.email;
+                const name = decoded.name || decoded.given_name || decoded.nickname;
+                const role = determineUserRole(email);
+
+                user = new User({
+                    email: email,
+                    name: name,
+                    role: role,
+                    auth0Id: decoded.sub,
+                    isAuth0User: true
+                });
+
+                await user.save();
+                console.log(`Auto-created user for Auth0 ID: ${decoded.sub}, Email: ${email}`);
+            }
+        } else {
+            // Handle legacy JWT token
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            user = await User.findById(decoded.user.id).select('-password');
+        }
+
+        if (!user) {
+            return res.status(401).json({ msg: 'User not found' });
+        }
+
+        req.user = user;
         next();
     } catch (err) {
+        console.error('Auth middleware error:', err);
         return res.status(401).json({ msg: 'Not authorized, token failed' });
     }
 };

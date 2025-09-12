@@ -1,11 +1,11 @@
 <script lang="ts">
   import PageHeader from "$lib/components/PageHeader.svelte";
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
-  import { authStore } from "$lib/stores/authStore";
+  import { auth0Store } from "$lib/stores/auth0Store";
   import { get } from 'svelte/store';
 
   // Check if user is a surveyor (read-only access)
-  $: isSurveyor = $authStore.user?.role === 'surveyor';
+  $: isSurveyor = $auth0Store.user?.role === 'surveyor';
 
   // Save state management
   let saving = false;
