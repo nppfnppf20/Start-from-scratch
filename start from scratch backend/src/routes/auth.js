@@ -100,4 +100,24 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// @route   GET /api/auth/profile
+// @desc    Get current user profile
+// @access  Private
+router.get('/profile', require('../middleware/authMiddleware').protect, async (req, res) => {
+    try {
+        // Return user data (password already excluded by middleware)
+        res.json({
+            id: req.user._id,
+            email: req.user.email,
+            name: req.user.name,
+            role: req.user.role,
+            auth0Id: req.user.auth0Id,
+            isAuth0User: req.user.isAuth0User
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 module.exports = router; 
