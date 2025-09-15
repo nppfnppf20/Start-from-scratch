@@ -22,6 +22,7 @@
 		"vite": "^6.2.6"
 	},
 	"dependencies": {
+		"@auth0/auth0-spa-js": "^2.4.1",
 		"@fullcalendar/core": "^6.1.17",
 		"@fullcalendar/daygrid": "^6.1.17",
 		"@fullcalendar/interaction": "^6.1.17",

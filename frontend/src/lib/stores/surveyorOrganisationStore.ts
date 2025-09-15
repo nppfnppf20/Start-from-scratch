@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { getAuthTokenHeader } from './authStore';
+import { getAuthTokenHeader } from './authHelpers';
 
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

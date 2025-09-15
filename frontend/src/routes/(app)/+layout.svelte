@@ -3,100 +3,141 @@
     import TopBar from "$lib/components/TopBar.svelte";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
+    import Login from "$lib/components/Login.svelte";
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    import { authStore } from '$lib/stores/authStore';
-    import { goto } from '$app/navigation';
+    // REPLACE old auth import with Auth0 imports
+    import { initAuth0, isLoading, isAuthenticated, userInfo } from '$lib/stores/auth0';
     import { browser } from '$app/environment';
-    import { get } from 'svelte/store';
-
+  
     onMount(async () => {
-        if (browser) {
-            const { user, token } = get(authStore);
-            if (!user || !token) {
-                await goto('/login');
-            } else {
-                await loadProjects();
-            }
-        }
-    });
-
-    // Removed FullCalendar CSS imports from here
-
-</script>
-
-<div class="app">
-    <TopBar />
-    <header>
+  console.log('Layout onMount called, browser:', browser);
+  
+  if (browser) {
+    console.log('Layout: About to call initAuth0');
+    try {
+      await initAuth0();
+      console.log('Layout: initAuth0 completed');
+    } catch (error) {
+      console.error('Layout: initAuth0 failed:', error);
+    }
+    
+    // ... rest of your existing logic
+  } else {
+    console.log('Layout: Not in browser, skipping auth init');
+  }
+});
+  
+    // Reactive statement to load projects when authentication status changes
+    $: if (browser && $isAuthenticated && $userInfo) {
+      loadProjects();
+    }
+  </script>
+  
+  {#if $isLoading}
+    <!-- Show loading while Auth0 initializes -->
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>Loading...</p>
+    </div>
+  {:else}
+    <!-- Show the app layout (auth redirects happen in script) -->
+    <div class="app">
+      <TopBar />
+      <header>
         <ProjectSelector />
         <TabNav />
-    </header>
-
-    <main>
-        {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission')}
-            <slot />
+      </header>
+      <main>
+        {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission') || $page.url.pathname.startsWith('/login') || $page.url.pathname.startsWith('/callback')}
+          <slot />
         {:else}
-            <div class="no-project-selected">
-                <h2>No Project Selected</h2>
-                <p>General project information is hidden until you select a project from the dropdown above.</p>
-            </div>
+          <div class="no-project-selected">
+            <h2>No Project Selected</h2>
+            <p>General project information is hidden until you select a project from the dropdown above.</p>
+          </div>
         {/if}
-    </main>
-
-    <footer>
+      </main>
+      <footer>
         <p>Projects Overview Dashboard</p>
-    </footer>
-</div>
-
-<style>
+      </footer>
+    </div>
+  {/if}
+  
+  <style>
     .app {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
-
+  
     main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        padding: 1rem;
-        width: 100%;
-        box-sizing: border-box;
-        overflow-y: auto;
-        background-color: var(--background-color);
-        position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      width: 100%;
+      box-sizing: border-box;
+      overflow-y: auto;
+      background-color: var(--background-color);
+      position: relative;
     }
-
+  
     header {
-        width: 100%;
-        overflow: visible;
-        position: relative;
+      width: 100%;
+      overflow: visible;
+      position: relative;
     }
-
+  
     footer {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 12px;
-        background-color: #f0f0f0;
-        border-top: 1px solid #ccc;
-        margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      background-color: #f0f0f0;
+      border-top: 1px solid #ccc;
+      margin-top: 2rem;
     }
-
+  
     .no-project-selected {
-        text-align: center;
-        margin: 2rem auto;
-        padding: 2rem;
-        background-color: #f8f9fa;
-        border-radius: 0.5rem;
-        border: 1px solid #dee2e6;
+      text-align: center;
+      margin: 2rem auto;
+      padding: 2rem;
+      background-color: #f8f9fa;
+      border-radius: 0.5rem;
+      border: 1px solid #dee2e6;
     }
-
+  
+    /* Loading styles */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f8f9fa;
+    }
+  
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+  
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  
     @media (min-width: 480px) {
-        footer {
-            padding: 12px 0;
-        }
+      footer {
+        padding: 12px 0;
+      }
     }
-</style> 
+  </style>

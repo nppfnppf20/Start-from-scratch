@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/authStore';
+  import { logout, userInfo } from '$lib/stores/auth0';
 
   function handleLogout() {
-    authStore.logout();
+    logout();
   }
 </script>
 
@@ -11,13 +11,12 @@
     <img src="/logo.png" alt="Logo" class="logo"/>
     <h1>TRP Project Management</h1>
   </div>
-  
   <div class="user-section">
-    {#if $authStore.user}
+    {#if $userInfo}
       <div class="user-info">
-        <span class="user-email">{$authStore.user.email}</span>
-        <span class="role-badge" class:admin={$authStore.user.role === 'admin'} class:surveyor={$authStore.user.role === 'surveyor'} class:client={$authStore.user.role === 'client'}>
-          {$authStore.user.role}
+        <span class="user-email">{$userInfo.email}</span>
+        <span class="role-badge" class:admin={$userInfo.role === 'admin'} class:surveyor={$userInfo.role === 'surveyor'} class:client={$userInfo.role === 'client'}>
+          {$userInfo.role}
         </span>
       </div>
       <button class="logout-btn" on:click={handleLogout}>
@@ -142,4 +141,4 @@
       font-size: 0.8rem;
     }
   }
-</style> 
+</style>

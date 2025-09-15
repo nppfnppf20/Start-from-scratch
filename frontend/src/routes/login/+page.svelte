@@ -1,88 +1,48 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/authStore';
+  import { login, isLoading, authError, isAuthenticated } from '$lib/stores/auth0';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { get } from 'svelte/store';
 
-  let email = '';
-  let password = '';
-  let errorMessage = '';
-  let isLoading = false;
-
-  // If a user who is already logged in navigates to this page,
-  // redirect them to the main application.
+  // If user is already authenticated, redirect them
   onMount(() => {
-    const unsubscribe = authStore.subscribe(state => {
-      if (state.isAuthenticated) {
+    const unsubscribe = isAuthenticated.subscribe(authenticated => {
+      if (authenticated) {
         goto('/', { replaceState: true });
       }
     });
 
-    // Clean up the subscription when the component is destroyed.
     return unsubscribe;
   });
 
-  async function handleLogin() {
-    isLoading = true;
-    errorMessage = '';
-    
-    const result = await authStore.login(email, password);
-    
-    isLoading = false;
-
-    if (result.success) {
-      const user = get(authStore).user; // Get user from the store
-      if (user && user.role === 'surveyor') {
-        goto('/fee-quote-submission'); // Redirect surveyors
-      } else {
-        goto('/'); // Redirect other users
-      }
-    } else {
-      errorMessage = result.error || 'An unknown error occurred.';
-    }
-  }
+  const handleLogin = () => {
+    login();
+  };
 </script>
 
 <div class="login-container">
   <div class="login-box">
-    <h1>Login</h1>
-    <p>Please enter your credentials to continue.</p>
+    <h1>TRP Dashboard</h1>
+    <p>Please log in to continue.</p>
     
-    <form on:submit|preventDefault={handleLogin}>
-      <div class="input-group">
-        <label for="email">Email</label>
-        <input 
-          type="email" 
-          id="email"
-          bind:value={email}
-          required
-          disabled={isLoading}
-        />
-      </div>
+    {#if $authError}
+      <p class="error-message">{$authError}</p>
+    {/if}
 
-      <div class="input-group">
-        <label for="password">Password</label>
-        <input 
-          type="password" 
-          id="password"
-          bind:value={password}
-          required
-          disabled={isLoading}
-        />
-      </div>
-      
-      {#if errorMessage}
-        <p class="error-message">{errorMessage}</p>
+    <button 
+      on:click={handleLogin}
+      disabled={$isLoading}
+      class="login-button"
+    >
+      {#if $isLoading}
+        <span>Signing in...</span>
+      {:else}
+        <span>Sign In with Auth0</span>
       {/if}
+    </button>
 
-      <button type="submit" class="login-button" disabled={isLoading}>
-        {#if isLoading}
-          <span>Logging In...</span>
-        {:else}
-          <span>Login</span>
-        {/if}
-      </button>
-    </form>
+    <div class="info-text">
+      <p>New users can create an account on the next page.</p>
+    </div>
   </div>
 </div>
 
@@ -117,27 +77,6 @@
     margin-bottom: 2rem;
   }
 
-  .input-group {
-    text-align: left;
-    margin-bottom: 1.5rem;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: #444;
-  }
-
-  input {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    box-sizing: border-box; /* Important */
-  }
-
   .login-button {
     width: 100%;
     padding: 0.9rem;
@@ -166,5 +105,13 @@
     font-size: 0.9rem;
   }
 
-  /* Registration-specific styles are no longer needed */
+  .info-text {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .info-text p {
+    color: #888;
+    margin: 0;
+  }
 </style>

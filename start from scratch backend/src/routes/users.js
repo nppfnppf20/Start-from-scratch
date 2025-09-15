@@ -1,32 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const User = require('../models/User'); // Import the model instead of defining it
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// @route   GET /api/users/surveyors
-// @desc    Get all users with the 'surveyor' role
-// @access  Admin only
-router.get('/surveyors', protect, authorize('admin'), async (req, res) => {
-    try {
-        const surveyors = await User.find({ role: 'surveyor' }).select('_id email');
-        res.json(surveyors);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
+// Example route - get all users (admin only)
+router.get('/', protect, authorize('admin'), async (req, res) => {
+  try {
+    const users = await User.find({}).select('-__v').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
-// @route   GET /api/users/clients
-// @desc    Get all users with the 'client' role
-// @access  Admin only
-router.get('/clients', protect, authorize('admin'), async (req, res) => {
-    try {
-        const clients = await User.find({ role: 'client' }).select('_id email');
-        res.json(clients);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
-
-module.exports = router; 
+module.exports = router;
