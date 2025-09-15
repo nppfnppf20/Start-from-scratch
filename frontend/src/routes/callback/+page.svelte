@@ -1,23 +1,50 @@
-<!-- src/routes/callback/+page.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { userInfo } from '$lib/stores/auth0';
+    import { isAuthenticated, userInfo, accessToken } from '$lib/stores/auth0';
+    
+    let redirecting = false;
     
     onMount(() => {
-      // Auth0 callback is handled automatically by the auth0.js store
-      // Wait a moment for auth to complete, then redirect based on user role
-      setTimeout(() => {
-        const user = $userInfo;
+      console.log('=== CALLBACK PAGE LOADED ===');
+      console.log('URL:', window.location.href);
+      console.log('URL Search params:', window.location.search);
+      
+      // Check auth status every second
+      const checkAuth = setInterval(() => {
+        console.log('Callback checking auth status:');
+        console.log('  - isAuthenticated:', $isAuthenticated);
+        console.log('  - userInfo:', $userInfo);
+        console.log('  - accessToken exists:', !!$accessToken);
         
-        if (user?.role === 'surveyor') {
-          // Redirect surveyors to fee quote submission
-          goto('/fee-quote-submission');
-        } else {
-          // Redirect other users to main dashboard
-          goto('/');
+        if ($isAuthenticated && $userInfo && !redirecting) {
+          console.log('=== CALLBACK SUCCESS ===');
+          console.log('User authenticated, redirecting...');
+          console.log('User role:', $userInfo.role);
+          console.log('User email:', $userInfo.email);
+          
+          redirecting = true;
+          clearInterval(checkAuth);
+          
+          if ($userInfo.role === 'surveyor') {
+            console.log('Redirecting surveyor to fee-quote-submission');
+            goto('/fee-quote-submission');
+          } else {
+            console.log('Redirecting to main dashboard');
+            goto('/');
+          }
         }
-      }, 2000);
+      }, 1000);
+      
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        if (!redirecting) {
+          console.log('=== CALLBACK TIMEOUT ===');
+          console.log('Auth did not complete in time, redirecting to login');
+          clearInterval(checkAuth);
+          goto('/login');
+        }
+      }, 15000);
     });
   </script>
   
@@ -26,6 +53,15 @@
       <div class="loading-spinner"></div>
       <h2>Completing login...</h2>
       <p>Please wait while we log you in and set up your dashboard.</p>
+      
+      <!-- Debug info visible on page -->
+      <div class="debug-info">
+        <p><strong>Debug Info:</strong></p>
+        <p>Auth status: {$isAuthenticated ? 'Authenticated' : 'Not authenticated'}</p>
+        <p>User: {$userInfo?.email || 'No user info'}</p>
+        <p>Role: {$userInfo?.role || 'No role'}</p>
+        <p>Token: {$accessToken ? 'Present' : 'Missing'}</p>
+      </div>
     </div>
   </div>
   
@@ -45,7 +81,7 @@
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       text-align: center;
-      max-width: 400px;
+      max-width: 500px;
       width: 100%;
     }
   
@@ -71,6 +107,24 @@
   
     p {
       color: #666;
-      margin: 0;
+      margin-bottom: 1rem;
+    }
+  
+    .debug-info {
+      background: #f8f9fa;
+      border-radius: 4px;
+      padding: 1rem;
+      margin-top: 1.5rem;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+  
+    .debug-info p {
+      margin: 0.5rem 0;
+      color: #495057;
+    }
+  
+    .debug-info strong {
+      color: #212529;
     }
   </style>

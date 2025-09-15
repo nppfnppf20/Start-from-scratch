@@ -1,36 +1,37 @@
 <script lang="ts">
+    console.log("🔥 APP LAYOUT LOADED WITH NEW CODE");
     import "../../app.css";
     import TopBar from "$lib/components/TopBar.svelte";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
-    import Login from "$lib/components/Login.svelte";
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    // REPLACE old auth import with Auth0 imports
-    import { initAuth0, isLoading, isAuthenticated, userInfo } from '$lib/stores/auth0';
+    import { isLoading, isAuthenticated, userInfo } from '$lib/stores/auth0';
     import { browser } from '$app/environment';
   
     onMount(async () => {
-  console.log('Layout onMount called, browser:', browser);
+      if (browser) {
+        console.log('=== APP LAYOUT ONMOUNT ===');
+        console.log('Auth state:', $isAuthenticated, $userInfo?.email);
+        console.log('Current path:', $page.url.pathname);
+        
+        // No timeout needed - just load projects if authenticated
+        if ($isAuthenticated && $userInfo) {
+          console.log('✅ App layout: Loading projects');
+          loadProjects();
+        }
+      }
+    });
   
-  if (browser) {
-    console.log('Layout: About to call initAuth0');
-    try {
-      await initAuth0();
-      console.log('Layout: initAuth0 completed');
-    } catch (error) {
-      console.error('Layout: initAuth0 failed:', error);
+    // Reactive statement debugging
+    $: if (browser) {
+      console.log('📊 Reactive check - Auth:', $isAuthenticated, 'Loading:', $isLoading, 'User:', $userInfo?.email);
     }
-    
-    // ... rest of your existing logic
-  } else {
-    console.log('Layout: Not in browser, skipping auth init');
-  }
-});
   
-    // Reactive statement to load projects when authentication status changes
-    $: if (browser && $isAuthenticated && $userInfo) {
+    // Only redirect after Auth0 has had time to initialize
+    $: if (browser && !$isLoading && $isAuthenticated && $userInfo) {
+      console.log('🔄 Reactive: Loading projects for authenticated user');
       loadProjects();
     }
   </script>

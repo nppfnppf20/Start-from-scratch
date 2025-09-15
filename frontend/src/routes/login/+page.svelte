@@ -1,20 +1,53 @@
 <script lang="ts">
-  import { login, isLoading, authError, isAuthenticated } from '$lib/stores/auth0';
+  import { login, isLoading, authError, isAuthenticated, userInfo } from '$lib/stores/auth0';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
 
-  // If user is already authenticated, redirect them
   onMount(() => {
+    console.log('=== LOGIN PAGE LOADED ===');
+    console.log('Initial auth state:', $isAuthenticated);
+    console.log('Initial user:', $userInfo?.email);
+    
+    // Debug current store values
+    setTimeout(() => {
+      console.log('LOGIN PAGE CHECK:', {
+        isAuthenticated: $isAuthenticated,
+        userInfo: $userInfo?.email,
+        isLoading: $isLoading
+      });
+    }, 100);
+    
+    // Subscribe to auth changes
     const unsubscribe = isAuthenticated.subscribe(authenticated => {
-      if (authenticated) {
+      console.log('LOGIN PAGE: Auth subscription triggered:', authenticated);
+      console.log('LOGIN PAGE: User info when auth changes:', $userInfo?.email);
+      
+      if (authenticated && $userInfo) {
+        console.log('LOGIN PAGE: User is authenticated, redirecting to home');
+        goto('/', { replaceState: true });
+      } else if (authenticated && !$userInfo) {
+        console.log('LOGIN PAGE: Authenticated but no user info yet, waiting...');
+      }
+    });
+    
+    // Also subscribe to userInfo changes
+    const unsubscribeUser = userInfo.subscribe(user => {
+      console.log('LOGIN PAGE: User info changed:', user?.email);
+      
+      if ($isAuthenticated && user) {
+        console.log('LOGIN PAGE: Both auth and user ready, redirecting');
         goto('/', { replaceState: true });
       }
     });
-
-    return unsubscribe;
+    
+    return () => {
+      unsubscribe();
+      unsubscribeUser();
+    };
   });
 
   const handleLogin = () => {
+    console.log('LOGIN PAGE: Login button clicked');
     login();
   };
 </script>
@@ -24,11 +57,19 @@
     <h1>TRP Dashboard</h1>
     <p>Please log in to continue.</p>
     
+    <!-- Debug info on page -->
+    <div class="debug-info">
+      <p><strong>Debug:</strong></p>
+      <p>Auth: {$isAuthenticated ? 'Yes' : 'No'}</p>
+      <p>User: {$userInfo?.email || 'None'}</p>
+      <p>Loading: {$isLoading ? 'Yes' : 'No'}</p>
+    </div>
+    
     {#if $authError}
       <p class="error-message">{$authError}</p>
     {/if}
 
-    <button 
+    <button
       on:click={handleLogin}
       disabled={$isLoading}
       class="login-button"
@@ -113,5 +154,23 @@
   .info-text p {
     color: #888;
     margin: 0;
+  }
+
+  .debug-info {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: left;
+    font-size: 0.85rem;
+  }
+
+  .debug-info p {
+    margin: 0.25rem 0;
+    color: #495057;
+  }
+
+  .debug-info strong {
+    color: #212529;
   }
 </style>
