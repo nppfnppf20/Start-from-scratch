@@ -8,6 +8,10 @@ export function setGlobalAuth0Client(client: any) {
   globalAuth0Client = client;
 }
 
+export function getGlobalAuth0Client() {
+  return globalAuth0Client;
+}
+
 /**
  * Get authorization header for API calls using Auth0 token directly
  */

@@ -44,9 +44,14 @@ function getKey(header, callback) {
 // Admin emails array (keep your existing logic)
 const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
 
+// Debug admin emails on startup
+console.log('Admin emails configured:', adminEmails);
+
 // Determine role based on email (keep your existing logic)
 function determineRole(email) {
-  return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
+  const isAdmin = adminEmails.includes(email.toLowerCase());
+  console.log(`Role check for ${email}: ${isAdmin ? 'admin' : 'surveyor'} (admin emails: ${adminEmails.join(', ')})`);
+  return isAdmin ? 'admin' : 'surveyor';
 }
 
 // Replace your current protect middleware
@@ -110,7 +115,7 @@ console.log('Email extracted from Auth0 userinfo:', email);
             // Create new user from Auth0 data
             const role = determineRole(email);
             console.log('Creating new user with role:', role);
-            
+
             user = await User.create({
               name: name,
               email: email.toLowerCase(),
@@ -124,6 +129,14 @@ console.log('Email extracted from Auth0 userinfo:', email);
               user.auth0Id = decoded.sub;
               await user.save();
               console.log('Updated existing user with Auth0 ID');
+            }
+
+            // Check if user's role needs updating based on current admin email configuration
+            const currentRole = determineRole(email);
+            if (user.role !== currentRole) {
+              console.log(`Updating user role from ${user.role} to ${currentRole} for ${email}`);
+              user.role = currentRole;
+              await user.save();
             }
           }
 

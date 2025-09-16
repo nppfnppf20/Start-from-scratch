@@ -7,58 +7,38 @@
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    import { isAuthenticated, user, error } from '../../store';
     import { browser } from '$app/environment';
-  
+
     onMount(async () => {
       if (browser) {
         console.log('=== APP LAYOUT ONMOUNT ===');
-        console.log('Auth state:', $isAuthenticated, $user?.email);
-        console.log('Current path:', $page.url.pathname);
-
-        // No timeout needed - just load projects if authenticated
-        if ($isAuthenticated && $user) {
-          console.log('✅ App layout: Loading projects');
-          loadProjects();
-        }
+        console.log('✅ App layout: Loading projects');
+        loadProjects();
       }
     });
-
-    // Only redirect after Auth0 has had time to initialize
-    $: if (browser && $isAuthenticated && $user) {
-      console.log('🔄 Reactive: Loading projects for authenticated user');
-      loadProjects();
-    }
   </script>
   
-  {#if !$isAuthenticated}
-    <!-- Redirect to login if not authenticated -->
-    {#if browser}
-      {window.location.href = '/login'}
-    {/if}
-  {:else}
-    <!-- Show the app layout (auth redirects happen in script) -->
-    <div class="app">
-      <TopBar />
-      <header>
-        <ProjectSelector />
-        <TabNav />
-      </header>
-      <main>
-        {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission') || $page.url.pathname.startsWith('/login') || $page.url.pathname.startsWith('/callback')}
-          <slot />
-        {:else}
-          <div class="no-project-selected">
-            <h2>No Project Selected</h2>
-            <p>General project information is hidden until you select a project from the dropdown above.</p>
-          </div>
-        {/if}
-      </main>
-      <footer>
-        <p>Projects Overview Dashboard</p>
-      </footer>
-    </div>
-  {/if}
+  <!-- Show the app layout (auth handled by +layout.ts) -->
+  <div class="app">
+    <TopBar />
+    <header>
+      <ProjectSelector />
+      <TabNav />
+    </header>
+    <main>
+      {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission') || $page.url.pathname.startsWith('/login') || $page.url.pathname.startsWith('/callback')}
+        <slot />
+      {:else}
+        <div class="no-project-selected">
+          <h2>No Project Selected</h2>
+          <p>General project information is hidden until you select a project from the dropdown above.</p>
+        </div>
+      {/if}
+    </main>
+    <footer>
+      <p>Projects Overview Dashboard</p>
+    </footer>
+  </div>
   
   <style>
     .app {
