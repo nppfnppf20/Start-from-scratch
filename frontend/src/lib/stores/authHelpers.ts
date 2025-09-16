@@ -1,13 +1,24 @@
 // src/lib/stores/authHelpers.ts
-import { getAccessToken } from './auth0';
+import { browser } from '$app/environment';
+
+// Global variable to store the Auth0 client (set from layout)
+let globalAuth0Client: any = null;
+
+export function setGlobalAuth0Client(client: any) {
+  globalAuth0Client = client;
+}
 
 /**
- * Get authorization header for API calls
- * Replaces the old getAuthTokenHeader function with Auth0 token
+ * Get authorization header for API calls using Auth0 token directly
  */
 export async function getAuthTokenHeader(): Promise<Record<string, string>> {
+  if (!browser || !globalAuth0Client) {
+    console.error('Auth0 client not available');
+    throw new Error('Failed to get authentication token');
+  }
+
   try {
-    const token = await getAccessToken();
+    const token = await globalAuth0Client.getTokenSilently();
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -24,7 +35,7 @@ export async function getAuthTokenHeader(): Promise<Record<string, string>> {
  */
 export async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = await getAuthTokenHeader();
-  
+
   return fetch(url, {
     ...options,
     headers: {

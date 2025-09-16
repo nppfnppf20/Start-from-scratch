@@ -7,41 +7,35 @@
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    import { isLoading, isAuthenticated, userInfo } from '$lib/stores/auth0';
+    import { isAuthenticated, user, error } from '../../store';
     import { browser } from '$app/environment';
   
     onMount(async () => {
       if (browser) {
         console.log('=== APP LAYOUT ONMOUNT ===');
-        console.log('Auth state:', $isAuthenticated, $userInfo?.email);
+        console.log('Auth state:', $isAuthenticated, $user?.email);
         console.log('Current path:', $page.url.pathname);
-        
+
         // No timeout needed - just load projects if authenticated
-        if ($isAuthenticated && $userInfo) {
+        if ($isAuthenticated && $user) {
           console.log('✅ App layout: Loading projects');
           loadProjects();
         }
       }
     });
-  
-    // Reactive statement debugging
-    $: if (browser) {
-      console.log('📊 Reactive check - Auth:', $isAuthenticated, 'Loading:', $isLoading, 'User:', $userInfo?.email);
-    }
-  
+
     // Only redirect after Auth0 has had time to initialize
-    $: if (browser && !$isLoading && $isAuthenticated && $userInfo) {
+    $: if (browser && $isAuthenticated && $user) {
       console.log('🔄 Reactive: Loading projects for authenticated user');
       loadProjects();
     }
   </script>
   
-  {#if $isLoading}
-    <!-- Show loading while Auth0 initializes -->
-    <div class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Loading...</p>
-    </div>
+  {#if !$isAuthenticated}
+    <!-- Redirect to login if not authenticated -->
+    {#if browser}
+      {window.location.href = '/login'}
+    {/if}
   {:else}
     <!-- Show the app layout (auth redirects happen in script) -->
     <div class="app">

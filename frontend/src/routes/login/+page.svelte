@@ -1,54 +1,35 @@
 <script lang="ts">
-  import { login, isLoading, authError, isAuthenticated, userInfo } from '$lib/stores/auth0';
+  import auth from '../../authService';
+  import { isAuthenticated, user, popupOpen, error } from '../../store';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { setGlobalAuth0Client } from '$lib/stores/authHelpers';
 
-  onMount(() => {
-    console.log('=== LOGIN PAGE LOADED ===');
-    console.log('Initial auth state:', $isAuthenticated);
-    console.log('Initial user:', $userInfo?.email);
-    
-    // Debug current store values
-    setTimeout(() => {
-      console.log('LOGIN PAGE CHECK:', {
-        isAuthenticated: $isAuthenticated,
-        userInfo: $userInfo?.email,
-        isLoading: $isLoading
-      });
-    }, 100);
-    
+  let auth0Client;
+
+  onMount(async () => {
+    auth0Client = await auth.createClient();
+    setGlobalAuth0Client(auth0Client); // Make client available to auth helpers
+
+    // Check if already authenticated
+    if ($isAuthenticated && $user) {
+      goto('/', { replaceState: true });
+    }
+
     // Subscribe to auth changes
     const unsubscribe = isAuthenticated.subscribe(authenticated => {
-      console.log('LOGIN PAGE: Auth subscription triggered:', authenticated);
-      console.log('LOGIN PAGE: User info when auth changes:', $userInfo?.email);
-      
-      if (authenticated && $userInfo) {
-        console.log('LOGIN PAGE: User is authenticated, redirecting to home');
-        goto('/', { replaceState: true });
-      } else if (authenticated && !$userInfo) {
-        console.log('LOGIN PAGE: Authenticated but no user info yet, waiting...');
-      }
-    });
-    
-    // Also subscribe to userInfo changes
-    const unsubscribeUser = userInfo.subscribe(user => {
-      console.log('LOGIN PAGE: User info changed:', user?.email);
-      
-      if ($isAuthenticated && user) {
-        console.log('LOGIN PAGE: Both auth and user ready, redirecting');
+      if (authenticated && $user) {
         goto('/', { replaceState: true });
       }
     });
-    
+
     return () => {
       unsubscribe();
-      unsubscribeUser();
     };
   });
 
   const handleLogin = () => {
-    console.log('LOGIN PAGE: Login button clicked');
-    login();
+    auth.loginWithPopup(auth0Client);
   };
 </script>
 
@@ -57,24 +38,16 @@
     <h1>TRP Dashboard</h1>
     <p>Please log in to continue.</p>
     
-    <!-- Debug info on page -->
-    <div class="debug-info">
-      <p><strong>Debug:</strong></p>
-      <p>Auth: {$isAuthenticated ? 'Yes' : 'No'}</p>
-      <p>User: {$userInfo?.email || 'None'}</p>
-      <p>Loading: {$isLoading ? 'Yes' : 'No'}</p>
-    </div>
-    
-    {#if $authError}
-      <p class="error-message">{$authError}</p>
+    {#if $error}
+      <p class="error-message">{$error}</p>
     {/if}
 
     <button
       on:click={handleLogin}
-      disabled={$isLoading}
+      disabled={$popupOpen}
       class="login-button"
     >
-      {#if $isLoading}
+      {#if $popupOpen}
         <span>Signing in...</span>
       {:else}
         <span>Sign In with Auth0</span>
