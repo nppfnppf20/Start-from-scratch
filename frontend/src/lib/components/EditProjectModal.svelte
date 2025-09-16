@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import type { ProjectBankItem } from '$lib/stores/projectStore';
   import { updateProject, authorizeClients } from '$lib/stores/projectStore';
-  import { authStore, getAuthTokenHeader } from '$lib/stores/authStore';
+  import { auth0Store, getAuth0Headers } from '$lib/stores/auth0Store';
   import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
   import { get } from 'svelte/store';
 
@@ -89,7 +89,7 @@
     loadClientOrganisations();
     try {
         const [surveyorsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/users/surveyors`, { headers: getAuthTokenHeader() })
+            fetch(`${API_BASE_URL}/users/surveyors`, { headers: await getAuth0Headers() })
         ]);
 
         if (surveyorsRes.ok) {

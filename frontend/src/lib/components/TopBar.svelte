@@ -1,9 +1,26 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/authStore';
+  import { auth0Store } from '$lib/stores/auth0Store';
 
   function handleLogout() {
-    authStore.logout();
+    auth0Store.logout();
   }
+
+  function getUserRole(user: any): string {
+    if (!user) return 'surveyor';
+    
+    // Check Auth0 custom claims first
+    const customRoles = user['https://your-app/roles'] || user.roles || [];
+    if (customRoles.includes('admin')) return 'admin';
+    if (customRoles.includes('client')) return 'client';
+    if (customRoles.includes('surveyor')) return 'surveyor';
+    
+    // Fallback to email-based determination
+    const email = user.email || '';
+    const adminEmails = import.meta.env?.VITE_ADMIN_EMAILS?.split(',') || [];
+    return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
+  }
+
+  $: userRole = $auth0Store.user ? getUserRole($auth0Store.user) : 'surveyor';
 </script>
 
 <div class="top-bar">
@@ -13,11 +30,11 @@
   </div>
   
   <div class="user-section">
-    {#if $authStore.user}
+    {#if $auth0Store.isAuthenticated && $auth0Store.user}
       <div class="user-info">
-        <span class="user-email">{$authStore.user.email}</span>
-        <span class="role-badge" class:admin={$authStore.user.role === 'admin'} class:surveyor={$authStore.user.role === 'surveyor'} class:client={$authStore.user.role === 'client'}>
-          {$authStore.user.role}
+        <span class="user-email">{$auth0Store.user.email}</span>
+        <span class="role-badge" class:admin={userRole === 'admin'} class:surveyor={userRole === 'surveyor'} class:client={userRole === 'client'}>
+          {userRole}
         </span>
       </div>
       <button class="logout-btn" on:click={handleLogout}>

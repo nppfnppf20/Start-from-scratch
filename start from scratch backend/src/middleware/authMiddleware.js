@@ -1,30 +1,72 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Protect routes
+// Protect routes with Auth0 Access Token
 exports.protect = async (req, res, next) => {
-    let token;
-
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith('Bearer')
-    ) {
-        token = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    const parts = authHeader.split(' ');
+    
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+        return res.status(401).json({ msg: 'Missing or invalid Authorization header' });
     }
-
-    if (!token) {
-        return res.status(401).json({ msg: 'Not authorized, no token' });
-    }
-
+    
+    const token = parts[1];
+    
     try {
-        // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.user.id).select('-password');
+        const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;
+        const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE;
+        
+        if (!AUTH0_DOMAIN) {
+            console.error('AUTH0_DOMAIN not set');
+            return res.status(500).json({ msg: 'Server misconfiguration' });
+        }
+
+        // Dynamically import jose (ESM)
+        const jose = await import('jose');
+        const issuer = `https://${AUTH0_DOMAIN}/`;
+        const JWKS = jose.createRemoteJWKSet(new URL(`${issuer}.well-known/jwks.json`));
+
+        // Verify Auth0 Access Token
+        const { payload } = await jose.jwtVerify(token, JWKS, { 
+            issuer,
+            audience: AUTH0_AUDIENCE || undefined
+        });
+
+        const email = (payload.email || payload.sub || '').toLowerCase();
+        if (!email) {
+            return res.status(400).json({ msg: 'Token missing email claim' });
+        }
+
+        // Find or create user in our database
+        let user = await User.findOne({ email });
+        if (!user) {
+            // Create user with role based on email domain or Auth0 metadata
+            const role = determineRoleFromAuth0(payload);
+            user = new User({ email, role });
+            await user.save();
+        }
+
+        req.user = user;
+        req.auth0Payload = payload; // Store full Auth0 payload for reference
         next();
     } catch (err) {
-        return res.status(401).json({ msg: 'Not authorized, token failed' });
+        console.error('Auth0 token verification error:', err);
+        return res.status(401).json({ msg: 'Invalid Auth0 token' });
     }
 };
+
+// Helper function to determine role from Auth0 token
+function determineRoleFromAuth0(payload) {
+    // Check for custom roles in Auth0 metadata first
+    const customRoles = payload['https://your-app/roles'] || payload.roles || [];
+    if (customRoles.includes('admin')) return 'admin';
+    if (customRoles.includes('client')) return 'client';
+    if (customRoles.includes('surveyor')) return 'surveyor';
+    
+    // Fallback to email-based role determination
+    const email = payload.email || '';
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
+    return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
+}
 
 // Grant access to specific roles
 exports.authorize = (...roles) => {

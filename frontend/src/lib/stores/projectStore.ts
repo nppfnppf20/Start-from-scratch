@@ -1,6 +1,6 @@
 import { writable, derived } from 'svelte/store';
-import { browser } from '$app/environment'; // Import browser check
-import { getAuthTokenHeader } from './authStore';
+import { browser } from '$app/environment';
+import { getAuth0Headers } from './auth0Store';
 
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -138,7 +138,7 @@ export async function loadProjectBank() {
   try {
     console.log('Fetching project bank data from API...');
     const response = await fetch(`${API_BASE_URL}/projects`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -165,7 +165,7 @@ export async function loadProjects(fetchFn: typeof fetch = fetch) {
   try {
     console.log('Fetching projects from API...');
     const response = await fetchFn(`${API_BASE_URL}/projects`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -206,7 +206,7 @@ export async function loadAllQuotes(fetchFn: typeof fetch = fetch) {
   try {
     console.log('Loading all quotes...');
     const response = await fetchFn(`${API_BASE_URL}/quotes`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -239,7 +239,7 @@ export async function addProject(projectData: { name: string; client?: string; p
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(projectData),
     });
@@ -278,7 +278,7 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(updatedData),
     });
@@ -334,7 +334,7 @@ export async function selectProjectById(id: string | null) {
    console.log(`Selecting project by ID: ${id}`);
    try {
        const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
-        headers: getAuthTokenHeader()
+        headers: await getAuth0Headers()
        });
        if (!response.ok) {
             const errorData = await response.json().catch(() => ({message: 'Failed to parse error response'}));
@@ -398,7 +398,7 @@ export async function deleteProject(projectId: string) {
   try {
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
       method: 'DELETE',
-      headers: getAuthTokenHeader(),
+      headers: await getAuth0Headers(),
     });
     
     if (!response.ok) {
@@ -495,7 +495,7 @@ async function loadQuotesForProject(projectId: string | null) {
   try {
     console.log(`Fetching quotes for project: ${projectId}`);
     const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -530,7 +530,7 @@ export async function addQuote(quoteData: Omit<Quote, 'id' | 'total' | 'createdA
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(quoteData),
     });
@@ -564,7 +564,7 @@ export async function updateQuote(quoteId: string, updateData: Partial<Omit<Quot
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(updateData),
     });
@@ -617,7 +617,7 @@ export async function deleteQuote(quoteId: string) {
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'DELETE',
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
 
     if (!response.ok) {
@@ -845,7 +845,7 @@ async function loadProgrammeEvents(projectId: string | null) {
     console.log(`Fetching programme events for project: ${projectId}`);
     // Use the backend route we defined: GET /api/programme-events/project/:projectId
     const response = await fetch(`${API_BASE_URL}/programme-events/project/${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -888,7 +888,7 @@ export async function addProgrammeEvent(eventData: Omit<ProgrammeEvent, 'id' | '
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(eventData),
     });
@@ -944,7 +944,7 @@ export async function updateProgrammeEvent(eventToUpdate: ProgrammeEvent): Promi
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(updateData),
     });
@@ -991,7 +991,7 @@ export async function deleteProgrammeEvent(eventId: string): Promise<boolean> {
   try {
       const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
           method: 'DELETE',
-          headers: getAuthTokenHeader()
+          headers: await getAuth0Headers()
       });
 
       if (!response.ok) {
@@ -1114,7 +1114,7 @@ async function loadInstructionLogsForProject(projectId: string | null) {
   console.log(`Fetching instruction logs for project ID: ${projectId}`);
   try {
     const response = await fetch(`${API_BASE_URL}/instruction-logs?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1144,7 +1144,7 @@ export async function upsertInstructionLog(quoteId: string, logData: Partial<Omi
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify(logData), // Send only the updatable fields
         });
@@ -1216,7 +1216,7 @@ async function loadSurveyorFeedback(projectId: string | null) {
   console.log(`Fetching surveyor feedback for project ID: ${projectId}`);
   try {
     const response = await fetch(`${API_BASE_URL}/surveyor-feedback?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1261,7 +1261,7 @@ export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<Surveyor
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify(dataToUpdate),
         });
@@ -1312,7 +1312,7 @@ export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> 
     try {
         const response = await fetch(`${API_BASE_URL}/surveyor-feedback?quoteId=${quoteId}`, {
             method: 'DELETE',
-            headers: getAuthTokenHeader(),
+            headers: await getAuth0Headers(),
         });
 
         if (!response.ok) {
@@ -1368,7 +1368,7 @@ async function loadFeeQuoteLogsForProject(projectId: string | null) {
   console.log(`Fetching fee quote logs for project ID: ${projectId}`);
   try {
     const response = await fetch(`${API_BASE_URL}/fee-quote-logs?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1409,7 +1409,7 @@ export async function createFeeQuoteLog(projectId: string, emails: string[]): Pr
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify({ projectId, emails }),
         });
@@ -1443,7 +1443,7 @@ export async function authorizeSurveyors(projectId: string, emails: string[]): P
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify({ emails }),
         });
@@ -1479,7 +1479,7 @@ export async function authorizeClients(projectId: string, emails: string[]): Pro
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify({ emails }),
         });
@@ -1511,7 +1511,7 @@ export async function revokeSurveyorAuthorization(projectId: string, email: stri
         const response = await fetch(`${API_BASE_URL}/projects/${projectId}/surveyors/${encodeURIComponent(email)}`, {
             method: 'DELETE',
             headers: {
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             }
         });
 

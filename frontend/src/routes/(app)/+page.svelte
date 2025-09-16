@@ -1,11 +1,25 @@
 <script lang="ts">
   import PageHeader from "$lib/components/PageHeader.svelte";
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
-  import { authStore } from "$lib/stores/authStore";
+  import { auth0Store } from "$lib/stores/auth0Store";
   import { get } from 'svelte/store';
 
   // Check if user is a surveyor (read-only access)
-  $: isSurveyor = $authStore.user?.role === 'surveyor';
+  function getUserRole(user: any): string {
+    if (!user) return 'surveyor';
+    
+    const customRoles = user['https://your-app/roles'] || user.roles || [];
+    if (customRoles.includes('admin')) return 'admin';
+    if (customRoles.includes('client')) return 'client';
+    if (customRoles.includes('surveyor')) return 'surveyor';
+    
+    const email = user.email || '';
+    const adminEmails = import.meta.env?.VITE_ADMIN_EMAILS?.split(',') || [];
+    return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
+  }
+
+  $: userRole = getUserRole($auth0Store.user);
+  $: isSurveyor = userRole === 'surveyor';
 
   // Save state management
   let saving = false;

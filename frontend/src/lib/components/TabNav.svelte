@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { authStore } from '$lib/stores/authStore';
+  import { auth0Store } from '$lib/stores/auth0Store';
   import { goto } from '$app/navigation';
   
   // Define all available tabs
@@ -24,9 +24,25 @@
     }
   ];
 
+  function getUserRole(user: any): string {
+    if (!user) return 'surveyor';
+    
+    // Check Auth0 custom claims first
+    const customRoles = user['https://your-app/roles'] || user.roles || [];
+    if (customRoles.includes('admin')) return 'admin';
+    if (customRoles.includes('client')) return 'client';
+    if (customRoles.includes('surveyor')) return 'surveyor';
+    
+    // Fallback to email-based determination
+    const email = user.email || '';
+    const adminEmails = import.meta.env?.VITE_ADMIN_EMAILS?.split(',') || [];
+    return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
+  }
+
   // Filter tabs based on user role
   $: tabs = allTabs.filter(tab => {
-    const userRole = $authStore.user?.role;
+    if (!$auth0Store.isAuthenticated) return false;
+    const userRole = getUserRole($auth0Store.user);
     return userRole && tab.roles.includes(userRole);
   });
 

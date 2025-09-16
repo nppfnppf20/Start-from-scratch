@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { getAuthTokenHeader } from './authStore';
+import { getAuth0Headers } from './auth0Store';
 
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -78,7 +78,7 @@ export async function loadSurveyorOrganisations(): Promise<SurveyorOrganisation[
   try {
     console.log('Fetching surveyor organisations...');
     const response = await fetch(`${API_BASE_URL}/surveyor-organisations`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     
     if (!response.ok) {
@@ -117,7 +117,7 @@ export async function addSurveyorOrganisation(orgData: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...await getAuth0Headers()
       },
       body: JSON.stringify(orgData),
     });
@@ -162,7 +162,7 @@ export async function updateSurveyorOrganisation(
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...await getAuth0Headers()
       },
       body: JSON.stringify(updateData),
     });
@@ -196,7 +196,7 @@ export const deleteSurveyorOrganisation = async (organisationId: string) => {
     try {
         const response = await fetch(`${API_BASE_URL}/surveyor-organisations/${organisationId}`, {
             method: 'DELETE',
-            headers: getAuthTokenHeader()
+            headers: await getAuth0Headers()
         });
 
         if (!response.ok) {
@@ -241,7 +241,7 @@ export async function loadPendingSurveyors(): Promise<void> {
 
   try {
     const response = await fetch(`${API_BASE_URL}/pending-surveyors`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -264,7 +264,7 @@ export async function approvePendingSurveyor(pendingId: string): Promise<boolean
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...await getAuth0Headers()
       },
       body: JSON.stringify({ pendingId }),
     });
@@ -296,7 +296,7 @@ export async function mergePendingSurveyor(pendingId: string, targetId: string):
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...await getAuth0Headers()
       },
       body: JSON.stringify({ pendingId, targetId }),
     });
@@ -335,7 +335,7 @@ export async function rejectPendingSurveyor(pendingId: string): Promise<boolean>
   try {
     const response = await fetch(`${API_BASE_URL}/pending-surveyors/${pendingId}`, {
       method: 'DELETE',
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
 
     if (!response.ok) {

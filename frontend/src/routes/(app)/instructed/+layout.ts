@@ -1,19 +1,21 @@
 import type { LayoutLoad } from './$types';
 import { browser } from '$app/environment';
-import { authStore } from '$lib/stores/authStore';
+import { auth0Store } from '$lib/stores/auth0Store';
 import { redirect } from '@sveltejs/kit';
 import { get } from 'svelte/store';
+import { getUserRole } from '$lib/utils/auth';
 
 export const load: LayoutLoad = async () => {
     if (browser) {
-        const user = get(authStore).user;
-        // This page is for admins and clients only.
-        // If the user is not an admin or a client, redirect them.
-        if (user?.role !== 'admin' && user?.role !== 'client') {
-            // Redirect to the homepage as a safe default.
-            throw redirect(307, '/'); 
+        const { isAuthenticated, user, isLoading } = get(auth0Store);
+        
+        if (isLoading) return {};
+        if (!isAuthenticated) throw redirect(307, '/auth/login');
+        
+        const userRole = getUserRole(user);
+        if (userRole !== 'admin') {
+            throw redirect(307, '/');
         }
     }
-    // No data needs to be returned.
     return {};
 };

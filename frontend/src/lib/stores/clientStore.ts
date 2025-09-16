@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { getAuthTokenHeader } from './authStore';
+import { getAuth0Headers } from './auth0Store';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -24,7 +24,7 @@ export async function loadClientOrganisations() {
 
   try {
     const response = await fetch(`${API_BASE_URL}/client-organisations`, {
-      headers: getAuthTokenHeader(),
+      headers: await getAuth0Headers(),
     });
 
     if (!response.ok) {
@@ -59,7 +59,7 @@ export async function addClientOrganisation(orgData: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...await getAuth0Headers()
       },
       body: JSON.stringify(orgData),
     });
@@ -93,7 +93,7 @@ export const updateClientOrganisation = async (clientData: ClientOrganisation) =
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...await getAuth0Headers()
       },
       body: JSON.stringify(clientData)
     });
@@ -124,7 +124,7 @@ export const deleteClientOrganisation = async (clientId: string) => {
   try {
     const response = await fetch(`${API_BASE_URL}/client-organisations/${clientId}`, {
       method: 'DELETE',
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error('Failed to delete client organisation.');

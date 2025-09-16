@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+// We'll dynamically import 'jose' inside the handler to avoid ESM/CJS interop issues
 
 // Helper function to determine role based on email
 function determineRole(email) {
@@ -100,4 +101,4 @@ router.post('/login', async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;
