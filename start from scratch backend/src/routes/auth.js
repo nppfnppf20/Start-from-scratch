@@ -3,33 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-
-// Helper function to determine role based on email
-function determineRole(email) {
-    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
-    return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
-}
-
-function validateRolePassword(role, password) {
-    // NOTE: Ensure these env vars are set in Render!
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-    const SURVEYOR_PASSWORD = process.env.SURVEYOR_PASSWORD;
-    // Support legacy/alternate env var name for client password
-    const CLIENT_PASSWORD = process.env.CLIENT_PASSWORD || process.env.CLIENT_DEFAULT_PASSWORD; // Assuming clients also have a shared password
-
-    if (!password) return false;
-
-    switch (role) {
-        case 'admin':
-            return password === ADMIN_PASSWORD;
-        case 'surveyor':
-            return password === SURVEYOR_PASSWORD;
-        case 'client':
-            return password === CLIENT_PASSWORD;
-        default:
-            return false; // Deny by default
-    }
-}
+const { protect } = require('../middleware/authMiddleware');
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -43,18 +17,10 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ msg: 'User already exists' });
         }
 
-        // Determine role based on email
-        const role = determineRole(email);
-
-        // Validate that they're using the correct password for their role
-        if (!validateRolePassword(role, password)) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
-
-        // Create new user (without storing password)
-        user = new User({ email, role });
+        // Create new user
+        user = new User({ email, password });
         await user.save();
-        res.status(201).json({ msg: 'User registered successfully', role });
+        res.status(201).json({ msg: 'User registered successfully' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
@@ -73,30 +39,49 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        // Use role-based password validation instead of individual passwords
-        if (!validateRolePassword(user.role, password)) {
+        // Check password
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
         const payload = {
             user: {
                 id: user.id,
-                email: user.email,
-                role: user.role
+                email: user.email
             }
         };
 
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
+            { expiresIn: '3d' },
             (err, token) => {
                 if (err) throw err;
-                res.json({ token, user: { email: user.email, role: user.role } });
+                res.json({ token, user: { email: user.email } });
             }
         );
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
+    }
+});
+
+// @route   GET /api/auth/me
+// @desc    Get current user info
+// @access  Protected
+router.get('/me', protect, async (req, res) => {
+    try {
+        res.json({
+            _id: req.user._id,
+            name: req.user.name,
+            email: req.user.email,
+            createdAt: req.user.createdAt,
+            updatedAt: req.user.updatedAt
+        });
+    } catch (error) {
+        console.error('Error getting user info:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

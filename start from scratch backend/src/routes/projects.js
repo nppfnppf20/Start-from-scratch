@@ -7,7 +7,7 @@ const Quote = require('../models/Quote'); // Added for cascade deletion
 const ProgrammeEvent = require('../models/ProgrammeEvent'); // Added for cascade deletion
 const SurveyorFeedback = require('../models/SurveyorFeedback'); // Added for cascade deletion
 const InstructionLog = require('../models/InstructionLog');
-const { protect, authorize, checkProjectAccess } = require('../middleware/authMiddleware'); // Import authorize and protect
+const { protect } = require('../middleware/authMiddleware');
 
 // @route   GET /api/projects
 // @desc    Get all projects (fetching selected fields)
@@ -15,12 +15,7 @@ const { protect, authorize, checkProjectAccess } = require('../middleware/authMi
 router.get('/', protect, async (req, res) => {
     try {
         let query = {};
-        // If user is a surveyor, only return projects they are authorized for
-        if (req.user.role === 'surveyor') {
-            query.authorizedSurveyors = req.user._id;
-        } else if (req.user.role === 'client') {
-            query.authorizedClients = req.user._id;
-        }
+        // All authenticated users can see all projects
 
         const projects = await Project.aggregate([
             // Stage 1: Match projects based on user role
@@ -233,8 +228,8 @@ router.get('/', protect, async (req, res) => {
 
 // @route   POST /api/projects
 // @desc    Create a new project
-// @access  Admin only
-router.post('/', protect, authorize('admin'), async (req, res) => {
+// @access  Private
+router.post('/', protect, async (req, res) => {
     const { name, client, projectLead, projectManager, teamMembers, clientOrSpvName } = req.body;
     try {
         if (!name) {
@@ -258,8 +253,8 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
 // @route   GET /api/projects/:id
 // @desc    Get a single project by ID
-// @access  Private (Admin or authorized surveyor)
-router.get('/:id', protect, checkProjectAccess, async (req, res) => {
+// @access  Private
+router.get('/:id', protect, async (req, res) => {
     try {
         const project = await Project.findById(req.params.id);
         if (!project) {
@@ -277,8 +272,8 @@ router.get('/:id', protect, checkProjectAccess, async (req, res) => {
 
 // @route   PUT /api/projects/:id
 // @desc    Update a project by ID
-// @access  Admin only
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private
+router.put('/:id', protect, async (req, res) => {
     try {
         let project = await Project.findById(req.params.id);
         if (!project) {
@@ -304,8 +299,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 
 // @route   DELETE /api/projects/:id
 // @desc    Delete a project by ID and all associated data
-// @access  Admin only
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
     try {
         const projectId = req.params.id;
         const project = await Project.findById(projectId);
@@ -434,7 +429,7 @@ router.delete('/:id/surveyors/:email', async (req, res) => {
 // @route   POST /api/projects/:id/authorize-clients
 // @desc    Authorize clients to a project by their email addresses
 // @access  Private
-router.post('/:id/authorize-clients', protect, authorize('admin'), async (req, res) => {
+router.post('/:id/authorize-clients', protect, async (req, res) => {
     const { id } = req.params;
     const { emails } = req.body;
 

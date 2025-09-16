@@ -4,8 +4,8 @@
   import { authStore } from "$lib/stores/authStore";
   import { get } from 'svelte/store';
 
-  // Check if user is a surveyor (read-only access)
-  $: isSurveyor = $authStore.user?.role === 'surveyor';
+  // All users have full access now
+  const isSurveyor = false;
 
   // Save state management
   let saving = false;
