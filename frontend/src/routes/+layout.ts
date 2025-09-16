@@ -23,11 +23,14 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
     }
 
     if (isAuthenticated) {
+        console.log('User is authenticated, loading projects...');
         try {
             await loadProjects(fetch);
         } catch (error) {
             console.error("Failed to load projects in layout:", error);
         }
+    } else {
+        console.log('User not authenticated, isLoading:', isLoading);
     }
 
     return {};

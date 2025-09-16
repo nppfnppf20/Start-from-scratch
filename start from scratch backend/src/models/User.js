@@ -22,6 +22,11 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'surveyor', 'client'],
         default: 'surveyor'
+    },
+    auth0Sub: {
+        type: String,
+        unique: true,
+        sparse: true // Allows null values but ensures uniqueness when present
     }
 }, {
     timestamps: true

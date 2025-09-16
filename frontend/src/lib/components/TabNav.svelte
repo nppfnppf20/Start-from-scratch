@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   import { auth0Store } from '$lib/stores/auth0Store';
   import { goto } from '$app/navigation';
+  import { getUserRole } from '$lib/utils/auth';
   
   // Define all available tabs
   const allTabs = [
@@ -24,20 +25,6 @@
     }
   ];
 
-  function getUserRole(user: any): string {
-    if (!user) return 'surveyor';
-    
-    // Check Auth0 custom claims first
-    const customRoles = user['https://your-app/roles'] || user.roles || [];
-    if (customRoles.includes('admin')) return 'admin';
-    if (customRoles.includes('client')) return 'client';
-    if (customRoles.includes('surveyor')) return 'surveyor';
-    
-    // Fallback to email-based determination
-    const email = user.email || '';
-    const adminEmails = import.meta.env?.VITE_ADMIN_EMAILS?.split(',') || [];
-    return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
-  }
 
   // Filter tabs based on user role
   $: tabs = allTabs.filter(tab => {

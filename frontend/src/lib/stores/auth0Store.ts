@@ -68,6 +68,7 @@ function createAuth0Store() {
         try {
             const client = await getAuth0Client();
             accessToken = await client.getTokenSilently();
+            console.log('Access token obtained:', accessToken ? 'YES' : 'NO');
             return accessToken;
         } catch (error) {
             console.error('Token error:', error);
@@ -96,5 +97,6 @@ export async function getAuth0Headers(): Promise<{ Authorization?: string }> {
     if (!browser) return {};
     
     const token = await auth0Store.getAccessToken();
+    console.log('getAuth0Headers called, token available:', token ? 'YES' : 'NO');
     return token ? { Authorization: `Bearer ${token}` } : {};
 }

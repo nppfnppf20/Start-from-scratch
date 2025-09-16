@@ -4,6 +4,7 @@ import { getAuth0Headers } from './auth0Store';
 
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+console.log('API_BASE_URL:', API_BASE_URL);
 
 // --- Helper Function to map _id to id recursively ---
 function mapMongoId<T>(item: any): T {
@@ -164,12 +165,20 @@ export async function loadProjects(fetchFn: typeof fetch = fetch) {
 
   try {
     console.log('Fetching projects from API...');
+    const headers = await getAuth0Headers();
+    console.log('Auth headers:', headers);
+    
     const response = await fetchFn(`${API_BASE_URL}/projects`, {
-      headers: await getAuth0Headers()
+      headers
     });
+    
+    console.log('Response status:', response.status);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API Error:', response.status, errorText);
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
+    
     let fetchedProjects: any[] = await response.json();
 
     // Map _id to id for frontend consistency
