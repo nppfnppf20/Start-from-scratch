@@ -3,34 +3,15 @@
     import TopBar from "$lib/components/TopBar.svelte";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
-    import Login from "$lib/components/Login.svelte";
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    // REPLACE old auth import with Auth0 imports
-    import { initAuth0, isLoading, isAuthenticated, userInfo } from '$lib/stores/auth0';
+    import { isLoading, isAuthenticated, userInfo, accessToken } from '$lib/stores/auth0';
     import { browser } from '$app/environment';
   
-    onMount(async () => {
-  console.log('Layout onMount called, browser:', browser);
-  
-  if (browser) {
-    console.log('Layout: About to call initAuth0');
-    try {
-      await initAuth0();
-      console.log('Layout: initAuth0 completed');
-    } catch (error) {
-      console.error('Layout: initAuth0 failed:', error);
-    }
-    
-    // ... rest of your existing logic
-  } else {
-    console.log('Layout: Not in browser, skipping auth init');
-  }
-});
-  
-    // Reactive statement to load projects when authentication status changes
-    $: if (browser && $isAuthenticated && $userInfo) {
+    // Reactive statement to load projects when all Auth0 data is ready
+    $: if (browser && !$isLoading && $isAuthenticated && $userInfo && $accessToken) {
+      console.log('All Auth0 data ready, loading projects');
       loadProjects();
     }
   </script>
@@ -42,7 +23,7 @@
       <p>Loading...</p>
     </div>
   {:else}
-    <!-- Show the app layout (auth redirects happen in script) -->
+    <!-- Show the app layout -->
     <div class="app">
       <TopBar />
       <header>
