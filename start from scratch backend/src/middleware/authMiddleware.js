@@ -45,50 +45,49 @@ exports.protect = async (req, res, next) => {
         let email = payload.email;
         const sub = payload.sub;
 
+        // Simple approach: always look up by auth0Sub if no email in token
         if (!email && sub) {
-            console.log('No email in token, using sub as identifier:', sub);
+            console.log('No email in token, looking up user by Auth0 sub:', sub);
             
-            // First get email from userinfo
-            try {
-                const userInfoResponse = await fetch(`https://${AUTH0_DOMAIN}/userinfo`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                if (userInfoResponse.ok) {
-                    const userInfo = await userInfoResponse.json();
-                    email = userInfo.email;
-                    console.log('Got email from userinfo:', email);
-                }
-            } catch (err) {
-                console.error('Failed to get userinfo:', err);
-            }
-            
-            if (!email) {
-                return res.status(400).json({ msg: 'Unable to determine user email' });
-            }
-            
-            email = email.toLowerCase();
-            
-            // Try to find user by Auth0 sub first
+            // Try to find user by Auth0 sub (should work after first successful login)
             user = await User.findOne({ auth0Sub: sub });
             
-            if (!user) {
-                // Try to find by email (for existing users)
+            if (user) {
+                console.log('Found existing user by Auth0 sub:', user.email);
+            } else {
+                console.log('User not found by Auth0 sub, fetching email from userinfo');
+                
+                // Get email from userinfo 
+                try {
+                    const userInfoResponse = await fetch(`https://${AUTH0_DOMAIN}/userinfo`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    
+                    if (userInfoResponse.ok) {
+                        const userInfo = await userInfoResponse.json();
+                        email = userInfo.email?.toLowerCase();
+                        console.log('Got email from userinfo:', email);
+                    }
+                } catch (err) {
+                    console.error('Failed to get userinfo:', err);
+                }
+                
+                if (!email) {
+                    return res.status(400).json({ msg: 'Unable to determine user email' });
+                }
+                
+                // Try to find by email (for existing users from old system)
                 user = await User.findOne({ email });
                 
                 if (user) {
-                    // Update existing user with auth0Sub
+                    // Link existing user to Auth0
                     user.auth0Sub = sub;
                     await user.save();
-                    console.log('Updated existing user with Auth0 sub:', user.email);
+                    console.log('Linked existing user to Auth0:', user.email);
                 } else {
                     // Create new user
                     const role = determineRoleFromAuth0(payload);
-                    user = new User({ 
-                        email, 
-                        role, 
-                        auth0Sub: sub 
-                    });
+                    user = new User({ email, role, auth0Sub: sub });
                     await user.save();
                     console.log('Created new user:', user.email);
                 }
