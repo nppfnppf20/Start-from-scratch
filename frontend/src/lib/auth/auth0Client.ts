@@ -23,15 +23,25 @@ export async function getAuth0Client(): Promise<Auth0Client> {
             // Safe to log clientId; it's not a secret. Helps diagnose env loading.
             console.debug('Auth0 config', { domain, clientId, audience });
         }
-        auth0Client = await createAuth0Client({
-            domain,
-            clientId,
-            authorizationParams: {
-                audience: audience || undefined,
-                redirect_uri: window.location.origin + '/auth/callback',
-                scope: 'openid profile email'
-            }
-        });
+        try {
+            console.log('About to create Auth0 client with config:', { domain, clientId, audience });
+            console.log('Redirect URI will be:', window.location.origin + '/auth/callback');
+            
+            auth0Client = await createAuth0Client({
+                domain,
+                clientId,
+                authorizationParams: {
+                    audience: audience || undefined,
+                    redirect_uri: window.location.origin + '/auth/callback',
+                    scope: 'openid profile email'
+                }
+            });
+            
+            console.log('Auth0 client created successfully');
+        } catch (error) {
+            console.error('Auth0 client creation failed:', error);
+            throw error;
+        }
     }
     return auth0Client;
 }
