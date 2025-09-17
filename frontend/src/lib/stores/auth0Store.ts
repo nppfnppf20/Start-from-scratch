@@ -22,16 +22,22 @@ function createAuth0Store() {
         if (!browser) return;
         
         try {
+            console.log('Auth0 store: Starting initialization');
             const client = await getAuth0Client();
+            console.log('Auth0 store: Got client, checking authentication');
             const isAuthenticated = await client.isAuthenticated();
+            console.log('Auth0 store: isAuthenticated =', isAuthenticated);
             
             if (isAuthenticated) {
+                console.log('Auth0 store: Getting user info');
                 const user = await client.getUser();
+                console.log('Auth0 store: Getting access token');
                 accessToken = await client.getTokenSilently();
                 set({ isAuthenticated: true, user: user || null, isLoading: false });
             } else {
                 set({ isAuthenticated: false, user: null, isLoading: false });
             }
+            console.log('Auth0 store: Initialization completed successfully');
         } catch (error) {
             console.error('Auth0 initialization error:', error);
             set({ isAuthenticated: false, user: null, isLoading: false });
