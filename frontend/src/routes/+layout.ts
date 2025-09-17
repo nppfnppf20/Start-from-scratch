@@ -12,8 +12,11 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
 
     const { isAuthenticated, isLoading } = get(auth0Store);
     const isAuthRoute = url.pathname.startsWith('/auth/');
+    
+    console.log('Layout load: Auth state check', { isAuthenticated, isLoading, url: url.pathname });
 
     if (isLoading) {
+        console.log('Layout load: Auth0 still loading, returning early');
         // Wait for Auth0 to initialize
         return {};
     }

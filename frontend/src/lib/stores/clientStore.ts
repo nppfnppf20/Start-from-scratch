@@ -31,6 +31,15 @@ export async function loadClientOrganisations() {
       throw new Error('Failed to fetch client organisations');
     }
 
+    // Debug: Check if response is actually JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response from /api/client-organisations:', text.slice(0, 200));
+      console.error('Content-Type:', contentType);
+      throw new Error('Expected JSON but got: ' + contentType);
+    }
+
     const data = await response.json();
     
     // Map _id to id and add a placeholder for projects
