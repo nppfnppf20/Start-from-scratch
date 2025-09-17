@@ -51,6 +51,10 @@ function createAuth0Store() {
     async function logout() {
         if (!browser) return;
         try {
+            // Clear role cache before logging out
+            const { clearUserRoleCache } = await import('$lib/utils/auth');
+            clearUserRoleCache();
+            
             const client = await getAuth0Client();
             await client.logout({
                 logoutParams: {

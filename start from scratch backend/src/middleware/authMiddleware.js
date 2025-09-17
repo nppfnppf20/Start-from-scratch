@@ -85,11 +85,16 @@ exports.protect = async (req, res, next) => {
                     await user.save();
                     console.log('Linked existing user to Auth0:', user.email);
                 } else {
+                    // Check if email is authorized in any bank
+                    const role = await determineRoleFromEmailBanks(email);
+                    if (!role) {
+                        return res.status(403).json({ msg: 'Email not authorized - contact admin to be added to the system' });
+                    }
+                    
                     // Create new user
-                    const role = determineRoleFromAuth0(payload);
                     user = new User({ email, role, auth0Sub: sub });
                     await user.save();
-                    console.log('Created new user:', user.email);
+                    console.log('Created new user:', user.email, 'with role:', role);
                 }
             }
         } else if (email) {
@@ -99,18 +104,24 @@ exports.protect = async (req, res, next) => {
             // Find or create user in our database
             user = await User.findOne({ email });
             if (!user) {
-                const role = determineRoleFromAuth0(payload);
+                // Check if email is authorized in any bank
+                const role = await determineRoleFromEmailBanks(email);
+                if (!role) {
+                    return res.status(403).json({ msg: 'Email not authorized - contact admin to be added to the system' });
+                }
+                
                 user = new User({ 
                     email, 
                     role,
                     auth0Sub: sub 
                 });
                 await user.save();
-                console.log('Created new user:', user.email);
+                console.log('Created new user:', user.email, 'with role:', role);
             } else if (!user.auth0Sub) {
                 // Update existing user with auth0Sub
                 user.auth0Sub = sub;
                 await user.save();
+                console.log('Linked existing user to Auth0:', user.email);
             }
         } else {
             return res.status(400).json({ msg: 'Token missing email claim' });
@@ -125,22 +136,35 @@ exports.protect = async (req, res, next) => {
     }
 };
 
-// Helper function to determine role from Auth0 token
-function determineRoleFromAuth0(payload) {
-    // TEMPORARY: Give everyone admin access for testing
-    return 'admin';
+// Helper function to determine role from email banks
+async function determineRoleFromEmailBanks(email) {
+    const emailLower = email.toLowerCase();
     
-    // Original logic (commented out for now):
-    // // Check for custom roles in Auth0 metadata first
-    // const customRoles = payload['https://your-app/roles'] || payload.roles || [];
-    // if (customRoles.includes('admin')) return 'admin';
-    // if (customRoles.includes('client')) return 'client';
-    // if (customRoles.includes('surveyor')) return 'surveyor';
-    // 
-    // // Fallback to email-based role determination
-    // const email = payload.email || '';
-    // const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
-    // return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
+    // 1. Check admin emails (environment variables)
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+    if (adminEmails.includes(emailLower)) {
+        console.log(`Email ${emailLower} found in admin bank`);
+        return 'admin';
+    }
+    
+    // 2. Check client organizations 
+    const ClientOrganisation = require('../models/ClientOrganisation');
+    const clientOrg = await ClientOrganisation.findOne({ 'contacts.email': emailLower });
+    if (clientOrg) {
+        console.log(`Email ${emailLower} found in client bank (org: ${clientOrg.organisationName})`);
+        return 'client';
+    }
+    
+    // 3. Check surveyor organizations
+    const SurveyorOrganisation = require('../models/SurveyorOrganisation');  
+    const surveyorOrg = await SurveyorOrganisation.findOne({ 'contacts.email': emailLower });
+    if (surveyorOrg) {
+        console.log(`Email ${emailLower} found in surveyor bank (org: ${surveyorOrg.organisation})`);
+        return 'surveyor';
+    }
+    
+    console.log(`Email ${emailLower} NOT FOUND in any email bank`);
+    return null; // Not authorized
 }
 
 // Grant access to specific roles
