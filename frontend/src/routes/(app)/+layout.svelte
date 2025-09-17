@@ -11,6 +11,18 @@
     import { browser } from '$app/environment';
     import { get } from 'svelte/store';
 
+    // Reactive redirect logic
+    $: {
+        if (browser) {
+            const { isAuthenticated, isLoading } = $auth0Store;
+            const isAuthRoute = $page.url.pathname.startsWith('/auth/');
+            
+            if (!isLoading && !isAuthenticated && !isAuthRoute) {
+                goto('/auth/login', { replaceState: true });
+            }
+        }
+    }
+
     onMount(async () => {
         if (browser) {
             const { isAuthenticated, isLoading } = get(auth0Store);
@@ -24,34 +36,49 @@
 
 </script>
 
-<div class="app">
-    <TopBar />
-    <header>
-        <ProjectSelector />
-        <TabNav />
-    </header>
+{#if !$auth0Store.isLoading}
+    <div class="app">
+        <TopBar />
+        <header>
+            <ProjectSelector />
+            <TabNav />
+        </header>
 
-    <main>
-        {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission')}
-            <slot />
-        {:else}
-            <div class="no-project-selected">
-                <h2>No Project Selected</h2>
-                <p>General project information is hidden until you select a project from the dropdown above.</p>
-            </div>
-        {/if}
-    </main>
+        <main>
+            {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission')}
+                <slot />
+            {:else}
+                <div class="no-project-selected">
+                    <h2>No Project Selected</h2>
+                    <p>General project information is hidden until you select a project from the dropdown above.</p>
+                </div>
+            {/if}
+        </main>
 
-    <footer>
-        <p>Projects Overview Dashboard</p>
-    </footer>
-</div>
+        <footer>
+            <p>Projects Overview Dashboard</p>
+        </footer>
+    </div>
+{:else}
+    <!-- You can replace this with a proper loading spinner component -->
+    <div class="loading-container">
+        <p>Loading...</p>
+    </div>
+{/if}
 
 <style>
     .app {
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+    }
+
+    .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-size: 1.5rem;
     }
 
     main {

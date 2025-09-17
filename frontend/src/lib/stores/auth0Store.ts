@@ -76,7 +76,9 @@ function createAuth0Store() {
         if (!browser) return null;
         
         try {
+            console.log('getAccessToken called - this might cause the JSON parse error');
             const client = await getAuth0Client();
+            console.log('About to call getTokenSilently...');
             accessToken = await client.getTokenSilently();
             console.log('Access token obtained:', accessToken ? 'YES' : 'NO');
             return accessToken;
