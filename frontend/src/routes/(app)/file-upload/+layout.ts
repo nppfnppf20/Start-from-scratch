@@ -13,7 +13,7 @@ export const load: LayoutLoad = async () => {
         if (!isAuthenticated) throw redirect(307, '/auth/login');
         
         const userRole = getUserRole(user);
-        if (userRole !== 'admin' && userRole !== 'client') {
+        if (userRole !== 'admin' && userRole !== 'client' && userRole !== 'surveyor') {
             throw redirect(307, '/');
         }
     }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { selectedProject } from "$lib/stores/projectStore";
+  import { userRole } from '$lib/utils/auth';
   
   // --- Reference to the scrollable table container ---
   let tableContainerElement: HTMLDivElement;
@@ -17,6 +18,10 @@
       tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' });
     }
   }
+
+  // Role-based access control
+  $: canViewFiles = $userRole === 'admin' || $userRole === 'client';
+  $: canUploadFiles = true; // all roles can upload
 
   // Placeholder data - will be replaced with actual file upload functionality
   const placeholderFiles = [
@@ -44,10 +49,12 @@
 <div class="file-upload-container">
   <PageHeader 
     title="File Upload (Beta)" 
-    subtitle={$selectedProject ? `File management for ${$selectedProject.name}` : 'Please select a project to manage files.'}
+    subtitle={$selectedProject ? 
+      (canViewFiles ? `File management for ${$selectedProject.name}` : `Upload files for ${$selectedProject.name}`) : 
+      'Please select a project to manage files.'}
   >
     <div slot="actions">
-      {#if $selectedProject}
+      {#if $selectedProject && canUploadFiles}
         <button class="upload-btn">
           + Upload Files
         </button>
@@ -71,63 +78,67 @@
       </div>
     </div>
 
-    {#if placeholderFiles.length > 0}
-      <div class="table-scroll-wrapper">
-        <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
-        <div class="files-table-container" bind:this={tableContainerElement}>
-          <table class="files-table">
-            <thead>
-              <tr>
-                <th>File Name</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Category</th>
-                <th>Upload Date</th>
-                <th>Uploaded By</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each placeholderFiles as file (file.id)}
+    {#if canViewFiles}
+      {#if placeholderFiles.length > 0}
+        <div class="table-scroll-wrapper">
+          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
+          <div class="files-table-container" bind:this={tableContainerElement}>
+            <table class="files-table">
+              <thead>
                 <tr>
-                  <td class="file-name">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14,2 14,8 20,8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                      <polyline points="10,9 9,9 8,9"/>
-                    </svg>
-                    {file.name}
-                  </td>
-                  <td>{file.type}</td>
-                  <td>{file.size}</td>
-                  <td>
-                    <span class="category-badge category-{file.category.toLowerCase()}">
-                      {file.category}
-                    </span>
-                  </td>
-                  <td>{file.uploadDate}</td>
-                  <td>{file.uploadedBy}</td>
-                  <td class="action-cell">
-                    <button class="action-btn download-btn" title="Download File">
-                      Download
-                    </button>
-                    <button class="action-btn delete-btn" title="Delete File">
-                      Delete
-                    </button>
-                  </td>
+                  <th>File Name</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Category</th>
+                  <th>Upload Date</th>
+                  <th>Uploaded By</th>
+                  <th>Actions</th>
                 </tr>
-              {/each}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {#each placeholderFiles as file (file.id)}
+                  <tr>
+                    <td class="file-name">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10,9 9,9 8,9"/>
+                      </svg>
+                      {file.name}
+                    </td>
+                    <td>{file.type}</td>
+                    <td>{file.size}</td>
+                    <td>
+                      <span class="category-badge category-{file.category.toLowerCase()}">
+                        {file.category}
+                      </span>
+                    </td>
+                    <td>{file.uploadDate}</td>
+                    <td>{file.uploadedBy}</td>
+                    <td class="action-cell">
+                      <button class="action-btn download-btn" title="Download File">
+                        Download
+                      </button>
+                      {#if $userRole === 'admin'}
+                        <button class="action-btn delete-btn" title="Delete File">
+                          Delete
+                        </button>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
         </div>
-        <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
-      </div>
-    {:else}
-      <div class="no-files">
-        <p>No files uploaded yet for this project.</p>
-      </div>
+      {:else}
+        <div class="no-files">
+          <p>No files uploaded yet for this project.</p>
+        </div>
+      {/if}
     {/if}
   {:else}
     <!-- Message is shown in the subtitle -->
@@ -391,4 +402,5 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     color: #718096;
   }
+
 </style>
