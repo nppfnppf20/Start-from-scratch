@@ -37,6 +37,16 @@ async function fetchUserRoleFromBackend(email: string) {
     // Skip if already cached for this email
     if (cachedUserRole && cachedUserEmail === email) return;
     
+    // Check if user is authenticated before making API call
+    const { auth0Store } = await import('$lib/stores/auth0Store');
+    const { get } = await import('svelte/store');
+    const { isAuthenticated, isLoading } = get(auth0Store);
+    
+    if (!isAuthenticated || isLoading) {
+        console.log('fetchUserRoleFromBackend: User not authenticated, skipping role fetch');
+        return;
+    }
+    
     try {
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
         const headers = await getAuth0Headers();

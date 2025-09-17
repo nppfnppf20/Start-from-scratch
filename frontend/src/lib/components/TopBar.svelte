@@ -7,7 +7,7 @@
   }
 
   // Trigger role fetch when user is authenticated
-  $: if ($auth0Store.user) {
+  $: if ($auth0Store.isAuthenticated && $auth0Store.user && !$auth0Store.isLoading) {
     getUserRole($auth0Store.user);
   }
 </script>
