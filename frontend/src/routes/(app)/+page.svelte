@@ -5,11 +5,11 @@
   import { getUserRole, userRole } from "$lib/utils/auth";
   import { get } from 'svelte/store';
 
-  // Check if user is a surveyor (read-only access)
-  $: if ($auth0Store.user) {
-    getUserRole($auth0Store.user);
-  }
-  $: isSurveyor = $userRole === 'surveyor';
+  // TEMPORARILY DISABLED - Check if user is a surveyor (read-only access)
+  // $: if ($auth0Store.user) {
+  //   getUserRole($auth0Store.user);
+  // }
+  $: isSurveyor = false; // Temporarily set to false for testing
 
   // Save state management
   let saving = false;
