@@ -26,18 +26,19 @@
   ];
 
 
-  // Filter tabs based on user role
-  $: tabs = allTabs.filter(tab => {
-    if (!$auth0Store.isAuthenticated) return false;
-    
-    // Trigger role fetch if user is authenticated
-    if ($auth0Store.user) {
-      getUserRole($auth0Store.user);
-    }
-    
-    // Use reactive role store for filtering
-    return $userRole && tab.roles.includes($userRole);
-  });
+  // TEMPORARILY DISABLED - Filter tabs based on user role
+  $: tabs = []; // Temporarily show no tabs for testing
+  // $: tabs = allTabs.filter(tab => {
+  //   if (!$auth0Store.isAuthenticated) return false;
+  //   
+  //   // Trigger role fetch if user is authenticated
+  //   if ($auth0Store.user) {
+  //     getUserRole($auth0Store.user);
+  //   }
+  //   
+  //   // Use reactive role store for filtering
+  //   return $userRole && tab.roles.includes($userRole);
+  // });
 
   // Dropdown state
   let openDropdownId: string | null = null;
