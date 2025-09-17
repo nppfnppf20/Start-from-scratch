@@ -140,10 +140,11 @@ exports.protect = async (req, res, next) => {
 async function determineRoleFromEmailBanks(email) {
     const emailLower = email.toLowerCase();
     
-    // 1. Check admin emails (environment variables)
-    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
-    if (adminEmails.includes(emailLower)) {
-        console.log(`Email ${emailLower} found in admin bank`);
+    // 1. Check admin emails (database)
+    const Admin = require('../models/Admin');
+    const adminUser = await Admin.findOne({ email: emailLower, isActive: true });
+    if (adminUser) {
+        console.log(`Email ${emailLower} found in admin bank (database)`);
         return 'admin';
     }
     

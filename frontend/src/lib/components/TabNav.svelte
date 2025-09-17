@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { auth0Store } from '$lib/stores/auth0Store';
   import { goto } from '$app/navigation';
-  import { getUserRole } from '$lib/utils/auth';
+  import { getUserRole, userRole } from '$lib/utils/auth';
   
   // Define all available tabs
   const allTabs = [
@@ -29,8 +29,14 @@
   // Filter tabs based on user role
   $: tabs = allTabs.filter(tab => {
     if (!$auth0Store.isAuthenticated) return false;
-    const userRole = getUserRole($auth0Store.user);
-    return userRole && tab.roles.includes(userRole);
+    
+    // Trigger role fetch if user is authenticated
+    if ($auth0Store.user) {
+      getUserRole($auth0Store.user);
+    }
+    
+    // Use reactive role store for filtering
+    return $userRole && tab.roles.includes($userRole);
   });
 
   // Dropdown state
