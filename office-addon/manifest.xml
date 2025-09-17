@@ -15,22 +15,23 @@
   <DisplayName DefaultValue="Project Data Filler" />
   <Description DefaultValue="Fill Word templates with project data from your database"/>
 
-  <!-- Icon for your add-in. Used on installation screens and the add-ins dialog. -->
-  <IconUrl DefaultValue="https://localhost:5000/office-addon/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:5000/office-addon/assets/icon-64.png"/>
+    <!-- Icon for your add-in. Used on installation screens and the add-ins dialog. -->
+    <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
+    <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
 
-  <!-- If you plan to submit this add-in to the Office Store, uncomment the SupportUrl element below -->
-  <!-- <SupportUrl DefaultValue="[Insert the URL of a page that provides support information for the app]">-->
+    <!-- If you plan to submit this add-in to the Office Store, uncomment the SupportUrl element below -->
+    <!-- <SupportUrl DefaultValue="[Insert the URL of a page that provides support information for the app]">-->
 
-  <!-- Domains that will be allowed when navigating to them from the add-in's context. -->
-  <AppDomains>
-    <AppDomain>https://localhost:5000</AppDomain>
-  </AppDomains>
+    <!-- Domains that will be allowed when navigating to them from the add-in's context. -->
+    <AppDomains>
+        <AppDomain>https://localhost:3000</AppDomain>
+        <AppDomain>http://localhost:5000</AppDomain>
+    </AppDomains>
 
-  <!-- Define the default location and context for the add-in -->
-  <DefaultSettings>
-    <SourceLocation DefaultValue="https://localhost:5000/office-addon/src/taskpane.html"/>
-  </DefaultSettings>
+    <!-- Define the default location and context for the add-in -->
+    <DefaultSettings>
+        <SourceLocation DefaultValue="https://localhost:3000/src/taskpane.html"/>
+    </DefaultSettings>
 
   <!-- Specify the permissions the add-in needs -->
   <Permissions>ReadWriteDocument</Permissions>
@@ -49,12 +50,12 @@
     <!-- You can have multiple resource files. -->
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:5000/office-addon/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:5000/office-addon/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:5000/office-addon/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="GetStarted.Url" DefaultValue="https://localhost:5000/office-addon/src/taskpane.html"/>
+        <bt:Url id="GetStarted.Url" DefaultValue="https://localhost:3000/src/taskpane.html"/>
       </bt:Urls>
       <!-- ShortStrings max characters==125. -->
       <bt:ShortStrings>

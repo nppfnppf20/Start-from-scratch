@@ -1,0 +1,13 @@
+{
+  "name": "project-data-filler-addon",
+  "version": "1.0.0",
+  "description": "Office Add-in for populating Word documents with project data",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
