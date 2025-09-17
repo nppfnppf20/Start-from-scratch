@@ -25,6 +25,7 @@ const User = require('./models/User'); // Import User model for seeding
 const userRoutes = require('./routes/users');
 const clientOrganisationsRoutes = require('./routes/clientOrganisations');
 const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
+const officeRoutes = require('./routes/office');
 // console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -94,8 +95,19 @@ const corsOptions = {
     if (process.env.NODE_ENV !== 'production') {
       allowedOrigins.push("http://localhost:5173"); // SvelteKit's default dev port
       allowedOrigins.push("http://127.0.0.1:5173"); // Another common localhost variant
+      allowedOrigins.push("https://localhost:3000"); // Office plugins often run on localhost:3000
+      allowedOrigins.push("http://localhost:3000"); // Office plugins (non-SSL)
       // Add any other local frontend ports you might use
     }
+    
+    // Allow Office 365 and related Microsoft domains for Office plugins
+    allowedOrigins.push("https://localhost"); // Office plugins on localhost
+    allowedOrigins.push("https://word-edit.officeapps.live.com"); // Word Online
+    allowedOrigins.push("https://excel-edit.officeapps.live.com"); // Excel Online
+    allowedOrigins.push("https://powerpoint-edit.officeapps.live.com"); // PowerPoint Online
+    allowedOrigins.push("https://outlook-sdf.officeapps.live.com"); // Outlook
+    allowedOrigins.push("https://teams.microsoft.com"); // Teams
+    // Add pattern for any *.officeapps.live.com subdomain if needed
 
     // Allow requests with no origin (like Postman, server-to-server) or from allowed origins
     if (!origin || allowedOrigins.includes(origin)) {
@@ -150,6 +162,9 @@ app.use('/api/client-organisations', clientOrganisationsRoutes);
 // Public routes
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
+
+// Office plugin routes (internal use only - no JWT protection)
+app.use('/api/office', officeRoutes);
 
 
 // --- Start Server ---

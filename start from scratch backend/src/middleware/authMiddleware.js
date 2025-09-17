@@ -215,4 +215,63 @@ exports.checkProjectAccess = async (req, res, next) => {
         console.error(err);
         return res.status(500).send('Server Error');
     }
+};
+
+// Simple user identification for Office plugin (internal use only)
+exports.identifyUser = async (req, res, next) => {
+    const email = req.headers['x-user-email'] || req.query.userEmail;
+    
+    if (!email) {
+        return res.status(400).json({ msg: 'User email required in x-user-email header or userEmail query parameter' });
+    }
+    
+    try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        
+        req.user = user;
+        next();
+    } catch (err) {
+        console.error('Error identifying user:', err);
+        return res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Check project access for Office plugin
+exports.checkProjectAccessOffice = async (req, res, next) => {
+    try {
+        const project = await require('../models/Project').findById(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+
+        // Admins have automatic access
+        if (req.user.role === 'admin') {
+            return next();
+        }
+
+        // Surveyors must be in the authorizedSurveyors list
+        if (req.user.role === 'surveyor') {
+            if (project.authorizedSurveyors.map(id => id.toString()).includes(req.user._id.toString())) {
+                return next();
+            }
+        }
+
+        // Clients must be in the authorizedClients list
+        if (req.user.role === 'client') {
+            if (project.authorizedClients.map(id => id.toString()).includes(req.user._id.toString())) {
+                return next();
+            }
+        }
+        
+        // If none of the above, deny access
+        return res.status(403).json({ msg: 'User not authorized for this project' });
+
+    } catch (err) {
+        console.error('Error checking project access:', err);
+        return res.status(500).json({ msg: 'Server Error' });
+    }
 }; 
