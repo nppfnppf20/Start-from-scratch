@@ -28,6 +28,14 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
             await loadProjects(fetch);
         } catch (error) {
             console.error("Failed to load projects in layout:", error);
+            
+            // Check if it's a 403 Unauthorized error
+            if (error.message.includes('403')) {
+                console.log('User email not authorized - logging out');
+                // Clear auth state and redirect to login with error message
+                await auth0Store.logout();
+                throw redirect(307, '/auth/login?error=unauthorized');
+            }
         }
     } else {
         console.log('User not authenticated, isLoading:', isLoading);

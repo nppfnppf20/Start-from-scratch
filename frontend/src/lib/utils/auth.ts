@@ -40,6 +40,12 @@ async function fetchUserRoleFromBackend(email: string) {
             cachedUserRole = userData.role;
             cachedUserEmail = email;
             console.log('Fetched user role from backend:', userData.role);
+        } else if (response.status === 403) {
+            // Email not authorized - trigger logout
+            console.error('User email not authorized:', response.status);
+            const { auth0Store } = await import('$lib/stores/auth0Store');
+            await auth0Store.logout();
+            // Redirect will be handled by the layout
         } else {
             console.error('Failed to fetch user role:', response.status);
         }
