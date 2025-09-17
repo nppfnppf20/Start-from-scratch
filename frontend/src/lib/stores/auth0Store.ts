@@ -88,9 +88,15 @@ function createAuth0Store() {
         }
     }
 
-    // Initialize when store is created
+    // TEMPORARILY DISABLED - Initialize when store is created
+    // if (browser) {
+    //     initialize();
+    // }
+    
+    // For testing: set a fake authenticated state
     if (browser) {
-        initialize();
+        console.log('Auth0 initialization DISABLED for testing');
+        set({ isAuthenticated: false, user: null, isLoading: false });
     }
 
     return {
