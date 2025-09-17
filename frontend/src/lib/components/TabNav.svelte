@@ -12,6 +12,7 @@
     { id: 'quotes', label: 'Surveyor Quotes', path: '/quotes', roles: ['admin', 'client'] },
     { id: 'instructed', label: 'Instructed Surveyors', path: '/instructed', roles: ['admin', 'client'] },
     { id: 'programme', label: 'Programme', path: '/programme', roles: ['admin', 'client'] },
+    { id: 'file-upload', label: 'File Upload (Beta)', path: '/file-upload', roles: ['admin', 'client'] },
     { id: 'reviews', label: 'Surveyor Reviews', path: '/reviews', roles: ['admin'] },
     { 
       id: 'admin', 
