@@ -3,7 +3,7 @@ import { browser } from '$app/environment';
 import { auth0Store } from '$lib/stores/auth0Store';
 import { redirect } from '@sveltejs/kit';
 import { get } from 'svelte/store';
-import { getUserRole } from '$lib/utils/auth';
+import { getUserRole, userRole } from '$lib/utils/auth';
 
 export const load: LayoutLoad = async () => {
     if (browser) {
@@ -12,8 +12,13 @@ export const load: LayoutLoad = async () => {
         if (isLoading) return {};
         if (!isAuthenticated) throw redirect(307, '/auth/login');
         
-        const userRole = getUserRole(user);
-        if (userRole !== 'admin') {
+        // Trigger role fetch
+        if (user) {
+            getUserRole(user);
+        }
+        
+        const currentRole = get(userRole);
+        if (currentRole !== 'admin' && currentRole !== 'surveyor') {
             throw redirect(307, '/');
         }
     }
