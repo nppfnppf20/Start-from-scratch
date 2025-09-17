@@ -16,6 +16,9 @@ export async function getAuth0Client(): Promise<Auth0Client> {
             throw new Error('Auth0 env missing: set PUBLIC_AUTH0_DOMAIN and PUBLIC_AUTH0_CLIENT_ID (or VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID) in frontend/.env');
         }
 
+        // Always log in production to debug the blank screen issue
+        console.log('Auth0 config (prod):', { domain, clientId, audience });
+        
         if ((import.meta as any).env?.DEV) {
             // Safe to log clientId; it's not a secret. Helps diagnose env loading.
             console.debug('Auth0 config', { domain, clientId, audience });

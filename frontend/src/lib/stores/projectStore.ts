@@ -179,6 +179,15 @@ export async function loadProjects(fetchFn: typeof fetch = fetch) {
       throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
     
+    // Debug: Check if response is actually JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response from /api/projects:', text.slice(0, 200));
+      console.error('Content-Type:', contentType);
+      throw new Error('Expected JSON but got: ' + contentType);
+    }
+    
     let fetchedProjects: any[] = await response.json();
 
     // Map _id to id for frontend consistency

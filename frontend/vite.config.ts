@@ -8,6 +8,9 @@ export default defineConfig({
 	plugins: [
 		sveltekit() // Keep your existing SvelteKit plugin
 	],
+	build: {
+		sourcemap: true // Enable source maps for debugging production issues
+	},
 	// Add the 'server' configuration block for the proxy
 	server: {
 		proxy: {
