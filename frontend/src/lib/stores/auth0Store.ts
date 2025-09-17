@@ -1,7 +1,13 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import { getAuth0Client } from '$lib/auth/auth0Client';
-import type { User } from '@auth0/auth0-spa-js';
+// TEMPORARILY DISABLED - import { getAuth0Client } from '$lib/auth/auth0Client';
+// TEMPORARILY DISABLED - import type { User } from '@auth0/auth0-spa-js';
+
+// Fake User type for testing
+interface User {
+    email?: string;
+    name?: string;
+}
 
 interface Auth0State {
     isAuthenticated: boolean;
@@ -21,71 +27,24 @@ function createAuth0Store() {
     async function initialize() {
         if (!browser) return;
         
-        try {
-            console.log('Auth0 store: Starting initialization');
-            const client = await getAuth0Client();
-            console.log('Auth0 store: Got client, checking authentication');
-            const isAuthenticated = await client.isAuthenticated();
-            console.log('Auth0 store: isAuthenticated =', isAuthenticated);
-            
-            if (isAuthenticated) {
-                console.log('Auth0 store: Getting user info');
-                const user = await client.getUser();
-                console.log('Auth0 store: Getting access token');
-                accessToken = await client.getTokenSilently();
-                set({ isAuthenticated: true, user: user || null, isLoading: false });
-            } else {
-                set({ isAuthenticated: false, user: null, isLoading: false });
-            }
-            console.log('Auth0 store: Initialization completed successfully');
-        } catch (error) {
-            console.error('Auth0 initialization error:', error);
-            set({ isAuthenticated: false, user: null, isLoading: false });
-        }
+        // COMPLETELY DISABLED FOR TESTING
+        console.log('Auth0 store: COMPLETELY DISABLED - setting fake state');
+        set({ isAuthenticated: false, user: null, isLoading: false });
     }
 
     async function login() {
-        if (!browser) return;
-        try {
-            const client = await getAuth0Client();
-            await client.loginWithRedirect();
-        } catch (error) {
-            console.error('Login error:', error);
-        }
+        console.log('Login called - DISABLED FOR TESTING');
+        return;
     }
 
     async function logout() {
-        if (!browser) return;
-        try {
-            // Clear role cache before logging out
-            const { clearUserRoleCache } = await import('$lib/utils/auth');
-            clearUserRoleCache();
-            
-            const client = await getAuth0Client();
-            await client.logout({
-                logoutParams: {
-                    returnTo: window.location.origin
-                }
-            });
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
+        console.log('Logout called - DISABLED FOR TESTING');
+        return;
     }
 
     async function getAccessToken(): Promise<string | null> {
-        if (!browser) return null;
-        
-        try {
-            console.log('getAccessToken called - this might cause the JSON parse error');
-            const client = await getAuth0Client();
-            console.log('About to call getTokenSilently...');
-            accessToken = await client.getTokenSilently();
-            console.log('Access token obtained:', accessToken ? 'YES' : 'NO');
-            return accessToken;
-        } catch (error) {
-            console.error('Token error:', error);
-            return null;
-        }
+        console.log('getAccessToken called - DISABLED FOR TESTING');
+        return null;
     }
 
     // TEMPORARILY DISABLED - Initialize when store is created
