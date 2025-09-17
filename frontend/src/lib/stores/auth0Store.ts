@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { getAuth0Client } from '$lib/auth/auth0Client';
 import type { User } from '@auth0/auth0-spa-js';
@@ -105,6 +105,15 @@ export const auth0Store = createAuth0Store();
 // Helper function to get auth headers for API calls
 export async function getAuth0Headers(): Promise<{ Authorization?: string }> {
     if (!browser) return {};
+    
+    // Check if user is authenticated before trying to get token
+    const { isAuthenticated, isLoading } = get(auth0Store);
+    console.log('getAuth0Headers called:', { isAuthenticated, isLoading });
+    
+    if (!isAuthenticated || isLoading) {
+        console.log('getAuth0Headers: User not authenticated, returning empty headers');
+        return {};
+    }
     
     const token = await auth0Store.getAccessToken();
     console.log('getAuth0Headers called, token available:', token ? 'YES' : 'NO');
