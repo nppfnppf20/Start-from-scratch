@@ -11,7 +11,13 @@ const config = {
 			assets: 'build',
 			fallback: 'index.html', // Important for SPAs
 			precompress: false
-		})
+		}),
+		// Disable SSR for true SPA mode
+		csr: true,
+		ssr: false,
+		prerender: {
+			handleHttpError: 'warn'
+		}
 	}
 };
 

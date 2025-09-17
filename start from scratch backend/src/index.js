@@ -20,7 +20,7 @@ const documentRoutes = require('./routes/documents');
 const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
 const authRoutes = require('./routes/auth');
 const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
-const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
+const { protect, authorize, protectFlexible } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
 const userRoutes = require('./routes/users');
 const clientOrganisationsRoutes = require('./routes/clientOrganisations');
@@ -129,14 +129,17 @@ app.use(express.json());
 // +++ Statically serve the uploads directory +++
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// +++ Serve Office Add-in files +++
+app.use('/office-addon', express.static(path.join(__dirname, '../../office-addon')));
+
 // +++ Change base API route to /api +++
 app.get('/api', (req, res) => {
   res.send('API is running...');
 });
 
-// Apply JWT protection to all data-related routes
-app.use('/api/projects', protect, projectRoutes);
-app.use('/api/quotes', protect, quoteRoutes);
+// Apply flexible protection (API key or JWT) to routes the Office add-in needs
+app.use('/api/projects', protectFlexible, projectRoutes);
+app.use('/api/quotes', protectFlexible, quoteRoutes);
 app.use('/api/instruction-logs', protect, instructionLogRoutes);
 app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
 app.use('/api/documents', protect, documentRoutes);

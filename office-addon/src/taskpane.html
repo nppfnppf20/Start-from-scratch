@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project Data Filler</title>
+
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <!-- Local styles and scripts -->
+    <link rel="stylesheet" href="taskpane.css" />
+</head>
+
+<body>
+    <div id="app">
+        <header class="header">
+            <img src="../assets/icon-32.png" alt="Logo" class="logo" />
+            <h1>Project Data Filler</h1>
+        </header>
+
+        <main class="main">
+            <!-- Loading State -->
+            <div id="loading" class="section">
+                <p>Loading projects...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error" class="section hidden">
+                <p class="error-text" id="error-message"></p>
+                <button id="retry-btn" class="btn btn-secondary">Retry</button>
+            </div>
+
+            <!-- Main Interface -->
+            <div id="main-interface" class="section hidden">
+                <!-- Project Selection -->
+                <div class="form-group">
+                    <label for="project-select">Select Project:</label>
+                    <select id="project-select" class="form-control">
+                        <option value="">Choose a project...</option>
+                    </select>
+                </div>
+
+                <!-- Project Info Display -->
+                <div id="project-info" class="hidden">
+                    <h3 id="project-name"></h3>
+                    <div class="project-details">
+                        <p><strong>Client:</strong> <span id="project-client"></span></p>
+                        <p><strong>Address:</strong> <span id="project-address"></span></p>
+                        <p><strong>Type:</strong> <span id="project-type"></span></p>
+                    </div>
+                </div>
+
+                <!-- Template Selection -->
+                <div id="template-section" class="hidden">
+                    <div class="form-group">
+                        <label for="template-select">Choose Template:</label>
+                        <select id="template-select" class="form-control">
+                            <option value="">Select template...</option>
+                            <option value="project-summary">Project Summary</option>
+                            <option value="surveyor-brief">Surveyor Brief</option>
+                            <option value="technical-spec">Technical Specification</option>
+                        </select>
+                    </div>
+
+                    <!-- Fill Document Button -->
+                    <button id="fill-document-btn" class="btn btn-primary" disabled>
+                        Fill Document
+                    </button>
+                </div>
+
+                <!-- Status Display -->
+                <div id="status" class="hidden">
+                    <p id="status-message"></p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="api.js"></script>
+    <script src="templates.js"></script>
+    <script src="taskpane.js"></script>
+</body>
+</html>

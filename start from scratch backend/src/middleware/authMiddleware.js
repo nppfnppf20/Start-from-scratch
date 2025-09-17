@@ -2,6 +2,48 @@ const User = require('../models/User');
 // For Node.js fetch support
 const fetch = globalThis.fetch || require('node-fetch');
 
+// API Keys for Office Add-in
+const API_KEYS = {
+    'office-addon-key-2025': {
+        name: 'Office Add-in',
+        permissions: ['read:projects', 'read:quotes'],
+        created: '2025-01-01'
+    }
+};
+
+// API Key authentication for Office Add-in
+exports.protectWithApiKey = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'];
+    
+    if (apiKey && API_KEYS[apiKey]) {
+        req.user = { 
+            id: 'office-addon', 
+            role: 'addon',
+            permissions: API_KEYS[apiKey].permissions 
+        };
+        return next();
+    }
+    
+    return res.status(401).json({ msg: 'Invalid or missing API key' });
+};
+
+// Combined auth middleware - tries API key first, then Auth0
+exports.protectFlexible = async (req, res, next) => {
+    // Try API key first
+    const apiKey = req.headers['x-api-key'];
+    if (apiKey && API_KEYS[apiKey]) {
+        req.user = { 
+            id: 'office-addon', 
+            role: 'addon',
+            permissions: API_KEYS[apiKey].permissions 
+        };
+        return next();
+    }
+    
+    // Fall back to Auth0 protection
+    return exports.protect(req, res, next);
+};
+
 // Protect routes with Auth0 Access Token
 exports.protect = async (req, res, next) => {
     const authHeader = req.headers.authorization || '';

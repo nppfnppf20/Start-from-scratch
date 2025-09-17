@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" 
+           xsi:type="TaskPaneApp">
+
+  <!-- Begin Basic Settings: Add-in metadata, used for all versions of Office unless override provided. -->
+  <Id>a13791e7-09e4-4f77-b8af-2487623fc1a5</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Your Company</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  
+  <!-- The display name of your add-in. Used on the store and various places of the Office UI such as the add-ins dialog. -->
+  <DisplayName DefaultValue="Project Data Filler" />
+  <Description DefaultValue="Fill Word templates with project data from your database"/>
+
+  <!-- Icon for your add-in. Used on installation screens and the add-ins dialog. -->
+  <IconUrl DefaultValue="https://localhost:5000/office-addon/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:5000/office-addon/assets/icon-64.png"/>
+
+  <!-- If you plan to submit this add-in to the Office Store, uncomment the SupportUrl element below -->
+  <!-- <SupportUrl DefaultValue="[Insert the URL of a page that provides support information for the app]">-->
+
+  <!-- Domains that will be allowed when navigating to them from the add-in's context. -->
+  <AppDomains>
+    <AppDomain>https://localhost:5000</AppDomain>
+  </AppDomains>
+
+  <!-- Define the default location and context for the add-in -->
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:5000/office-addon/src/taskpane.html"/>
+  </DefaultSettings>
+
+  <!-- Specify the permissions the add-in needs -->
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <!-- Begin Add-in Commands Mode integration. This section is used if you want to extend the ribbon. -->
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+
+    <!-- The Hosts node is required. -->
+    <Hosts>
+      <!-- Each host can have a different set of commands. -->
+      <!-- Exactly one Hosts node is required. -->
+      <!-- This is the Parent node -->
+      <Host xsi:type="Document" />
+    </Hosts>
+
+    <!-- You can have multiple resource files. -->
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:5000/office-addon/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:5000/office-addon/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:5000/office-addon/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="GetStarted.Url" DefaultValue="https://localhost:5000/office-addon/src/taskpane.html"/>
+      </bt:Urls>
+      <!-- ShortStrings max characters==125. -->
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="Get started with Project Data Filler!"/>
+      </bt:ShortStrings>
+      <!-- LongStrings max characters==250. -->
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Your sample add-in loaded successfully. Go to the HOME tab and click the 'Show Taskpane' button to get started."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+  <!-- End Add-in Commands Mode integration. -->
+
+</OfficeApp>

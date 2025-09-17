@@ -1,0 +1,210 @@
+/* Office Add-in Taskpane Styles */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #323130;
+    background-color: #ffffff;
+    height: 100vh;
+    overflow-x: hidden;
+}
+
+#app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Styles */
+.header {
+    background-color: #0078d4;
+    color: white;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.logo {
+    width: 32px;
+    height: 32px;
+}
+
+.header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Main Content */
+.main {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 16px;
+}
+
+label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #323130;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d2d0ce;
+    border-radius: 2px;
+    font-size: 14px;
+    color: #323130;
+    background-color: #ffffff;
+    transition: border-color 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 1px #0078d4;
+}
+
+/* Button Styles */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.15s ease-in-out;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #0078d4;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #106ebe;
+}
+
+.btn-secondary {
+    background-color: #f3f2f1;
+    color: #323130;
+    border: 1px solid #d2d0ce;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #edebe9;
+}
+
+/* Project Info Styles */
+.project-details {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #e1dfdd;
+    margin-top: 12px;
+}
+
+.project-details p {
+    margin-bottom: 8px;
+}
+
+.project-details p:last-child {
+    margin-bottom: 0;
+}
+
+#project-name {
+    color: #0078d4;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+/* Status and Error Messages */
+.error-text {
+    color: #d13438;
+    background-color: #fdf3f4;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #f1aeb5;
+    margin-bottom: 12px;
+}
+
+#status {
+    background-color: #e6f3ff;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #b3d9ff;
+}
+
+#status-message {
+    color: #0078d4;
+    font-weight: 600;
+}
+
+/* Loading Animation */
+#loading {
+    text-align: center;
+    padding: 20px;
+}
+
+#loading::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0078d4;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 320px) {
+    .header {
+        padding: 12px;
+    }
+    
+    .main {
+        padding: 16px;
+    }
+    
+    .header h1 {
+        font-size: 16px;
+    }
+}
