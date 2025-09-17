@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { getAuth0Client } from '$lib/auth/auth0Client';
 import type { User } from '@auth0/auth0-spa-js';
@@ -22,16 +22,22 @@ function createAuth0Store() {
         if (!browser) return;
         
         try {
+            console.log('Auth0 store: Starting initialization');
             const client = await getAuth0Client();
+            console.log('Auth0 store: Got client, checking authentication');
             const isAuthenticated = await client.isAuthenticated();
+            console.log('Auth0 store: isAuthenticated =', isAuthenticated);
             
             if (isAuthenticated) {
+                console.log('Auth0 store: Getting user info');
                 const user = await client.getUser();
+                console.log('Auth0 store: Getting access token');
                 accessToken = await client.getTokenSilently();
                 set({ isAuthenticated: true, user: user || null, isLoading: false });
             } else {
                 set({ isAuthenticated: false, user: null, isLoading: false });
             }
+            console.log('Auth0 store: Initialization completed successfully');
         } catch (error) {
             console.error('Auth0 initialization error:', error);
             set({ isAuthenticated: false, user: null, isLoading: false });
@@ -99,6 +105,14 @@ export const auth0Store = createAuth0Store();
 // Helper function to get auth headers for API calls
 export async function getAuth0Headers(): Promise<{ Authorization?: string }> {
     if (!browser) return {};
+    
+    // Check if user is authenticated before trying to get token
+    const { isAuthenticated, isLoading } = get(auth0Store);
+    
+    if (!isAuthenticated || isLoading) {
+        console.log('getAuth0Headers: User not authenticated, returning empty headers');
+        return {};
+    }
     
     const token = await auth0Store.getAccessToken();
     console.log('getAuth0Headers called, token available:', token ? 'YES' : 'NO');

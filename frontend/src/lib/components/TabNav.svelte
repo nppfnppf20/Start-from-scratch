@@ -31,7 +31,7 @@
     if (!$auth0Store.isAuthenticated) return false;
     
     // Trigger role fetch if user is authenticated
-    if ($auth0Store.user) {
+    if ($auth0Store.user && !$auth0Store.isLoading) {
       getUserRole($auth0Store.user);
     }
     

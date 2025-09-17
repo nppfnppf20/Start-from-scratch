@@ -11,14 +11,23 @@
     import { browser } from '$app/environment';
     import { get } from 'svelte/store';
 
-    onMount(async () => {
-        if (browser) {
-            const { isAuthenticated, isLoading } = get(auth0Store);
-            if (!isLoading && isAuthenticated) {
-                await loadProjects();
-            }
+    // SPA mode - handle authentication client-side
+    $: if (browser && !$auth0Store.isLoading) {
+        const isAuthRoute = $page.url.pathname.startsWith('/auth/');
+        
+        if (!$auth0Store.isAuthenticated && !isAuthRoute) {
+            console.log('Not authenticated, redirecting to login');
+            goto('/auth/login');
+        } else if ($auth0Store.isAuthenticated) {
+            console.log('Authenticated, loading projects');
+            loadProjects().catch(error => {
+                console.error('Failed to load projects:', error);
+                if (error.message.includes('403')) {
+                    auth0Store.logout();
+                }
+            });
         }
-    });
+    }
 
     // Removed FullCalendar CSS imports from here
 
