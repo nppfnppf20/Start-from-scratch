@@ -15,23 +15,15 @@
   import InstructedDocumentUploadModal from "$lib/components/InstructedDocumentUploadModal.svelte";
   import { browser } from '$app/environment'; // Ensure browser check is available
   import LineItemsModal from '$lib/components/LineItemsModal.svelte';
+  import DataTable, { type TableColumn } from '$lib/components/DataTable.svelte';
 
-  // --- New: Reference to the scrollable table container ---
-  let tableContainerElement: HTMLDivElement; // UNCOMMENTED
-
-  // --- New: Scroll functions ---
-  function scrollLeft() { // UNCOMMENTED
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' });
-    }
+  // DataTable event handlers
+  function handleAction(event: CustomEvent) {
+    // The instructed table doesn't have Edit/Delete actions currently
+    // This is kept for potential future actions
+    const { action, item } = event.detail;
+    console.log('Action triggered:', action, item);
   }
-
-  function scrollRight() { // UNCOMMENTED
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' });
-    }
-  }
-  // ---------
 
   // Modal state for Notes
   let showNotesModal = false;
@@ -50,6 +42,43 @@
   // --- NEW: Line Items Modal State ---
   let showLineItemsModal = false;
   let selectedQuoteForLineItems: Quote | null = null;
+
+  // Define table columns for DataTable
+  const columns: TableColumn[] = [
+    {
+      key: 'organisation',
+      label: 'Organisation',
+      sortable: true
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      sortable: true
+    },
+    {
+      key: 'lineItems',
+      label: 'Line Items',
+      align: 'center' as const
+    },
+    {
+      key: 'quote',
+      label: 'Quote Amt.',
+      align: 'right' as const,
+      sortable: true
+    },
+    {
+      key: 'workStatus',
+      label: 'Work Status'
+    },
+    {
+      key: 'dependencies',
+      label: 'Dependencies'
+    },
+    {
+      key: 'notes',
+      label: 'Notes'
+    }
+  ];
 
   // Filter for instructed quotes based on selected project
   $: instructedQuotes = $currentProjectQuotes.filter(quote =>
@@ -283,85 +312,76 @@
   {#if $selectedProject}
     
     {#if instructedQuotes.length > 0}
-      <div class="table-scroll-wrapper">
-          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
-          <div class="table-container" bind:this={tableContainerElement}>
-        <table>
-          <thead>
-            <tr>
-              <th>Organisation</th>
-              <th>Contact</th>
-              <th>Line Items</th>
-              <th>Quote Amt.</th>
-              <th>Work Status</th>
-              <th>Dependencies</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each instructedQuotes as quote (quote.id)}
-              {@const log = findLog(quote.id)} 
-              {@const currentWorkStatus = log?.workStatus || 'not started'}
-              <tr class:row-completed={currentWorkStatus === 'completed'}>
-                <td>{quote.organisation}</td>
-                <td>
-                  <div class="contact-name">{quote.contactName}</div>
-                  {#if quote.email}
-                    <a href="mailto:{quote.email}" class="contact-email">{quote.email}</a>
-                  {/if}
-                </td>
-                <td class="text-center">
-                  <button 
-                      type="button" 
-                      class="line-items-button" 
-                      title="View Line Items" 
-                      on:click={() => openLineItemsModal(quote)}
-                      aria-label={`View ${quote.lineItems.length} line items`}
-                  >
-                    {quote.lineItems.length}
-                    <span class="plus-sign">+</span>
-                  </button>
-                </td>
-                <td>
-                  {#if quote.instructionStatus === 'partially instructed' && quote.partiallyInstructedTotal !== undefined}
-                    £{quote.partiallyInstructedTotal.toFixed(2)} (Partial)
-                  {:else}
-                    £{quote.total.toFixed(2)}
-                  {/if}
-                </td>
-                <td>
-                  <div class="status-dropdown-container">
-                     <select
-                        class="work-status-dropdown {currentWorkStatus.toLowerCase().replace(/\s+/g, '-')}"
-                        value={currentWorkStatus}
-                        on:change={(e) => handleWorkStatusChange(quote.id, e.currentTarget.value as WorkStatus)}
-                        title="Set work status"
-                      >
-                        {#each workStatuses as status}
-                          <option value={status}>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </option>
-                        {/each}
-                     </select>
-                  </div>
-                </td>
-                <td>
-                  <button class="notes-button" on:click={() => openDependenciesNotesModal(quote)} title="Edit dependencies notes">
-                    {getNotesPreview(log?.dependencies)}
-                  </button>
-                </td>
-                <td>
-                   <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit operational notes">
-                        {getNotesPreview(log?.operationalNotes)}
-                   </button>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-          </div>
-          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
-      </div>
+      <DataTable
+        data={instructedQuotes}
+        {columns}
+        searchPlaceholder="Search by organisation, contact, or notes..."
+        emptyMessage="No instructed surveyors found for this project."
+        showSearch={true}
+        showActions={false}
+        minWidth="1000px"
+        on:action={handleAction}
+      >
+        <svelte:fragment slot="cell" let:column let:item let:index>
+          {@const log = findLog(item.id)}
+          {@const currentWorkStatus = log?.workStatus || 'not started'}
+
+          {#if column.key === 'contact'}
+            <div class="contact-name">{item.contactName}</div>
+            {#if item.email}
+              <a href="mailto:{item.email}" class="contact-email">{item.email}</a>
+            {/if}
+          {:else if column.key === 'lineItems'}
+            <button
+              type="button"
+              class="line-items-button"
+              title="View Line Items"
+              on:click|stopPropagation={() => openLineItemsModal(item)}
+              aria-label={`View ${item.lineItems.length} line items`}
+            >
+              {item.lineItems.length}
+              <span class="plus-sign">+</span>
+            </button>
+          {:else if column.key === 'quote'}
+            {#if item.instructionStatus === 'partially instructed' && item.partiallyInstructedTotal !== undefined}
+              £{item.partiallyInstructedTotal.toFixed(2)} (Partial)
+            {:else}
+              £{item.total.toFixed(2)}
+            {/if}
+          {:else if column.key === 'workStatus'}
+            <select
+              class="work-status-dropdown {currentWorkStatus.toLowerCase().replace(/\s+/g, '-')}"
+              value={currentWorkStatus}
+              on:change|stopPropagation={(e) => handleWorkStatusChange(item.id, e.currentTarget.value as WorkStatus)}
+              title="Set work status"
+            >
+              {#each workStatuses as status}
+                <option value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              {/each}
+            </select>
+          {:else if column.key === 'dependencies'}
+            <button
+              class="notes-button"
+              on:click|stopPropagation={() => openDependenciesNotesModal(item)}
+              title="Edit dependencies notes"
+            >
+              {getNotesPreview(log?.dependencies)}
+            </button>
+          {:else if column.key === 'notes'}
+            <button
+              class="notes-button"
+              on:click|stopPropagation={() => openNotesModal(item)}
+              title="Edit operational notes"
+            >
+              {getNotesPreview(log?.operationalNotes)}
+            </button>
+          {:else}
+            {item[column.key] ?? '-'}
+          {/if}
+        </svelte:fragment>
+      </DataTable>
     {:else}
       <p>No instructed surveyors found for this project.</p>
     {/if}
@@ -460,122 +480,7 @@
       font-size: 0.95rem;
   }
   
-  /* Table Styling */
-  .table-container { /* Renamed from quotes-table-container */
-    overflow-x: auto; 
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e2e8f0;
-    margin-bottom: 2rem; 
-  }
-  
-  .table-container table { /* Target table within container */
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem; /* MATCHING QUOTES */
-    white-space: nowrap; 
-  }
-  
-  .table-container th,
-  .table-container td {
-    padding: 0.6rem 0.8rem; /* RESTORED ORIGINAL PADDING */
-    text-align: left;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: middle;
-    white-space: nowrap;
-  }
-
-  /* Control Organisation and Contact columns - content-based but capped */
-  .table-container th:nth-child(1), /* Organisation header */
-  .table-container td:nth-child(1) { /* Organisation cells */
-    max-width: 300px; /* Cap at 300px but allow auto-sizing */
-    width: auto;
-  }
-
-  .table-container th:nth-child(2), /* Contact header */
-  .table-container td:nth-child(2) { /* Contact cells */
-    max-width: 300px; /* Cap at 300px but allow auto-sizing */
-    width: auto;
-  }
-
-  /* Control Line Items column - compact sizing */
-  .table-container th:nth-child(3), /* Line Items header */
-  .table-container td:nth-child(3) { /* Line Items cells */
-    width: 120px; /* Compact width for line items button */
-    max-width: 120px;
-  }
-
-  .table-container th:nth-child(3) { /* Line Items header only */
-    padding-left: 0.6rem;
-    padding-right: 0.6rem;
-  }
-
-  .table-container td:nth-child(3) { /* Line Items cells only */
-    padding-left: 0.4rem;
-    padding-right: 0.4rem;
-  }
-
-  /* Control Quote Amt column - compact sizing */
-  .table-container th:nth-child(4), /* Quote Amt header */
-  .table-container td:nth-child(4) { /* Quote Amt cells */
-    width: 160px; /* Compact width for quote amounts */
-    max-width: 2160px;
-  }
-
-  .table-container th:nth-child(4) { /* Quote Amt header only */
-    padding-left: 0.6rem;
-    padding-right: 0.6rem;
-  }
-
-  .table-container td:nth-child(4) { /* Quote Amt cells only */
-    padding-left: 0.4rem;
-    padding-right: 0.4rem;
-  }
-
-  /* Control Work Status column width and spacing */
-  .table-container th:nth-child(5), /* Work Status header */
-  .table-container td:nth-child(5) { /* Work Status cells */
-    width: 200px; /* Fixed width for work status dropdown */
-    max-width: 200px;
-  }
-
-  .table-container th:nth-child(5) { /* Work Status header only */
-    padding-left: 0.4rem;
-    padding-right: 0.6rem;
-  }
-
-  .table-container td:nth-child(5) { /* Work Status cells only */
-    padding-left: 0.2rem; /* Further reduce left padding to bring closer to Quote Amt */
-    padding-right: 0.4rem; /* Keep right padding to maintain space from Dependencies */
-  }
-
-  /* Control Dependencies and Notes column widths */
-  .table-container th:nth-child(6), /* Dependencies header */
-  .table-container td:nth-child(6) { /* Dependencies cells */
-    width: 220px; /* Fixed width to match button max-width + padding */
-    max-width: 220px;
-  }
-
-  .table-container th:nth-child(7), /* Notes header */
-  .table-container td:nth-child(7) { /* Notes cells */
-    width: 220px; /* Fixed width to match button max-width + padding */
-    max-width: 220px;
-  }
-
-  .table-container td {
-    color: #4a5568; 
-  }
-  
-  .table-container th {
-    background-color: #f8f9fa; 
-    font-weight: 600;
-    color: #4a5568;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.75rem; /* SMALLER HEADER FONT */
-  }
-
+  /* Contact styling for DataTable */
   .contact-name {
     font-weight: 500;
     color: #1a202c;
@@ -588,36 +493,6 @@
   }
 
   .contact-email:hover {
-    text-decoration: underline;
-  }
-
-  .table-container tbody tr:last-child td {
-    border-bottom: none; 
-  }
-
-  .table-container tbody tr:hover {
-    background-color: #f7fafc; 
-  }
-
-  /* Completed Row Styling */
-.row-completed {
-    background-color: #f0fff4; /* A light green to indicate completion */
-  }
-  .row-completed td {
-    color: #38a169; /* Darker green text */
-}
-.row-completed:hover {
-      background-color: #e6fffa; /* Slightly different green on hover */
-  }
-
-  /* Email Link */
-  td a[href^="mailto:"] {
-      color: #3182ce;
-    text-decoration: none;
-      transition: color 0.2s ease-in-out;
-  }
-  td a[href^="mailto:"]:hover {
-      color: #2b6cb0;
     text-decoration: underline;
   }
 
@@ -1215,46 +1090,6 @@
     color: var(--status-client-reviewing-color);
   }
 
-  /* --- Table Scroll Wrapper and Buttons --- */
-  .table-scroll-wrapper {
-    position: relative; /* Context for absolute positioning of buttons */
-    margin-bottom: 2rem; /* Keep space below */
-  }
-
-  .scroll-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%); /* Center vertically */
-    z-index: 10;
-    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
-    border: 1px solid #cbd5e0;
-    border-radius: 50%; /* Circle */
-    width: 36px;
-    height: 36px;
-    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
-    cursor: pointer;
-    color: #4a5568;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    display: inline-flex; /* Use inline-flex */
-    align-items: center;    /* Flexbox: Vertically center content */
-    justify-content: center; /* Flexbox: Horizontally center content */
-    padding: 0; /* Remove padding if flex is centering */
-  }
-
-  .scroll-btn:hover {
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-  }
-
-  .scroll-btn-left {
-    left: -18px; /* Position halfway outside the container */
-  }
-
-  .scroll-btn-right {
-    right: -18px; /* Position halfway outside the container */
-  }
-  /* ------------------------------------------- */
 
   .page-description {
     margin-bottom: 1.5rem;
