@@ -66,10 +66,8 @@
       name = project.name;
       projectLead = project.projectLead || [];
       projectManager = project.projectManager || [];
-      authorizedSurveyors = project.authorizedSurveyors || [];
-      
-      console.log('DEBUG: Project authorized surveyors:', authorizedSurveyors);
-      
+      authorizedSurveyors = Array.isArray(project.authorizedSurveyors) ? [...project.authorizedSurveyors] : [];
+
       // Find the client organisation that matches the project's client name
       const matchingOrg = $clientOrganisations.find(org => org.organisationName === project.client);
       // Set the client variable to the ID of the matching org, which the dropdown will use
@@ -80,6 +78,7 @@
       }
     }
   }
+
 
   let isSaving = false;
   let errorMessage = '';
@@ -219,7 +218,20 @@
         <div class="checkbox-group">
           {#each visibleSurveyors as surveyor}
             <div class="checkbox-item">
-              <input type="checkbox" id="surveyor-{surveyor._id}" value={surveyor._id} bind:group={authorizedSurveyors} />
+              <input
+                type="checkbox"
+                id="surveyor-{surveyor._id}"
+                checked={authorizedSurveyors.includes(surveyor._id)}
+                on:change={(e) => {
+                  if (e.currentTarget.checked) {
+                    if (!authorizedSurveyors.includes(surveyor._id)) {
+                      authorizedSurveyors = [...authorizedSurveyors, surveyor._id];
+                    }
+                  } else {
+                    authorizedSurveyors = authorizedSurveyors.filter(id => id !== surveyor._id);
+                  }
+                }}
+              />
               <label for="surveyor-{surveyor._id}">{surveyor.email}</label>
             </div>
           {/each}
