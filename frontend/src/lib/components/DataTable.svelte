@@ -319,6 +319,11 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: white;
+    /* Windows performance optimizations */
+    contain: layout style paint;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    overflow-anchor: auto;
   }
 
   .data-table {
@@ -345,6 +350,10 @@
     position: sticky;
     top: 0;
     z-index: 10;
+    /* Windows sticky header performance */
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   .sort-button {

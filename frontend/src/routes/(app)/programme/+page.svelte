@@ -687,6 +687,11 @@
     border: 1px solid #dee2e6;
     border-radius: 4px;
     min-height: 300px; /* Ensure container has minimum height */
+    /* Windows performance optimizations */
+    contain: layout style paint;
+    will-change: scroll-position;
+    transform: translateZ(0); /* Force GPU acceleration */
+    overflow-anchor: auto; /* Prevent scroll jumping */
   }
 
   .timeline-table {
@@ -695,6 +700,9 @@
     margin-bottom: 0; /* Remove margin since container handles spacing */
     min-width: 800px; /* Ensure table has minimum width for columns to be visible */
     width: max-content; /* Let table size to its content */
+    /* Windows performance optimizations */
+    transform: translateZ(0); /* Force GPU layer */
+    backface-visibility: hidden; /* Prevent flicker */
   }
 
   .timeline-table th, .timeline-table td {
@@ -724,11 +732,14 @@
   .sticky-col {
     position: sticky;
     left: 0;
-    background-color: #f8f9fa; 
-    z-index: 1; 
-    width: 200px; 
+    background-color: #f8f9fa;
+    z-index: 1;
+    width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Windows sticky performance */
+    will-change: transform;
+    transform: translateZ(0);
   }
   
   /* Ensure sticky headers are above sticky column body */

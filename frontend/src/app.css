@@ -23,10 +23,75 @@ body {
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
+    font-variant-ligatures: common-ligatures;
 }
 
 *, *::before, *::after {
     box-sizing: border-box;
+}
+
+/* Windows scrolling performance optimizations */
+* {
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
+}
+
+html {
+    scroll-behavior: auto; /* Disable smooth scroll for better performance */
+}
+
+/* Optimize scrollable containers */
+[data-scroll-container] {
+    overflow-anchor: auto;
+    overscroll-behavior: contain;
+}
+
+/* Cross-browser compatibility fixes */
+/* Fix flexbox issues on older browsers */
+.flex-container {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+}
+
+/* Ensure consistent scrollbar styling */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Firefox scrollbar styling */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* Windows button and form optimization */
+button, input, select, textarea {
+    font-family: inherit; /* Use system font */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent zoom on inputs in iOS and improve Windows rendering */
+input, select, textarea {
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: 0; /* Reset border radius for consistency */
 }
 
 h1, h2, h3, h4, h5, h6 {

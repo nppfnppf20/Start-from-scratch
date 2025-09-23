@@ -88,6 +88,10 @@
         overflow-y: auto;
         background-color: var(--background-color);
         position: relative;
+        /* Windows scrolling optimizations */
+        overflow-anchor: auto;
+        overscroll-behavior: contain;
+        will-change: scroll-position;
     }
 
     header {
