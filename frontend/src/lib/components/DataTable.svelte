@@ -161,6 +161,10 @@
                   {/if}
                 </th>
               {/each}
+
+              {#if showActions}
+                <th rowspan="2" class="actions-header">Actions</th>
+              {/if}
             </tr>
 
             <!-- Sub-headers row if any column has subHeaders -->
@@ -397,35 +401,51 @@
     border-right: 1px solid #e2e8f0;
   }
 
+  .actions-header {
+    text-align: center;
+    white-space: nowrap;
+    width: 120px;
+    max-width: 120px;
+  }
+
   .actions-cell {
     white-space: nowrap;
+    text-align: center;
+    width: 120px;
+    max-width: 120px;
   }
 
   .action-btn {
-    padding: 6px 12px;
-    font-size: 0.875rem;
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    margin: 0.2rem 0.2rem 0.2rem 0;
+    font-size: 0.85rem;
+    font-weight: 500;
     border-radius: 4px;
+    text-decoration: none;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    border: 1px solid transparent;
-    background-color: transparent;
-    margin-right: 5px;
-    border-color: #007bff;
-    color: #007bff;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    border: 1px solid #a0aec0;
+    background: none;
+    color: #718096;
+  }
+
+  .action-btn:last-child {
+    margin-right: 0;
   }
 
   .action-btn:hover {
-    background-color: #007bff;
-    color: white;
+    background-color: #edf2f7;
+    color: #2d3748;
   }
 
   .action-btn.delete {
-    border-color: #dc3545;
-    color: #dc3545;
+    color: #e53e3e;
+    border-color: #a0aec0;
   }
 
   .action-btn.delete:hover {
-    background-color: #dc3545;
-    color: white;
+    background-color: #fed7d7;
+    color: #c53030;
   }
 </style>
