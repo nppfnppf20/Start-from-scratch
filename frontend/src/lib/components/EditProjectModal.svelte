@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import type { ProjectBankItem } from '$lib/stores/projectStore';
-  import { updateProject, authorizeClients } from '$lib/stores/projectStore';
+  import { updateProject, authorizeClients, authorizeSurveyors } from '$lib/stores/projectStore';
   import { auth0Store, getAuth0Headers } from '$lib/stores/auth0Store';
   import { clientOrganisations, loadClientOrganisations } from '$lib/stores/clientStore';
   import { get } from 'svelte/store';
@@ -138,6 +138,18 @@
             await authorizeClients(project.id, emails);
           }
         }
+
+        // Authorize selected surveyors
+        if (authorizedSurveyors && authorizedSurveyors.length > 0) {
+          const surveyorEmails = authorizedSurveyors
+            .map(id => allSurveyors.find(s => s._id === id)?.email)
+            .filter((email): email is string => Boolean(email));
+
+          if (surveyorEmails.length > 0) {
+            await authorizeSurveyors(project.id, surveyorEmails);
+          }
+        }
+
         dispatch('save');
       } else {
         errorMessage = 'Failed to save project. Please try again.';
