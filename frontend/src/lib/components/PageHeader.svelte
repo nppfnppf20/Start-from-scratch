@@ -32,7 +32,7 @@
 
   .header-title {
     font-size: 2.25rem; /* ~text-4xl */
-    font-weight: 800;   /* font-extrabold */
+    font-weight: 600;   /* font-semibold */
     color: #1a202c;
     margin: 0;
   }
