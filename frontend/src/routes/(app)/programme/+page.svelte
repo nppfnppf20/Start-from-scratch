@@ -739,14 +739,18 @@
 
   .header-cell {
      text-align: center;
-     vertical-align: middle; 
-     font-weight: bold;
+     vertical-align: middle;
+     font-size: 0.75rem;
+     font-weight: 600;
+     color: #4a5568;
   }
   .surveyor-header {
      /* specific styles if needed */
   }
   .key-dates-header {
-     font-size: 0.9em;
+     font-size: 0.75rem;
+     font-weight: 600;
+     color: #4a5568;
      /* Ensure it aligns vertically with button if needed */
      vertical-align: bottom;
      padding-bottom: 0.5rem; /* Add space below text */
