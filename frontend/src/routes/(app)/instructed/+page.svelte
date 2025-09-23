@@ -479,11 +479,24 @@
   
   .table-container th,
   .table-container td {
-    padding: 0.6rem 0.8rem; /* REDUCED PADDING */
+    padding: 0.6rem 0.8rem; /* RESTORED ORIGINAL PADDING */
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
-    white-space: nowrap; 
+    white-space: nowrap;
+  }
+
+  /* Control Dependencies and Notes column widths */
+  .table-container th:nth-child(6), /* Dependencies header */
+  .table-container td:nth-child(6) { /* Dependencies cells */
+    width: 220px; /* Fixed width to match button max-width + padding */
+    max-width: 220px;
+  }
+
+  .table-container th:nth-child(7), /* Notes header */
+  .table-container td:nth-child(7) { /* Notes cells */
+    width: 220px; /* Fixed width to match button max-width + padding */
+    max-width: 220px;
   }
 
   .table-container td {
@@ -557,18 +570,14 @@
     background-color: white;
     cursor: pointer;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
-    min-width: 120px; 
+    min-width: 120px;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E"); 
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 1em 1em;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
   }
   .work-status-dropdown:focus {
       border-color: #4299e1; 
@@ -647,6 +656,8 @@
 
   /* Notes Button Styling */
   .notes-button {
+    width: 100%;
+    max-width: 200px; /* Limit maximum width */
     padding: 0.3rem 0.6rem; /* SMALLER PADDING */
     font-size: 0.8rem; /* SMALLER FONT */
     border-radius: 5px;

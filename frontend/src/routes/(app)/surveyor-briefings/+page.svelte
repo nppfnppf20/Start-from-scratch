@@ -299,17 +299,31 @@
     max-height: 50vh; /* Limit height of the top section */
   }
 
-  .discipline-filter, .surveyor-list, .survey-type-filter {
+  .discipline-filter, .survey-type-filter {
     border: 1px solid #ccc;
     border-radius: 8px;
     padding: 1rem;
     overflow-y: auto; /* Allow scrolling within each top box */
   }
+
+  .surveyor-list {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-y: auto; /* Allow scrolling within each top box */
+  }
+
+  .surveyor-list h2 {
+    margin-bottom: 0.5rem;
+  }
   
   .discipline-filter ul, .survey-type-filter ul {
     list-style-type: none;
     padding: 0;
-    margin: 0;
+    margin-top: 1rem;
+    margin-bottom: 0;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .discipline-filter ul li, .survey-type-filter ul li {

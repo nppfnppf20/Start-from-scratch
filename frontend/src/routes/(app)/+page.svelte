@@ -366,17 +366,6 @@
                 <textarea id="parkingDetails" name="parkingDetails" rows="3" bind:value={$selectedProject.parkingDetails} readonly={isSurveyor}></textarea>
               </div>
               
-              <div class="form-group">
-                <label>ATV Use</label>
-                <div class="radio-group">
-                  <label class="radio-label">
-                    <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} disabled={isSurveyor} /> Yes
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} disabled={isSurveyor} /> No
-                  </label>
-                </div>
-              </div>
               
               <div class="form-group">
                   <label for="additionalNotes">Additional Notes</label>
@@ -544,6 +533,19 @@
     font-family: inherit;
     background-color: #fff; /* Ensure white background */
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
+    height: 3rem; /* Fixed height for consistency */
+    box-sizing: border-box;
+    appearance: none; /* Remove default styling */
+  }
+
+  /* Specific styling for select dropdowns */
+  select {
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="5" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4L2 0zM2 5L0 3h4L2 5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+    cursor: pointer;
   }
 
   input[type="text"]:focus,
@@ -610,6 +612,7 @@
   textarea {
     resize: vertical;
     min-height: 80px; /* Taller default height */
+    height: auto; /* Override fixed height for textareas */
   }
   
   .read-only-notice {
