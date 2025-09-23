@@ -266,11 +266,12 @@
   let selectedSurveyorName: string = '';
   let customDateBeingEdited: any = null;
 
-  // State for the hold-up notes display modal
-  let showDependenciesNotesDisplayModal = false;
+  // State for the notes display modal
+  let showNotesDisplayModal = false;
   let currentNotesContent = '';
   let currentNotesOrgName = '';
   let currentNotesQuoteId = '';
+  let currentNotesType = 'dependencies'; // 'dependencies' or 'operational'
 
   // --- Modal Handlers ---
   function handleOpenKeyDateModal(weekDate: Date) {
@@ -420,22 +421,27 @@
     customDateBeingEdited = null;
   }
 
-  function openDependenciesNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
+  function openNotesDisplayModal(notes: string, orgName: string, quoteId: string, notesType: 'dependencies' | 'operational') {
     currentNotesContent = notes;
     currentNotesOrgName = orgName;
     currentNotesQuoteId = quoteId;
-    showDependenciesNotesDisplayModal = true;
+    currentNotesType = notesType;
+    showNotesDisplayModal = true;
   }
 
   async function handleSaveFromDisplay(event: CustomEvent<{ notes: string; quoteId: string }>) {
     const { notes, quoteId } = event.detail;
     if (!browser) return;
-    
-    // Use the new upsert function
-    await upsertInstructionLog(quoteId, { dependencies: notes });
-    
+
+    // Use the appropriate field based on notes type
+    const updateData = currentNotesType === 'dependencies'
+      ? { dependencies: notes }
+      : { operationalNotes: notes };
+
+    await upsertInstructionLog(quoteId, updateData);
+
     // Close the modal
-    showDependenciesNotesDisplayModal = false;
+    showNotesDisplayModal = false;
   }
 
   // Reactive calculation for quotes belonging to the selected project
@@ -523,7 +529,7 @@
                       <span>{quote.discipline}</span>
                       <!-- Surveyor Notes Icon -->
                       {#if log && log.operationalNotes && log.operationalNotes.trim() !== ''}
-                        <svg on:click={() => openDependenciesNotesDisplayModal(log.operationalNotes || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                        <svg on:click={() => openNotesDisplayModal(log.operationalNotes || '', quote.organisation, quote.id, 'operational')} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
                           <title>Surveyor Notes: {log.operationalNotes}</title>
                           <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z"/>
                           <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V11h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
@@ -532,7 +538,7 @@
                       {/if}
                       <!-- Dependencies Icon -->
                       {#if log && log.dependencies && log.dependencies.trim() !== ''}
-                        <svg on:click={() => openDependenciesNotesDisplayModal(log.dependencies || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                        <svg on:click={() => openNotesDisplayModal(log.dependencies || '', quote.organisation, quote.id, 'dependencies')} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
                           <title>Dependencies: {log.dependencies}</title>
                           <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 4a.905.905 0 0 1 .9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6.022a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                         </svg>
@@ -630,15 +636,15 @@
     />
   {/if}
 
-  <!-- Display/Edit Modal for Dependencies Notes -->
-  {#if showDependenciesNotesDisplayModal}
-    <NotesDisplayModal 
-        modalTitle="Dependencies for {currentNotesOrgName}"
-        notesPrefix="Dependencies:"
+  <!-- Display/Edit Modal for Notes -->
+  {#if showNotesDisplayModal}
+    <NotesDisplayModal
+        modalTitle="{currentNotesType === 'dependencies' ? 'Dependencies' : 'Surveyor Notes'} for {currentNotesOrgName}"
+        notesPrefix="{currentNotesType === 'dependencies' ? 'Dependencies:' : 'Notes:'}"
         notes={currentNotesContent}
         organisationName={currentNotesOrgName}
         quoteId={currentNotesQuoteId}
-        on:close={() => showDependenciesNotesDisplayModal = false}
+        on:close={() => showNotesDisplayModal = false}
         on:save={handleSaveFromDisplay}
     />
   {/if}
