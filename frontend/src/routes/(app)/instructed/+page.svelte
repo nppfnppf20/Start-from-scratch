@@ -486,6 +486,70 @@
     white-space: nowrap;
   }
 
+  /* Control Organisation and Contact columns - content-based but capped */
+  .table-container th:nth-child(1), /* Organisation header */
+  .table-container td:nth-child(1) { /* Organisation cells */
+    max-width: 300px; /* Cap at 300px but allow auto-sizing */
+    width: auto;
+  }
+
+  .table-container th:nth-child(2), /* Contact header */
+  .table-container td:nth-child(2) { /* Contact cells */
+    max-width: 300px; /* Cap at 300px but allow auto-sizing */
+    width: auto;
+  }
+
+  /* Control Line Items column - compact sizing */
+  .table-container th:nth-child(3), /* Line Items header */
+  .table-container td:nth-child(3) { /* Line Items cells */
+    width: 120px; /* Compact width for line items button */
+    max-width: 120px;
+  }
+
+  .table-container th:nth-child(3) { /* Line Items header only */
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
+
+  .table-container td:nth-child(3) { /* Line Items cells only */
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+  }
+
+  /* Control Quote Amt column - compact sizing */
+  .table-container th:nth-child(4), /* Quote Amt header */
+  .table-container td:nth-child(4) { /* Quote Amt cells */
+    width: 160px; /* Compact width for quote amounts */
+    max-width: 2160px;
+  }
+
+  .table-container th:nth-child(4) { /* Quote Amt header only */
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
+
+  .table-container td:nth-child(4) { /* Quote Amt cells only */
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+  }
+
+  /* Control Work Status column width and spacing */
+  .table-container th:nth-child(5), /* Work Status header */
+  .table-container td:nth-child(5) { /* Work Status cells */
+    width: 200px; /* Fixed width for work status dropdown */
+    max-width: 200px;
+  }
+
+  .table-container th:nth-child(5) { /* Work Status header only */
+    padding-left: 0.4rem;
+    padding-right: 0.6rem;
+  }
+
+  .table-container td:nth-child(5) { /* Work Status cells only */
+    padding-left: 0.2rem; /* Further reduce left padding to bring closer to Quote Amt */
+    padding-right: 0.4rem; /* Keep right padding to maintain space from Dependencies */
+  }
+
   /* Control Dependencies and Notes column widths */
   .table-container th:nth-child(6), /* Dependencies header */
   .table-container td:nth-child(6) { /* Dependencies cells */
