@@ -336,9 +336,10 @@
     padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
-    white-space: nowrap;
     vertical-align: top;
     font-size: 0.85rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .data-table th {
