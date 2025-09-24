@@ -23,6 +23,42 @@
   $: canViewFiles = $userRole === 'admin' || $userRole === 'client';
   $: canUploadFiles = true; // all roles can upload
 
+  let sharepointFolderUrl = '';
+  let isSaving = false;
+  let saveMessage = '';
+
+  async function saveSharepointUrl() {
+    if (!$selectedProject || !sharepointFolderUrl.trim()) {
+      saveMessage = 'Please enter a SharePoint folder URL';
+      return;
+    }
+
+    isSaving = true;
+    saveMessage = '';
+
+    try {
+      const response = await fetch(`/api/projects/${$selectedProject._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sharePointFolderUrl: sharepointFolderUrl })
+      });
+
+      if (!response.ok) throw new Error('Failed to save SharePoint URL');
+
+      saveMessage = '✓ SharePoint folder URL saved successfully';
+      setTimeout(() => saveMessage = '', 3000);
+    } catch (error) {
+      saveMessage = '✗ Failed to save SharePoint URL';
+      console.error(error);
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  $: if ($selectedProject) {
+    sharepointFolderUrl = $selectedProject.sharePointFolderUrl || '';
+  }
+
   // Placeholder data - will be replaced with actual file upload functionality
   const placeholderFiles = [
     {
@@ -63,18 +99,62 @@
   </PageHeader>
   
   {#if $selectedProject}
+    <div class="sharepoint-config-section">
+      <div class="config-box">
+        <h3>SharePoint Configuration</h3>
+        <p class="config-description">Enter the SharePoint folder URL where files for this project will be uploaded</p>
+
+        <div class="config-input-group">
+          <label for="sharepoint-url">Surveyor SharePoint Upload Link:</label>
+          <input
+            type="text"
+            id="sharepoint-url"
+            bind:value={sharepointFolderUrl}
+            placeholder="https://yourcompany.sharepoint.com/sites/..."
+            disabled={isSaving}
+          />
+        </div>
+
+        {#if saveMessage}
+          <p class="save-message" class:success={saveMessage.includes('✓')} class:error={saveMessage.includes('✗')}>
+            {saveMessage}
+          </p>
+        {/if}
+
+        <button
+          class="save-btn"
+          on:click={saveSharepointUrl}
+          disabled={isSaving || !sharepointFolderUrl.trim()}
+        >
+          {isSaving ? 'Saving...' : 'Save SharePoint URL'}
+        </button>
+      </div>
+    </div>
+
     <div class="upload-section">
       <div class="upload-area">
-        <div class="upload-dropzone">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17,8 12,3 7,8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          <h3>Drag and drop files here</h3>
-          <p>or click to browse</p>
-          <button class="browse-btn">Browse Files</button>
-        </div>
+        {#if !sharepointFolderUrl || !sharepointFolderUrl.trim()}
+          <div class="upload-disabled">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <h3>SharePoint Not Configured</h3>
+            <p>Please configure the SharePoint folder URL above before uploading files</p>
+          </div>
+        {:else}
+          <div class="upload-dropzone">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17,8 12,3 7,8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <h3>Drag and drop files here</h3>
+            <p>or click to browse</p>
+            <button class="browse-btn">Browse Files</button>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -160,6 +240,105 @@
     padding: 1rem 2rem;
   }
 
+  .sharepoint-config-section {
+    margin-bottom: 2rem;
+  }
+
+  .config-box {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    padding: 2rem;
+  }
+
+  .config-box h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+  }
+
+  .config-description {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .config-input-group {
+    margin-bottom: 1rem;
+  }
+
+  .config-input-group label {
+    display: block;
+    font-weight: 500;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .config-input-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+  }
+
+  .config-input-group input:focus {
+    outline: none;
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  }
+
+  .config-input-group input:disabled {
+    background-color: #f7fafc;
+    cursor: not-allowed;
+  }
+
+  .save-btn {
+    background-color: #3182ce;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+
+  .save-btn:hover:not(:disabled) {
+    background-color: #2b6cb0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .save-btn:disabled {
+    background-color: #cbd5e0;
+    cursor: not-allowed;
+  }
+
+  .save-message {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .save-message.success {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+  }
+
+  .save-message.error {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+
   .upload-section {
     margin-bottom: 2rem;
   }
@@ -189,6 +368,30 @@
   .upload-dropzone svg {
     color: #718096;
     margin-bottom: 1rem;
+  }
+
+  .upload-disabled {
+    border: 2px dashed #e2e8f0;
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background-color: #f7fafc;
+  }
+
+  .upload-disabled svg {
+    color: #cbd5e0;
+    margin-bottom: 1rem;
+  }
+
+  .upload-disabled h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #a0aec0;
+    margin-bottom: 0.5rem;
+  }
+
+  .upload-disabled p {
+    color: #a0aec0;
   }
 
   .upload-dropzone h3 {
