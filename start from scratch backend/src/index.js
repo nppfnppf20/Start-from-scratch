@@ -100,8 +100,10 @@ const corsOptions = {
       // Add any other local frontend ports you might use
     }
     
-    // Allow Office 365 and related Microsoft domains for Office plugins
+    // Allow Office 365 and related Microsoft domains for Office plugins (always allowed)
     allowedOrigins.push("https://localhost"); // Office plugins on localhost
+    allowedOrigins.push("http://localhost:3000"); // Office plugins (non-SSL)
+    allowedOrigins.push("https://localhost:3000"); // Office plugins (SSL)
     allowedOrigins.push("https://word-edit.officeapps.live.com"); // Word Online
     allowedOrigins.push("https://excel-edit.officeapps.live.com"); // Excel Online
     allowedOrigins.push("https://powerpoint-edit.officeapps.live.com"); // PowerPoint Online
