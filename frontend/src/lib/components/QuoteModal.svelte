@@ -10,6 +10,7 @@
     uniqueOrganisations,
     uniqueLineItemItems
   } from "$lib/stores/projectStore"; // Import only necessary store functions
+  import QuoteSubmittedModal from './QuoteSubmittedModal.svelte';
 
   // --- Props ---
   export let isOpen: boolean = false;
@@ -22,6 +23,7 @@
   // --- Internal State ---
   let isEditing = false;
   let quoteToEditId: string | null = null;
+  let showConfirmation = false;
 
   const disciplines = [
     'Agricultural Land and Soil',
@@ -297,6 +299,10 @@
         }
 
         if (success) {
+            if (!isEditing) {
+                // Show confirmation modal for new quotes
+                showConfirmation = true;
+            }
             closeModal(); // Close modal on success
             // Parent page reactivity should update the table via store subscription
         } else {
@@ -441,6 +447,8 @@
     </div>
   </div>
 {/if}
+
+<QuoteSubmittedModal bind:showModal={showConfirmation} on:close={() => showConfirmation = false} />
 
 <style>
   .modal-backdrop {
