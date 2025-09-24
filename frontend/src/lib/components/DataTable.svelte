@@ -414,15 +414,12 @@
   .actions-header {
     text-align: center;
     white-space: nowrap;
-    width: 120px;
-    max-width: 120px;
+    min-width: 200px;
   }
 
   .actions-cell {
-    white-space: nowrap;
     text-align: center;
-    width: 120px;
-    max-width: 120px;
+    min-width: 200px;
   }
 
   :global(.action-btn) {
