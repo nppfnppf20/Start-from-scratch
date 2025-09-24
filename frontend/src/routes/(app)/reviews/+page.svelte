@@ -313,10 +313,10 @@
           {@const isEditing = editingQuoteId === item.id}
 
           {#if isEditing}
-            <button class="action-btn save-btn" on:click|stopPropagation={saveChanges} title="Save changes">Save</button>
-            <button class="action-btn cancel-btn" on:click|stopPropagation={cancelEditing} title="Discard changes">Cancel</button>
+            <button class="action-btn" on:click|stopPropagation={saveChanges} title="Save changes">Save</button>
+            <button class="action-btn" on:click|stopPropagation={cancelEditing} title="Discard changes">Cancel</button>
           {:else}
-            <button class="action-btn edit-btn" on:click|stopPropagation={() => startEditing(item)} title="Edit review">Edit</button>
+            <button class="action-btn" on:click|stopPropagation={() => startEditing(item)} title="Edit review">Edit</button>
             <button class="action-btn delete" on:click|stopPropagation={() => handleDeleteReview(item.id, item.organisation)} title="Delete review">Delete</button>
             {#if feedback?.updatedAt}
               <div class="last-saved" title="Last saved">Saved: {format(parseISO(feedback.updatedAt), 'd MMM yyyy HH:mm')}</div>
@@ -384,23 +384,6 @@
     border-color: #adb5bd;
   }
 
-  /* Action Button Overrides for this page */
-  .save-btn {
-    background-color: #38a169 !important;
-    color: white !important;
-    border-color: #38a169 !important;
-  }
-  .save-btn:hover {
-    background-color: #2f855a !important;
-  }
-
-  .cancel-btn {
-    border-color: #a0aec0 !important;
-  }
-
-  .edit-btn {
-    border-color: #a0aec0 !important;
-  }
 
   /* Last Saved Info */
   .last-saved {

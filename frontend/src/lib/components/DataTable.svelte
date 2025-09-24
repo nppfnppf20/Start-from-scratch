@@ -425,7 +425,7 @@
     max-width: 120px;
   }
 
-  .action-btn {
+  :global(.action-btn) {
     display: inline-block;
     padding: 0.4rem 0.8rem;
     margin: 0.2rem 0.2rem 0.2rem 0;
@@ -440,21 +440,21 @@
     color: #718096;
   }
 
-  .action-btn:last-child {
+  :global(.action-btn:last-child) {
     margin-right: 0;
   }
 
-  .action-btn:hover {
+  :global(.action-btn:hover) {
     background-color: #edf2f7;
     color: #2d3748;
   }
 
-  .action-btn.delete {
+  :global(.action-btn.delete) {
     color: #e53e3e;
     border-color: #a0aec0;
   }
 
-  .action-btn.delete:hover {
+  :global(.action-btn.delete:hover) {
     background-color: #fed7d7;
     color: #c53030;
   }
