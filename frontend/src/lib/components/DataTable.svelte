@@ -319,6 +319,8 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: white;
+    max-width: 1400px;
+    margin: 0 auto;
     /* Windows performance optimizations */
     contain: layout style paint;
     will-change: scroll-position;
@@ -414,10 +416,33 @@
   .actions-header {
     text-align: center;
     white-space: nowrap;
+    width: 1%;
+    min-width: max-content;
   }
 
   .actions-cell {
     text-align: center;
+    white-space: nowrap;
+    width: 1%;
+    min-width: max-content;
+  }
+
+  /* Universal rule: Last data column shouldn't expand unnecessarily */
+  /* When actions are shown: target second-to-last column */
+  .data-table td:nth-last-child(2) {
+    width: auto;
+    max-width: 300px;
+  }
+
+  /* When no actions: target last column */
+  .data-table tbody tr td:last-child:not(.actions-cell) {
+    width: auto;
+    max-width: 300px;
+  }
+
+  /* Universal rule: Actions column should be minimal width */
+  .data-table .actions-cell {
+    width: 1%;
     white-space: nowrap;
   }
 

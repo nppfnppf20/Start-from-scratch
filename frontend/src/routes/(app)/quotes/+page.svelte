@@ -576,15 +576,4 @@
     border-color: var(--status-not-started-bg);
     font-weight: 500;
   }
-
-  /* Fix table column spacing - copied from Reviews page */
-  :global(.data-table td:nth-last-child(2)) {
-    width: 250px !important;
-    max-width: 250px !important;
-    padding-right: 8px !important;
-  }
-
-  :global(.data-table .actions-cell) {
-    padding-left: 8px !important;
-  }
 </style> 
