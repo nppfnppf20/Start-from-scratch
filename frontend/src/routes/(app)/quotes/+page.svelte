@@ -1,9 +1,11 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes, 
     updateQuoteInstructionStatus, 
     deleteQuote,
+    revokeSurveyorAuthorization,
     type InstructionStatus, 
     type Quote, 
     type LineItem
@@ -13,6 +15,9 @@
   import LineItemsModal from '$lib/components/LineItemsModal.svelte';
   import PartiallyInstructedModal from '$lib/components/PartiallyInstructedModal.svelte';
   import DocumentUploadModal from '$lib/components/DocumentUploadModal.svelte';
+  import InstructionEmailModal from '$lib/components/InstructionEmailModal.svelte';
+  import NotInstructedModal from '$lib/components/NotInstructedModal.svelte';
+  import DataTable, { type TableColumn } from '$lib/components/DataTable.svelte';
   
   const instructionStatuses: InstructionStatus[] = [
     'pending', 
@@ -32,23 +37,82 @@
   let showDocumentUploadModal = false;
   let quoteForDocumentUpload: Quote | null = null;
   let documentUploadType: 'quote' | 'instruction' | null = null;
+  
+  // Instruction Email Modal state
+  let showInstructionEmailModal = false;
+  let quoteForInstruction: Quote | null = null;
+  let selectedLineItemsForPartial: LineItem[] = [];
+  let isPartialInstruction = false;
+  
+  // Not Instructed Modal state
+  let showNotInstructedModal = false;
+  let quoteForNotInstructed: Quote | null = null;
 
-  // --- New: Reference to the scrollable table container ---
-  let tableContainerElement: HTMLDivElement;
-
-  // --- New: Scroll functions ---
-  function scrollLeft() {
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' }); // Scroll 150px left
+  // Define table columns for DataTable
+  const columns: TableColumn[] = [
+    {
+      key: 'discipline',
+      label: 'Discipline',
+      sortable: true,
+      width: '120px'
+    },
+    {
+      key: 'organisation',
+      label: 'Organisation',
+      sortable: true,
+      width: '150px'
+    },
+    {
+      key: 'contactName',
+      label: 'Contact Name',
+      sortable: true,
+      width: '130px'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      width: '180px'
+    },
+    {
+      key: 'lineItems',
+      label: 'Line Items',
+      align: 'center' as const,
+      width: '80px'
+    },
+    {
+      key: 'total',
+      label: 'Total (excl. VAT)',
+      align: 'right' as const,
+      sortable: true,
+      width: '120px'
+    },
+    {
+      key: 'instructionStatus',
+      label: 'Instruction Status',
+      width: '140px'
     }
-  }
+  ];
 
-  function scrollRight() {
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' }); // Scroll 150px right
-    }
-  }
-  // ---------
+  $: processedQuotes = (() => {
+    const sorted = [...$currentProjectQuotes].sort((a, b) => {
+      const disciplineA = a.discipline || '';
+      const disciplineB = b.discipline || '';
+      return disciplineA.localeCompare(disciplineB);
+    });
+
+    let groupCounter = 0;
+    let lastDiscipline: string | null = null;
+
+    return sorted.map(quote => {
+      if (quote.discipline !== lastDiscipline) {
+        groupCounter++;
+        lastDiscipline = quote.discipline;
+      }
+      return { ...quote, group: groupCounter };
+    });
+  })();
+
 
   function openNewQuoteModal() {
     currentQuoteToEdit = null;
@@ -92,6 +156,16 @@
           quoteForPartialInstruction = currentQuote;
           currentlySelectedStatus = newStatus; 
           showPartiallyInstructedModal = true;
+      } else if (newStatus === 'instructed') {
+          // NEW: Open instruction email modal instead of immediate update
+          isPartialInstruction = false;
+          selectedLineItemsForPartial = [];
+          quoteForInstruction = currentQuote;
+          showInstructionEmailModal = true;
+      } else if (newStatus === 'will not be instructed') {
+          // NEW: Open not instructed confirmation modal
+          quoteForNotInstructed = currentQuote;
+          showNotInstructedModal = true;
       } else {
           try {
               console.log(`Updating status for quote ${quoteId} to ${newStatus}`);
@@ -113,16 +187,12 @@
   async function handlePartialInstructionConfirm(event: CustomEvent<{ selectedItems: LineItem[] }>) { 
       const selectedItems = event.detail.selectedItems;
       if (quoteForPartialInstruction && currentlySelectedStatus === 'partially instructed') {
-          const partialTotal = selectedItems.reduce((sum, item) => sum + (item.cost || 0), 0);
-          try {
-              const success = await updateQuoteInstructionStatus(quoteForPartialInstruction.id, currentlySelectedStatus, partialTotal); 
-              if (!success) { alert('Failed to update quote status to partially instructed.'); }
-          } catch(error) {
-               console.error(`Error setting partial status for quote ${quoteForPartialInstruction.id}:`, error);
-               alert('An error occurred while setting the partial status.');
-          } finally {
-              closePartiallyInstructedModal(); 
-          }
+          // Store selected line items and open instruction email modal
+          selectedLineItemsForPartial = selectedItems;
+          isPartialInstruction = true;
+          quoteForInstruction = quoteForPartialInstruction;
+          closePartiallyInstructedModal();
+          showInstructionEmailModal = true;
       } else {
           closePartiallyInstructedModal(); 
       }
@@ -135,102 +205,193 @@
        }
       closePartiallyInstructedModal();
   }
+
+  // Instruction Email Modal handlers
+  async function handleInstructionConfirmed() {
+    if (quoteForInstruction) {
+      try {
+        if (isPartialInstruction) {
+          // Handle partially instructed case
+          const partialTotal = selectedLineItemsForPartial.reduce((sum, item) => sum + (item.cost || 0), 0);
+          console.log(`Confirming partial instruction for quote ${quoteForInstruction.id} with ${selectedLineItemsForPartial.length} items`);
+          const success = await updateQuoteInstructionStatus(quoteForInstruction.id, 'partially instructed', partialTotal);
+          if (success) {
+            closeInstructionEmailModal();
+          } else {
+            alert('Failed to update quote status to partially instructed.');
+            // Don't close modal, let user try again or cancel
+          }
+        } else {
+          // Handle regular instructed case
+          console.log(`Confirming instruction for quote ${quoteForInstruction.id}`);
+          const success = await updateQuoteInstructionStatus(quoteForInstruction.id, 'instructed', undefined);
+          if (success) {
+            closeInstructionEmailModal();
+          } else {
+            alert('Failed to update quote status to instructed.');
+            // Don't close modal, let user try again or cancel
+          }
+        }
+      } catch (error) {
+        console.error(`Error confirming instruction for quote ${quoteForInstruction.id}:`, error);
+        alert('An error occurred while updating the status.');
+        // Don't close modal, let user try again or cancel
+      }
+    }
+  }
+
+  function handleInstructionCancelled() {
+    if (quoteForInstruction) {
+      // Revert dropdown to original status
+      const selectEl = document.getElementById(`status-select-${quoteForInstruction.id}`) as HTMLSelectElement | null;
+      if (selectEl) {
+        selectEl.value = quoteForInstruction.instructionStatus;
+      }
+    }
+    closeInstructionEmailModal();
+  }
+
+  function closeInstructionEmailModal() {
+    showInstructionEmailModal = false;
+    quoteForInstruction = null;
+    selectedLineItemsForPartial = [];
+    isPartialInstruction = false;
+  }
+
+  async function handleNotInstructedConfirm() {
+    if (quoteForNotInstructed && $selectedProject) {
+      try {
+        console.log(`Confirming not instructed for quote ${quoteForNotInstructed.id}`);
+        
+        // First revoke surveyor authorization if email exists
+        if (quoteForNotInstructed.email) {
+          const authRevoked = await revokeSurveyorAuthorization($selectedProject.id, quoteForNotInstructed.email);
+          if (!authRevoked) {
+            alert('Failed to revoke surveyor authorization.');
+            return;
+          }
+        }
+
+        // Then update quote status
+        const success = await updateQuoteInstructionStatus(quoteForNotInstructed.id, 'will not be instructed', undefined);
+        if (success) {
+          closeNotInstructedModal();
+        } else {
+          alert('Failed to update quote status to will not be instructed.');
+        }
+      } catch (error) {
+        console.error(`Error confirming not instructed for quote ${quoteForNotInstructed.id}:`, error);
+        alert('An error occurred while updating the status.');
+      }
+    }
+  }
+
+  function handleNotInstructedCancel() {
+    if (quoteForNotInstructed) {
+      // Revert dropdown to original status
+      const selectEl = document.getElementById(`status-select-${quoteForNotInstructed.id}`) as HTMLSelectElement | null;
+      if (selectEl) {
+        selectEl.value = quoteForNotInstructed.instructionStatus;
+      }
+    }
+    closeNotInstructedModal();
+  }
+
+  function closeNotInstructedModal() {
+    showNotInstructedModal = false;
+    quoteForNotInstructed = null;
+  }
   
-  async function handleDeleteQuote(quoteId: string, organisationName: string) { 
+  async function handleDeleteQuote(quoteId: string, organisationName: string) {
       try {
           console.log(`Attempting to delete quote: ${quoteId}`);
-          await deleteQuote(quoteId); 
+          await deleteQuote(quoteId);
       } catch(error) {
            console.error(`Error deleting quote ${quoteId}:`, error);
            alert('An error occurred while deleting the quote.');
       }
   }
+
+  // DataTable event handlers
+  function handleAction(event: CustomEvent) {
+    const { action, item } = event.detail;
+
+    if (action === 'edit') {
+      openEditQuoteModal(item);
+    } else if (action === 'delete') {
+      handleDeleteQuote(item.id, item.organisation);
+    }
+  }
+
+  function handleRowClick(event: CustomEvent) {
+    // Optional: Handle row clicks if needed
+  }
 </script>
 
 <div class="quotes-container">
-  <h1>Surveyor Quotes</h1>
+  <PageHeader 
+    title="Surveyor Quotes" 
+    subtitle={$selectedProject ? `Quotes for ${$selectedProject.name}` : 'Please select a project to view quotes.'}
+  >
+    <div slot="actions">
+      {#if $selectedProject}
+        <button class="add-quote-btn" on:click={openNewQuoteModal}>
+          + Add New Quote
+        </button>
+      {/if}
+    </div>
+  </PageHeader>
   
   {#if $selectedProject}
-    <div class="quotes-header">
-      <h2>Quotes for {$selectedProject.name}</h2>
-      <button class="add-quote-btn" on:click={openNewQuoteModal} disabled={!$selectedProject}>+ Add New Quote</button>
-    </div>
-    
-    <div class="table-scroll-wrapper">
-      <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
-      <div class="quotes-table-container" bind:this={tableContainerElement}>
-        <table class="quotes-table">
-          <thead>
-            <tr>
-              <th>Discipline</th>
-              <th>Survey Type</th>
-              <th>Organisation</th>
-              <th>Contact Name</th>
-              <th>Email</th>
-              <th>Line Items</th>
-              <th>Total (excl. VAT)</th>
-              <th>Instruction Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each $currentProjectQuotes as quote (quote.id)}
-              <tr>
-                <td>{quote.discipline}</td>
-                <td>{quote.surveyType}</td>
-                <td>{quote.organisation}</td>
-                <td>{quote.contactName}</td>
-                <td><a href="mailto:{quote.email}">{quote.email}</a></td>
-                <td class="text-center">
-                  <button 
-                      type="button" 
-                      class="line-items-button" 
-                      title="View Line Items" 
-                      on:click={() => openLineItemsModal(quote)}
-                      aria-label={`View ${quote.lineItems.length} line items`}
-                  >
-                    {quote.lineItems.length}
-                    <span class="plus-sign">+</span>
-                  </button>
-                </td>
-                <td class="text-right">£{quote.total.toFixed(2)}</td>
-                <td>
-                  <select 
-                    class="instruction-status-select"
-                    class:status-instructed={quote.instructionStatus === 'instructed'}
-                    class:status-partially-instructed={quote.instructionStatus === 'partially instructed'}
-                    class:status-pending={quote.instructionStatus === 'pending'}
-                    class:status-will-not-be-instructed={quote.instructionStatus === 'will not be instructed'}
-                    value={quote.instructionStatus}
-                    id={`status-select-${quote.id}`}
-                    on:change={(e) => handleStatusChange(quote.id, e.currentTarget.value as InstructionStatus, quote)}
-                  >
-                    {#each instructionStatuses as status}
-                      <option value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
-                    {/each}
-                  </select>
-                </td>
-                <td class="action-cell">
-                  <button 
-                    class="action-btn delete-btn" 
-                    title="Delete Quote" 
-                    on:click={() => handleDeleteQuote(quote.id, quote.organisation)}
-                  >Delete</button>
-                  <button 
-                    class="action-btn edit-btn" 
-                    title="Edit Quote"
-                    on:click={() => openEditQuoteModal(quote)} 
-                  >Edit</button>
-                </td>
-              </tr>
+    <DataTable
+      data={processedQuotes}
+      {columns}
+      searchPlaceholder="Search quotes by discipline, organisation, or contact..."
+      emptyMessage="No quotes found for this project."
+      showSearch={true}
+      showActions={true}
+      minWidth="900px"
+      on:action={handleAction}
+      on:rowClick={handleRowClick}
+    >
+      <svelte:fragment slot="cell" let:column let:item let:index>
+        {#if column.key === 'email'}
+          <a href="mailto:{item.email}" class="email-link">{item.email}</a>
+        {:else if column.key === 'lineItems'}
+          <button
+            type="button"
+            class="line-items-button"
+            title="View Line Items"
+            on:click|stopPropagation={() => openLineItemsModal(item)}
+            aria-label={`View ${item.lineItems.length} line items`}
+          >
+            {item.lineItems.length}
+            <span class="plus-sign">+</span>
+          </button>
+        {:else if column.key === 'total'}
+          £{item.total.toFixed(2)}
+        {:else if column.key === 'instructionStatus'}
+          <select
+            class="instruction-status-select"
+            class:status-instructed={item.instructionStatus === 'instructed'}
+            class:status-partially-instructed={item.instructionStatus === 'partially instructed'}
+            class:status-pending={item.instructionStatus === 'pending'}
+            class:status-will-not-be-instructed={item.instructionStatus === 'will not be instructed'}
+            value={item.instructionStatus}
+            id={`status-select-${item.id}`}
+            on:change|stopPropagation={(e) => handleStatusChange(item.id, e.currentTarget.value as InstructionStatus, item)}
+          >
+            {#each instructionStatuses as status}
+              <option value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
             {/each}
-          </tbody>
-        </table>
-      </div>
-      <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
-    </div>
+          </select>
+        {:else}
+          {item[column.key] ?? '-'}
+        {/if}
+      </svelte:fragment>
+    </DataTable>
   {:else}
-    <p>Please select a project to view quotes.</p>
+    <!-- Message is now in the subtitle -->
   {/if}
   
   <QuoteModal 
@@ -266,315 +427,153 @@
       on:uploaded={handleDocumentUploaded}
     />
   {/if}
+
+  {#if showInstructionEmailModal && quoteForInstruction}
+    <InstructionEmailModal
+      quote={quoteForInstruction}
+      bind:isOpen={showInstructionEmailModal}
+      isPartialInstruction={isPartialInstruction}
+      selectedLineItems={isPartialInstruction ? selectedLineItemsForPartial : quoteForInstruction.lineItems}
+      on:confirm={handleInstructionConfirmed}
+      on:cancel={handleInstructionCancelled}
+    />
+  {/if}
+
+  {#if showNotInstructedModal && quoteForNotInstructed}
+    <NotInstructedModal
+      quote={quoteForNotInstructed}
+      bind:isOpen={showNotInstructedModal}
+      on:confirm={handleNotInstructedConfirm}
+      on:cancel={handleNotInstructedCancel}
+    />
+  {/if}
 </div>
 
 <style>
-  /* General page styling (assumed globally applied) */
+  /* CSS Variables for status colors */
+  :root {
+    --status-not-started-bg: #fff5f5;
+    --status-not-started-color: #c53030;
+    --status-completed-bg: #d4edda;
+    --status-completed-color: #155724;
+  }
 
   .quotes-container {
-    padding: 2rem 1rem; /* Match general-info padding */
-  }
-  
-  /* Headings */
-  h1 {
-    font-size: 1.8rem; 
-    font-weight: 600; 
-    margin-bottom: 1.5rem;
-    color: #1a202c; 
-  }
-  
-  h2 {
-    font-size: 1.3rem; 
-    font-weight: 500; 
-    color: #2d3748; 
-    margin: 0; 
+    padding: 1rem 2rem;
   }
 
-  /* Header section */
-  .quotes-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-
-  /* Add Quote Button */
   .add-quote-btn {
+    background-color: #3182ce;
+    color: white;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
-    background-color: #3182ce; /* Blue accent */
-    color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
+
   .add-quote-btn:hover {
-    background-color: #2b6cb0; 
+    background-color: #2b6cb0;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
+
   .add-quote-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); 
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5);
   }
+
   .add-quote-btn:disabled {
     background-color: #a0aec0;
     cursor: not-allowed;
     box-shadow: none;
   }
-  
-  /* Table Styling */
-  .quotes-table-container {
-    overflow-x: scroll; /* Changed from auto to scroll for persistent visibility */
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e2e8f0;
-    margin-bottom: 2rem; /* Space below table */
-  }
-  
-  .quotes-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    white-space: nowrap; /* Prevent wrapping in cells initially */
-  }
-  
-  .quotes-table th,
-  .quotes-table td {
-    padding: 0.9rem 1.2rem;
-    text-align: left;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: middle;
-    white-space: nowrap; /* Keep cells from wrapping */
-  }
-
-  .quotes-table td {
-    color: #4a5568; /* Slightly softer text color for data */
-  }
-  
-  .quotes-table th {
-    background-color: #f7fafc; 
-    font-weight: 600;
-    color: #4a5568;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.05em;
-  }
-
-  .quotes-table tbody tr:last-child td {
-    border-bottom: none; 
-  }
-
-  .quotes-table tbody tr:hover {
-    background-color: #f7fafc; 
-  }
-
-  /* Specific Cell Alignments */
-  .text-center {
-    text-align: center;
-  }
-  .text-right {
-    text-align: right;
-  }
 
   /* Email Link */
-  td a[href^="mailto:"] {
-      color: #3182ce;
-      text-decoration: none;
-      transition: color 0.2s ease-in-out;
+  .email-link {
+    color: #3182ce;
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
   }
-  td a[href^="mailto:"]:hover {
-      color: #2b6cb0;
-      text-decoration: underline;
+  .email-link:hover {
+    color: #2b6cb0;
+    text-decoration: underline;
   }
 
   /* Line Items Button */
   .line-items-button {
-    background-color: #edf2f7;
-    color: #4a5568;
-    border: 1px solid #e2e8f0;
-    border-radius: 50%; /* Circle */
-    width: auto; /* Adjust width based on content */
-    min-width: 28px; /* Keep minimum size */
-    height: 28px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    /* line-height: 26px; Remove fixed line height */
-    text-align: center;
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 9999px; /* Pill shape */
+    padding: 0.2rem 0.6rem;
     cursor: pointer;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    display: inline-flex; /* Use flex for centering */
+    display: flex;
     align-items: center;
-    justify-content: center;
-    /* position: relative; Remove relative positioning */
-    padding: 0 0.5rem; /* Add some horizontal padding */
-    gap: 0.25rem; /* Add gap between number and plus */
+    gap: 0.3rem;
+    transition: background-color 0.2s, border-color 0.2s;
+    font-size: 0.75rem;
   }
   .line-items-button:hover {
-    background-color: #e2e8f0;
-    border-color: #cbd5e0;
+    background-color: #e9ecef;
+    border-color: #adb5bd;
   }
   .line-items-button .plus-sign {
-    /* display: none; Remove hiding */
-    display: inline; /* Show the plus sign */
-    font-size: 0.8em; /* Make plus slightly smaller */
+    display: inline;
+    font-size: 0.8em;
     font-weight: bold;
-    line-height: 1; /* Ensure it doesn't affect button height much */
+    line-height: 1;
   }
 
   /* Instruction Status Select */
   .instruction-status-select {
-    padding: 0.4rem 2rem 0.4rem 0.8rem; /* Increase right padding for arrow */
+    padding: 0.3rem 0.5rem;
+    border-radius: 5px;
     border: 1px solid #cbd5e0;
-    border-radius: 15px; /* Pill shape */
     font-size: 0.85rem;
-    background-color: #fff;
+    background-color: white;
     cursor: pointer;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    min-width: 120px; /* Ensure dropdown is wide enough */
-    appearance: none; /* Hide default arrow */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    min-width: 120px;
+    text-align: left;
+    appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E"); /* Add custom arrow */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 1em 1em;
   }
   .instruction-status-select:focus {
-      border-color: #4299e1; 
-      box-shadow: 0 0 0 1px #4299e1; 
-      outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 1px #4299e1;
+    outline: none;
   }
 
   /* Status-specific Select Styling */
-  .instruction-status-select.status-instructed {
-    background-color: #f0fff4; /* Light green */
-    border-color: #c6f6d5;
-    color: #276749;
-  }
-  .instruction-status-select.status-partially-instructed {
-    background-color: #fffaf0; /* Light orange/yellow */
-    border-color: #feebc8;
-    color: #975a16;
-  }
-  .instruction-status-select.status-pending {
-    background-color: #ebf4ff; /* Light blue */
-    border-color: #bee3f8;
-    color: #2c5282;
-  }
-  .instruction-status-select.status-will-not-be-instructed {
-    background-color: #fff5f5; /* Light red */
-    border-color: #fed7d7;
-    color: #c53030;
-  }
-  
-  /* Action Buttons in Table */
-  .action-cell {
-    text-align: center; /* Center align actions */
-  }
-  
-  .action-btn {
-    display: inline-block;
-    padding: 0.3rem 0.7rem;
-    margin: 0 0.2rem; /* Adjust spacing */
-    font-size: 0.8rem;
+  .status-instructed {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+    border-color: var(--status-completed-bg);
     font-weight: 500;
-    border-radius: 4px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    border: 1px solid transparent;
-    background: none;
-    color: #718096; /* Default subtle grey */
   }
-  .action-btn:hover {
-     background-color: #edf2f7; /* Light grey background on hover */
-     color: #2d3748; /* Darker text on hover */
+  .status-partially-instructed {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+    border-color: var(--status-completed-bg);
+    font-weight: 500;
   }
-
-  /* Specific Button Styles */
-  .edit-btn {
-    /* Maybe a subtle blue hint? */
-     /* border-color: #bee3f8; */
-  }
-  .delete-btn {
-    /* Maybe a subtle red hint? */
-     /* border-color: #fed7d7; */
-     /* color: #e53e3e; */
-  }
-  .delete-btn:hover {
-      background-color: #fed7d7; /* Light red background on hover */
-      color: #c53030; /* Red text on hover */
-  }
-
-  /* Icon Buttons */
-  .icon-cell {
-    width: 40px; /* Fixed width for icon cells */
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-  .icon-btn {
-    font-size: 1.1rem; /* Larger emoji */
-    padding: 0.2rem 0.4rem;
-    border: none;
-  }
-  .icon-btn:hover {
+  .status-pending {
     background-color: #e2e8f0;
-  }
-
-  /* No Project State */
-  .quotes-container > p {
-    text-align: center;
-    margin: 3rem auto;
-    padding: 2.5rem;
-    background-color: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    color: #718096;
-  }
-
-  /* --- New: Table Scroll Wrapper and Buttons --- */
-  .table-scroll-wrapper {
-    position: relative; /* Context for absolute positioning of buttons */
-    margin-bottom: 2rem; /* Keep space below */
-  }
-
-  .scroll-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%); /* Center vertically */
-    z-index: 10;
-    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
-    border: 1px solid #cbd5e0;
-    border-radius: 50%; /* Circle */
-    width: 36px;
-    height: 36px;
-    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
-    cursor: pointer;
     color: #4a5568;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    display: inline-flex; /* Use inline-flex */
-    align-items: center;    /* Flexbox: Vertically center content */
-    justify-content: center; /* Flexbox: Horizontally center content */
-    padding: 0; /* Remove padding if flex is centering */
+    border-color: #e2e8f0;
+    font-weight: 500;
   }
-
-  .scroll-btn:hover {
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  .status-will-not-be-instructed {
+    background-color: var(--status-not-started-bg);
+    color: var(--status-not-started-color);
+    border-color: var(--status-not-started-bg);
+    font-weight: 500;
   }
-
-  .scroll-btn-left {
-    left: -18px; /* Position halfway outside the container */
-  }
-
-  .scroll-btn-right {
-    right: -18px; /* Position halfway outside the container */
-  }
-  /* ------------------------------------------- */
 </style> 

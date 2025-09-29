@@ -101,7 +101,3 @@ router.delete('/:id', async (req, res) => {
 // --- END OF NEW ROUTE HANDLER ---
 
 module.exports = router;
-
-// You can add other document-related routes here later (e.g., DELETE /api/documents/:id)
-
-module.exports = router;

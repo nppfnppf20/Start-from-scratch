@@ -1,9 +1,10 @@
 import { writable, derived } from 'svelte/store';
-import { browser } from '$app/environment'; // Import browser check
-import { getAuthTokenHeader } from './authStore';
+import { browser } from '$app/environment';
+import { getAuth0Headers } from './auth0Store';
 
 // Define the base URL for your API
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+console.log('API_BASE_URL:', API_BASE_URL);
 
 // --- Helper Function to map _id to id recursively ---
 function mapMongoId<T>(item: any): T {
@@ -52,6 +53,9 @@ interface Project {
   name: string;
   // Basic Project Information
   client?: string; // Umbrella client name from the modal
+  projectLead?: string[];
+  projectManager?: string[];
+  teamMembers?: string[]; // Team member initials/names
   clientOrSpvName?: string; // Specific client/SPV name from the main form
   detailedDescription?: string;
   proposedUseDuration?: number;
@@ -92,29 +96,89 @@ interface Project {
   // SharePoint Document Link
   sharepointLink?: string;
   
+  authorizedSurveyors?: string[]; // NEW: Array of surveyor user IDs
+  authorizedClients?: string[];
+
   createdAt?: string; // From timestamps
   updatedAt?: string; // From timestamps
 }
 
+// --- NEW --- Interface for the Project Bank View
+export interface ProjectBankItem extends Project {
+  instructedCount: number;
+  completedCount: number;
+  outstandingCount: number;
+  outstandingSurveys: {
+    quoteId: string;
+    organisation: string;
+    contactName: string;
+    workStatus: string;
+  }[];
+  instructedSpend: number;
+  programmeEvents: {
+    id: string; // Add the ID field
+    title: string;
+    date: string;
+  }[];
+  authorizedSurveyors?: string[]; // NEW: Add here as well for consistency
+  authorizedClients?: string[];
+}
+
+
 // --- Project Store ---
 // Initialize stores with empty/null values initially
 export const projects = writable<Project[]>([]);
+export const projectBank = writable<ProjectBankItem[]>([]); // New store for the project bank
 export const selectedProject = writable<Project | null>(null);
 export const allQuotes = writable<Quote[]>([]); // New master quote store
 
+// --- NEW --- Function to load data for the project bank
+export async function loadProjectBank() {
+  if (!browser) return;
+
+  try {
+    console.log('Fetching project bank data from API...');
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: await getAuth0Headers()
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    let fetchedProjects: any[] = await response.json();
+
+    // Map _id to id for frontend consistency
+    const mappedProjects = fetchedProjects.map(p => mapMongoId<ProjectBankItem>(p));
+    
+    console.log('Project bank data fetched:', mappedProjects);
+    projectBank.set(mappedProjects);
+
+  } catch (error) {
+    console.error("Failed to load project bank data:", error);
+    projectBank.set([]); // Reset on error
+  }
+}
+
 // Function to load projects from the API
-export async function loadProjects() {
+export async function loadProjects(fetchFn: typeof fetch = fetch) {
   // Only run fetch in the browser environment
   if (!browser) return;
 
   try {
     console.log('Fetching projects from API...');
-    const response = await fetch(`${API_BASE_URL}/projects`, {
-      headers: getAuthTokenHeader()
+    const headers = await getAuth0Headers();
+    console.log('Auth headers:', headers);
+    
+    const response = await fetchFn(`${API_BASE_URL}/projects`, {
+      headers
     });
+    
+    console.log('Response status:', response.status);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API Error:', response.status, errorText);
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
+    
     let fetchedProjects: any[] = await response.json();
 
     // Map _id to id for frontend consistency
@@ -124,16 +188,15 @@ export async function loadProjects() {
     projects.set(fetchedProjects);
 
     // New call to load all quotes
-    await loadAllQuotes();
+    await loadAllQuotes(fetchFn);
 
-    // Optionally, automatically select the first project if the list isn't empty
-    // But only if no project is currently selected
-    const currentSelectedProject = get(selectedProject); // Need to get current value
-    if (fetchedProjects.length > 0 && !currentSelectedProject) {
-       // Fetch full details for the first project to ensure selectedProject has all data
-       await selectProjectById(fetchedProjects[0].id);
-    } else if (fetchedProjects.length === 0) {
-        selectedProject.set(null); // Clear selection if no projects exist
+    // Do not auto-select a project on initial load; require explicit user selection
+    const currentSelectedProject = get(selectedProject);
+    if (fetchedProjects.length === 0) {
+        selectedProject.set(null); // Ensure cleared when none exist
+    } else if (!currentSelectedProject) {
+        // Leave unselected until user chooses from dropdown
+        selectedProject.set(null);
     }
 
   } catch (error) {
@@ -146,13 +209,13 @@ export async function loadProjects() {
 }
 
 // New function to fetch all quotes
-export async function loadAllQuotes() {
+export async function loadAllQuotes(fetchFn: typeof fetch = fetch) {
   if (!browser) return;
   
   try {
     console.log('Loading all quotes...');
-    const response = await fetch(`${API_BASE_URL}/quotes`, {
-      headers: getAuthTokenHeader()
+    const response = await fetchFn(`${API_BASE_URL}/quotes`, {
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -177,7 +240,7 @@ import { get } from 'svelte/store';
 // --- Store Manipulation Functions ---
 
 // Function to add a new project via API
-export async function addProject(projectData: { name: string; client?: string; teamMembers?: string[] }) {
+export async function addProject(projectData: { name: string; client?: string; projectLead?: string[]; projectManager?: string[]; teamMembers?: string[] }) {
   if (!browser) return null; // Don't run on server
 
   try {
@@ -185,7 +248,7 @@ export async function addProject(projectData: { name: string; client?: string; t
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(projectData),
     });
@@ -202,6 +265,10 @@ export async function addProject(projectData: { name: string; client?: string; t
     // Add to the local store
     projects.update(existing => [...existing, newProject].sort((a, b) => a.name.localeCompare(b.name))); // Keep sorted? Or sort by date? Maybe sort in component
     selectedProject.set(newProject); // Automatically select the new project
+
+    // After adding the project, reload the project bank data to include the new project
+    await loadProjectBank();
+    
   return newProject;
 
   } catch (error) {
@@ -211,55 +278,54 @@ export async function addProject(projectData: { name: string; client?: string; t
   }
 }
 
-// Function to update an existing project via API
-export async function updateProject(projectId: string, updatedData: Partial<Project>) {
+// Function to update a project's details
+export async function updateProject(projectId: string, updatedData: Partial<Project & { authorizedClients?: string[] }>) {
   if (!browser) return false; // Don't run on server
-
-  // Create a copy to avoid modifying the original object directly if needed
-  const dataToSend = { ...updatedData };
-  // Remove 'id' and MongoDB specific fields if they exist, backend uses :id from URL
-  delete dataToSend.id;
-  delete (dataToSend as any)._id; // Use any to bypass potential type error if _id isn't explicitly in Partial<Project>
-  delete dataToSend.createdAt;
-  delete dataToSend.updatedAt;
-
 
   try {
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
-      body: JSON.stringify(dataToSend),
+      body: JSON.stringify(updatedData),
     });
 
     if (!response.ok) {
-       const errorData = await response.json().catch(() => ({}));
-       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
+      // Try to get error message from backend response body
+      const errorData = await response.json().catch(() => ({})); // Default if body isn't JSON
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to update project'}`);
     }
 
-    let updatedProjectFromServer = await response.json();
-    updatedProjectFromServer = { ...updatedProjectFromServer, id: updatedProjectFromServer._id };
+    let updatedProject = await response.json();
+    updatedProject = mapMongoId<Project>(updatedProject);
 
-    // Update the local stores
-    projects.update(existing =>
-      existing.map(p => (p.id === projectId ? updatedProjectFromServer : p))
-      // Consider re-sorting if needed after update
+    // Update the project in the main projects list
+    projects.update(allProjects =>
+      allProjects.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p))
     );
-    selectedProject.update(current =>
-      current && current.id === projectId ? updatedProjectFromServer : current
+    
+    // Also update the project in the project bank list
+    projectBank.update(allProjects =>
+      allProjects.map(p => (p.id === projectId ? { ...p, ...updatedProject } : p))
     );
-    return true;
 
+    // If this is the currently selected project, update it as well
+    const currentSelected = get(selectedProject);
+    if (currentSelected && currentSelected.id === projectId) {
+      selectedProject.update(p => (p ? { ...p, ...updatedProject } : null));
+    }
+
+    return true; // Indicate success
   } catch (error) {
     console.error("Failed to update project:", error);
-    alert(`Error updating project: ${error}`); // Simple user feedback
-    return false;
+    alert(`Error updating project: ${error}`);
+    return false; // Indicate failure
   }
 }
 
-// Function to select a project - Fetches full details
+// Function to select a project by its ID
 export async function selectProjectById(id: string | null) {
    if (!browser) return false;
    if (!id) { // Handle explicit clearing of selection
@@ -270,13 +336,14 @@ export async function selectProjectById(id: string | null) {
         currentInstructionLogs.set([]);
         surveyorFeedbacks.set([]); // Clear feedback too
         allProgrammeEvents.set([]); // *** CLEAR PROGRAMME EVENTS ***
+        currentProjectFeeQuoteLogs.set([]); // Clear fee quote logs
         return true;
    }
 
    console.log(`Selecting project by ID: ${id}`);
    try {
        const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
-        headers: getAuthTokenHeader()
+        headers: await getAuth0Headers()
        });
        if (!response.ok) {
             const errorData = await response.json().catch(() => ({message: 'Failed to parse error response'}));
@@ -297,7 +364,8 @@ export async function selectProjectById(id: string | null) {
            loadQuotesForProject(id),
            loadInstructionLogsForProject(id),
            loadSurveyorFeedback(id),
-           loadProgrammeEvents(id) // Load programme events alongside other data
+           loadProgrammeEvents(id), // Load programme events alongside other data
+           loadFeeQuoteLogsForProject(id) // Load fee quote logs
        ]);
 
        return true;
@@ -309,6 +377,7 @@ export async function selectProjectById(id: string | null) {
        currentInstructionLogs.set([]);
        surveyorFeedbacks.set([]);
        allProgrammeEvents.set([]); // Ensure programme events are cleared on error
+       currentProjectFeeQuoteLogs.set([]); // Clear fee quote logs on error
        alert(`Error loading project details: ${error}`);
        return false;
    }
@@ -331,50 +400,40 @@ export function selectProjectByName(name: string) {
   return found;
 }
 
-// Function to delete a project via API
+// Function to delete a project
 export async function deleteProject(projectId: string) {
-  if (!browser) return false;
-
-  if (!confirm('Are you sure you want to delete this project? This cannot be undone.')) {
-      return false;
-  }
+  if (!browser) return;
 
   try {
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-          method: 'DELETE',
-          headers: getAuthTokenHeader()
-      });
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: await getAuth0Headers(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete project');
+    }
 
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || response.statusText}`);
-      }
+    // Remove from local stores
+    projects.update(all => all.filter(p => p.id !== projectId));
+    projectBank.update(all => all.filter(p => p.id !== projectId));
+    
+    // If the deleted project was the selected one, clear the selection
+    const currentSelected = get(selectedProject);
+    if (currentSelected && currentSelected.id === projectId) {
+      selectedProject.set(null);
+    }
 
-      // Remove from local stores
-      projects.update(existing => existing.filter(p => p.id !== projectId));
-      // Check if the deleted project was the selected one
-      const currentSelected = get(selectedProject);
-      if (currentSelected && currentSelected.id === projectId) {
-          const remainingProjects = get(projects);
-          if (remainingProjects.length > 0) {
-             // Select the first remaining project
-             await selectProjectById(remainingProjects[0].id);
-          } else {
-             // No projects left, clear selection
-             selectProjectById(null);
-          }
-      }
-      console.log(`Project ${projectId} deleted.`);
-      return true;
-
-  } catch (error) {
-      console.error("Failed to delete project:", error);
-      alert(`Error deleting project: ${error}`);
-      return false;
+  } catch (err: any) {
+    console.error('Error deleting project:', err);
+    // Optionally re-throw or handle in UI
+    throw err;
   }
 }
 
-// --- Quote Interface and Store ---
+// --- QUOTE MANAGEMENT ---
+
+// Interface for LineItem
 export interface LineItem {
 	item?: string;
 	description: string;
@@ -387,7 +446,6 @@ export interface Quote {
   id: string;
   projectId: string;
   discipline: string;
-  surveyType?: string;
   organisation: string;
   contactName: string;
   email?: string;
@@ -411,14 +469,6 @@ export const uniqueDisciplines = derived(
   ($allQuotes) => {
     const allDisciplines = $allQuotes.map(q => q.discipline);
     return [...new Set(allDisciplines)].sort();
-  }
-);
-
-export const uniqueSurveyTypes = derived(
-  allQuotes,
-  ($allQuotes) => {
-    const allSurveyTypes = $allQuotes.map(q => q.surveyType).filter(st => st); // Filter out empty/null values
-    return [...new Set(allSurveyTypes as string[])].sort();
   }
 );
 
@@ -454,7 +504,7 @@ async function loadQuotesForProject(projectId: string | null) {
   try {
     console.log(`Fetching quotes for project: ${projectId}`);
     const response = await fetch(`${API_BASE_URL}/quotes?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -489,7 +539,7 @@ export async function addQuote(quoteData: Omit<Quote, 'id' | 'total' | 'createdA
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(quoteData),
     });
@@ -523,7 +573,7 @@ export async function updateQuote(quoteId: string, updateData: Partial<Omit<Quot
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(updateData),
     });
@@ -576,7 +626,7 @@ export async function deleteQuote(quoteId: string) {
   try {
     const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
       method: 'DELETE',
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
 
     if (!response.ok) {
@@ -597,7 +647,7 @@ export async function deleteQuote(quoteId: string) {
 }
 
 // --- Review Interface and Store ---
-export type WorkStatus = 'in progress' | 'completed' | 'not started' | 'TRP Reviewing' | 'Client reviewing';
+export type WorkStatus = 'in progress' | 'completed' | 'not started' | 'TRP Reviewing' | 'Client reviewing' | 'Back with author';
 
 // New interface for uploaded work details
 export interface UploadedWork {
@@ -614,6 +664,7 @@ export interface CustomDate {
   id: string; // Unique ID for the custom date entry
   title: string;
   date: string; // ISO date string (YYYY-MM-DD)
+  color?: string; // Optional color for the custom date
 }
 
 export interface SurveyorReview {
@@ -803,7 +854,7 @@ async function loadProgrammeEvents(projectId: string | null) {
     console.log(`Fetching programme events for project: ${projectId}`);
     // Use the backend route we defined: GET /api/programme-events/project/:projectId
     const response = await fetch(`${API_BASE_URL}/programme-events/project/${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -846,7 +897,7 @@ export async function addProgrammeEvent(eventData: Omit<ProgrammeEvent, 'id' | '
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(eventData),
     });
@@ -902,7 +953,7 @@ export async function updateProgrammeEvent(eventToUpdate: ProgrammeEvent): Promi
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthTokenHeader()
+        ...(await getAuth0Headers())
       },
       body: JSON.stringify(updateData),
     });
@@ -949,7 +1000,7 @@ export async function deleteProgrammeEvent(eventId: string): Promise<boolean> {
   try {
       const response = await fetch(`${API_BASE_URL}/programme-events/${eventId}`, {
           method: 'DELETE',
-          headers: getAuthTokenHeader()
+          headers: await getAuth0Headers()
       });
 
       if (!response.ok) {
@@ -1049,11 +1100,11 @@ export interface InstructionLog {
   id: string; // Corresponds to _id from backend
   projectId: string;
   quoteId: string;
-  workStatus?: 'not started' | 'in progress' | 'completed' | 'TRP Reviewing' | 'Client reviewing';
+  workStatus?: WorkStatus;
   siteVisitDate?: string; // ISO date string
   reportDraftDate?: string; // ISO date string
   operationalNotes?: string;
-  holdUpNotes?: string;
+  dependencies?: string;
   uploadedWorks?: UploadedWork[]; // Uses existing UploadedWork interface
   customDates?: CustomDate[];   // Uses existing CustomDate interface
   createdAt?: string;
@@ -1072,7 +1123,7 @@ async function loadInstructionLogsForProject(projectId: string | null) {
   console.log(`Fetching instruction logs for project ID: ${projectId}`);
   try {
     const response = await fetch(`${API_BASE_URL}/instruction-logs?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1102,7 +1153,7 @@ export async function upsertInstructionLog(quoteId: string, logData: Partial<Omi
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify(logData), // Send only the updatable fields
         });
@@ -1174,7 +1225,7 @@ async function loadSurveyorFeedback(projectId: string | null) {
   console.log(`Fetching surveyor feedback for project ID: ${projectId}`);
   try {
     const response = await fetch(`${API_BASE_URL}/surveyor-feedback?projectId=${projectId}`, {
-      headers: getAuthTokenHeader()
+      headers: await getAuth0Headers()
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1219,7 +1270,7 @@ export async function upsertSurveyorFeedback(feedbackData: Partial<Omit<Surveyor
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                ...getAuthTokenHeader()
+                ...(await getAuth0Headers())
             },
             body: JSON.stringify(dataToUpdate),
         });
@@ -1270,7 +1321,7 @@ export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> 
     try {
         const response = await fetch(`${API_BASE_URL}/surveyor-feedback?quoteId=${quoteId}`, {
             method: 'DELETE',
-            headers: getAuthTokenHeader(),
+            headers: await getAuth0Headers(),
         });
 
         if (!response.ok) {
@@ -1299,4 +1350,199 @@ export async function deleteSurveyorFeedback(quoteId: string): Promise<boolean> 
 export function getFeedbackForQuote(quoteId: string): SurveyorFeedback | undefined {
     const currentFeedback = get(surveyorFeedbacks); // Get current value from the correct store
     return currentFeedback.find(fb => fb.quoteId === quoteId);
+}
+
+// --- Fee Quote Log Interface and Store ---
+export interface FeeQuoteLog {
+  id: string;
+  projectId: string;
+  emails: string[];
+  sentDate: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Store for fee quote logs for the *currently selected* project
+export const currentProjectFeeQuoteLogs = writable<FeeQuoteLog[]>([]);
+
+// --- Fee Quote Log API Functions ---
+
+// Function to load Fee Quote Logs for a specific project
+async function loadFeeQuoteLogsForProject(projectId: string | null) {
+  if (!browser || !projectId) {
+    currentProjectFeeQuoteLogs.set([]); // Clear if no project or SSR
+    return;
+  }
+
+  console.log(`Fetching fee quote logs for project ID: ${projectId}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/fee-quote-logs?projectId=${projectId}`, {
+      headers: await getAuth0Headers()
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to fetch fee quote logs'}`);
+    }
+    let logs: any[] = await response.json();
+
+    // Map _id to id deeply
+    const mappedLogs = logs.map(log => mapMongoId<FeeQuoteLog>(log));
+
+    currentProjectFeeQuoteLogs.set(mappedLogs);
+    console.log('Fee quote logs loaded:', mappedLogs);
+  } catch (error) {
+    console.error(`Failed to load fee quote logs for project ${projectId}:`, error);
+    currentProjectFeeQuoteLogs.set([]); // Clear store on error
+  }
+}
+
+// Function to create a new Fee Quote Log
+export async function createFeeQuoteLog(projectId: string, emails: string[]): Promise<FeeQuoteLog | null> {
+    if (!browser) return null;
+
+    if (!projectId) {
+        console.error('Cannot create fee quote log without projectId');
+        alert('Error: Project ID is missing.');
+        return null;
+    }
+
+    if (!emails || emails.length === 0) {
+        console.error('Cannot create fee quote log without emails');
+        alert('Error: At least one email address is required.');
+        return null;
+    }
+
+    try {
+        console.log('Creating fee quote log:', { projectId, emails });
+        const response = await fetch(`${API_BASE_URL}/fee-quote-logs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(await getAuth0Headers())
+            },
+            body: JSON.stringify({ projectId, emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to create fee quote log'}`);
+        }
+
+        let newLog = await response.json();
+        const mappedLog = mapMongoId<FeeQuoteLog>(newLog);
+
+        // Add to the local store (prepend to show newest first)
+        currentProjectFeeQuoteLogs.update(existing => [mappedLog, ...existing]);
+
+        console.log('Fee quote log created:', mappedLog);
+        return mappedLog;
+
+    } catch (error) {
+        console.error('Failed to create fee quote log:', error);
+        alert(`Error logging fee quote request: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}
+
+export async function authorizeSurveyors(projectId: string, emails: string[]): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/authorize-surveyors`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(await getAuth0Headers())
+            },
+            body: JSON.stringify({ emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.msg || 'Failed to authorize surveyors');
+        }
+
+        const updatedProject = await response.json();
+        
+        // Map _id to id for frontend consistency
+        const mappedProject = mapMongoId<Project>(updatedProject);
+        
+        // Update the stores
+        projects.update(ps => ps.map(p => p.id === projectId ? mappedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? mappedProject : p);
+
+        return mappedProject;
+
+    } catch (error) {
+        console.error('Error in authorizeSurveyors:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}
+
+export async function authorizeClients(projectId: string, emails: string[]): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/authorize-clients`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(await getAuth0Headers())
+            },
+            body: JSON.stringify({ emails }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.msg || 'Failed to authorize clients');
+        }
+
+        const updatedProject = await response.json();
+        const mappedProject = mapMongoId<Project>(updatedProject);
+
+        projects.update(ps => ps.map(p => p.id === projectId ? mappedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? mappedProject : p);
+
+        return mappedProject;
+
+    } catch (error) {
+        console.error('Error in authorizeClients:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}
+
+export async function revokeSurveyorAuthorization(projectId: string, email: string): Promise<Project | null> {
+    if (!browser) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}/surveyors/${encodeURIComponent(email)}`, {
+            method: 'DELETE',
+            headers: {
+                ...(await getAuth0Headers())
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.msg || 'Failed to revoke surveyor authorization');
+        }
+
+        const updatedProject = await response.json();
+        
+        // Map _id to id for frontend consistency
+        const mappedProject = mapMongoId<Project>(updatedProject);
+        
+        // Update the stores
+        projects.update(ps => ps.map(p => p.id === projectId ? mappedProject : p));
+        selectedProject.update(p => p && p.id === projectId ? mappedProject : p);
+
+        return mappedProject;
+
+    } catch (error) {
+        console.error('Error in revokeSurveyorAuthorization:', error);
+        alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
 }

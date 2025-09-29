@@ -6,9 +6,17 @@ const ProjectSchema = new mongoose.Schema({
         required: [true, 'Project name is required'],
         trim: true
     },
-    client: { // Umbrella term from modal
-        type: String,
-        trim: true
+    client: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ClientOrganisation'
+    },
+    projectLead: {
+        type: [String],
+        default: []
+    },
+    projectManager: {
+        type: [String],
+        default: []
     },
     teamMembers: { // Initials from modal
         type: [String],
@@ -72,7 +80,16 @@ const ProjectSchema = new mongoose.Schema({
     additionalNotes: { type: String, trim: true },
     invoicingDetails: { type: String, trim: true },
     // --- SharePoint Document Link ---
-    sharepointLink: { type: String, trim: true }
+    sharepointLink: { type: String, trim: true },
+    // --- NEW FIELD for Surveyor Permissions ---
+    authorizedSurveyors: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    authorizedClients: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true // Automatically add createdAt and updatedAt fields
 });

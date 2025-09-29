@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes,
@@ -23,6 +25,7 @@
   import { derived } from 'svelte/store';
   import { startOfWeek, addMonths, addWeeks, format, isBefore, min, parseISO, isWithinInterval, endOfWeek, compareAsc } from 'date-fns';
   import TimelineKeyDateModal from '$lib/components/TimelineKeyDateModal.svelte'; // Import the modal
+  import SurveyorDateModal from '$lib/components/SurveyorDateModal.svelte';
   import NotesDisplayModal from '$lib/components/NotesDisplayModal.svelte';
   
   // CSS imports removed from here
@@ -161,8 +164,8 @@
               items.push({
                 id: `log-${log.id}-cd-${cd.id}`,
                 date: cd.date,
-                title: `${cd.title} - ${orgName}`,
-                color: '#7030A0', // Example color (Purple)
+                title: cd.title, // Just use the title without organization name
+                color: cd.color || '#6c757d', // Use saved color or default to grey
                 type: 'log-custom',
                 projectId,
                 quoteId: log.quoteId,
@@ -256,13 +259,19 @@
   let selectedWeekStartDateForModal: Date | null = null;
   let eventBeingEdited: ProgrammeEvent | null = null;
 
-  // State for the hold-up notes display modal
-  let showHoldUpNotesDisplayModal = false;
-  let showSurveyorNotesDisplayModal = false; // New state for surveyor notes modal
-  let notesToDisplay = '';
-  let orgNameToDisplay = '';
-  let modalType: 'holdUp' | 'surveyor' = 'holdUp'; // New state to track modal type
-  let currentQuoteId = ''; // New state to track which quote is being viewed
+  // State for surveyor date modal
+  let showSurveyorDateModal = false;
+  let selectedSurveyorQuoteId: string = '';
+  let selectedSurveyorWeekDate: Date | null = null;
+  let selectedSurveyorName: string = '';
+  let customDateBeingEdited: any = null;
+
+  // State for the notes display modal
+  let showNotesDisplayModal = false;
+  let currentNotesContent = '';
+  let currentNotesOrgName = '';
+  let currentNotesQuoteId = '';
+  let currentNotesType = 'dependencies'; // 'dependencies' or 'operational'
 
   // --- Modal Handlers ---
   function handleOpenKeyDateModal(weekDate: Date) {
@@ -324,46 +333,115 @@
     eventBeingEdited = null;
   }
 
-  // Function to open the hold-up notes display modal
-  function openHoldUpNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
-    notesToDisplay = notes;
-    orgNameToDisplay = orgName;
-    currentQuoteId = quoteId;
-    modalType = 'holdUp';
-    showHoldUpNotesDisplayModal = true;
+  // --- Surveyor Date Modal Handlers ---
+  function handleSurveyorCellClick(quoteId: string, weekDate: Date, surveyorName: string) {
+    selectedSurveyorQuoteId = quoteId;
+    selectedSurveyorWeekDate = weekDate;
+    selectedSurveyorName = surveyorName;
+    showSurveyorDateModal = true;
   }
 
-  // Function to open the surveyor notes display modal
-  function openSurveyorNotesDisplayModal(notes: string, orgName: string, quoteId: string) {
-    notesToDisplay = notes;
-    orgNameToDisplay = orgName;
-    currentQuoteId = quoteId;
-    modalType = 'surveyor';
-    showSurveyorNotesDisplayModal = true;
+  function handleEditCustomDate(customDate: any, quoteId: string, surveyorName: string) {
+    selectedSurveyorQuoteId = quoteId;
+    selectedSurveyorName = surveyorName;
+    customDateBeingEdited = customDate;
+    selectedSurveyorWeekDate = null; // Not used when editing
+    showSurveyorDateModal = true;
   }
 
-  // Function to handle saving notes from the modal
-  async function handleNoteSave(event: CustomEvent<{ quoteId: string; notes: string; modalType: 'holdUp' | 'surveyor' }>) {
-    const { quoteId, notes, modalType } = event.detail;
+  function handleSurveyorDateCancel() {
+    showSurveyorDateModal = false;
+    selectedSurveyorQuoteId = '';
+    selectedSurveyorWeekDate = null;
+    selectedSurveyorName = '';
+    customDateBeingEdited = null;
+  }
+
+  async function handleSurveyorDateSave(event: CustomEvent<{ title: string; date: string; color: string; quoteId: string; id?: string }>) {
+    if (!browser || !$selectedProject) return;
     
-    try {
-      if (modalType === 'surveyor') {
-        // Update operational notes
-        await upsertInstructionLog(quoteId, { operationalNotes: notes });
-        console.log('Surveyor notes updated successfully');
-      } else if (modalType === 'holdUp') {
-        // Update hold-up notes
-        await upsertInstructionLog(quoteId, { holdUpNotes: notes });
-        console.log('Hold-up notes updated successfully');
-      }
-      
-      // Update the display
-      notesToDisplay = notes;
-      
-    } catch (error) {
-      console.error('Failed to save notes:', error);
-      alert('Failed to save notes. Please try again.');
+    const { title, date, color, quoteId, id } = event.detail;
+    
+    // Get existing custom dates for this quote
+    const existingLog = $currentInstructionLogs.find(log => log.quoteId === quoteId);
+    const existingDates = existingLog?.customDates || [];
+    
+    let updatedDatesArray;
+    
+    if (id) {
+      // Editing existing custom date
+      updatedDatesArray = existingDates.map(cd => 
+        cd.id === id 
+          ? { ...cd, title, date, color }
+          : cd
+      );
+    } else {
+      // Adding new custom date
+      const newDateId = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
+      const newCustomDate = {
+        id: newDateId,
+        title,
+        date,
+        color
+      };
+      updatedDatesArray = [...existingDates, newCustomDate];
     }
+    
+    // Save to instruction log
+    await upsertInstructionLog(quoteId, { customDates: updatedDatesArray });
+    
+    // Close modal
+    showSurveyorDateModal = false;
+    selectedSurveyorQuoteId = '';
+    selectedSurveyorWeekDate = null;
+    selectedSurveyorName = '';
+    customDateBeingEdited = null;
+  }
+
+  async function handleSurveyorDateDelete(event: CustomEvent<{ id: string; quoteId: string }>) {
+    if (!browser || !$selectedProject) return;
+    
+    const { id, quoteId } = event.detail;
+    
+    // Get existing custom dates for this quote
+    const existingLog = $currentInstructionLogs.find(log => log.quoteId === quoteId);
+    if (!existingLog || !existingLog.customDates) return;
+    
+    // Remove the custom date with the matching ID
+    const updatedDatesArray = existingLog.customDates.filter(cd => cd.id !== id);
+    
+    // Save to instruction log
+    await upsertInstructionLog(quoteId, { customDates: updatedDatesArray });
+    
+    // Close modal
+    showSurveyorDateModal = false;
+    selectedSurveyorQuoteId = '';
+    selectedSurveyorWeekDate = null;
+    selectedSurveyorName = '';
+    customDateBeingEdited = null;
+  }
+
+  function openNotesDisplayModal(notes: string, orgName: string, quoteId: string, notesType: 'dependencies' | 'operational') {
+    currentNotesContent = notes;
+    currentNotesOrgName = orgName;
+    currentNotesQuoteId = quoteId;
+    currentNotesType = notesType;
+    showNotesDisplayModal = true;
+  }
+
+  async function handleSaveFromDisplay(event: CustomEvent<{ notes: string; quoteId: string }>) {
+    const { notes, quoteId } = event.detail;
+    if (!browser) return;
+
+    // Use the appropriate field based on notes type
+    const updateData = currentNotesType === 'dependencies'
+      ? { dependencies: notes }
+      : { operationalNotes: notes };
+
+    await upsertInstructionLog(quoteId, updateData);
+
+    // Close the modal
+    showNotesDisplayModal = false;
   }
 
   // Reactive calculation for quotes belonging to the selected project
@@ -377,13 +455,12 @@
 </script>
 
 <div class="programme-container">
-  <h1>Programme</h1>
+  <PageHeader 
+    title="Programme"
+    subtitle={$selectedProject ? `Timeline for ${$selectedProject.name}` : 'Please select a project'}
+  />
   
   {#if $selectedProject}
-    <div class="programme-header">
-      <h2>Timeline for {$selectedProject.name}</h2>
-    </div>
-    
     <div class="programme-content timeline-view">
       {#if $instructedSurveyors.length > 0 || $currentProjectManualEvents.length > 0}
         <div class="table-scroll-container">
@@ -452,18 +529,18 @@
                       <span>{quote.discipline}</span>
                       <!-- Surveyor Notes Icon -->
                       {#if log && log.operationalNotes && log.operationalNotes.trim() !== ''}
-                        <svg on:click={() => openSurveyorNotesDisplayModal(log.operationalNotes || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                        <svg on:click={() => openNotesDisplayModal(log.operationalNotes || '', quote.organisation, quote.id, 'operational')} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#007bff" viewBox="0 0 16 16" class="notes-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
                           <title>Surveyor Notes: {log.operationalNotes}</title>
                           <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z"/>
                           <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3v-.5a.5.5 0 0 1 1 0V11h.5a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
                           <path d="M6 4h6v1H6V4zm0 3h6v1H6V7zm0 3h6v1H6v-1z"/>
                         </svg>
                       {/if}
-                      <!-- Hold-up Icon -->
-                      {#if log && log.holdUpNotes && log.holdUpNotes.trim() !== ''}
-                        <svg on:click={() => openHoldUpNotesDisplayModal(log.holdUpNotes || '', quote.organisation, quote.id)} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
-                          <title>Hold Up: {log.holdUpNotes}</title>
-                          <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                      <!-- Dependencies Icon -->
+                      {#if log && log.dependencies && log.dependencies.trim() !== ''}
+                        <svg on:click={() => openNotesDisplayModal(log.dependencies || '', quote.organisation, quote.id, 'dependencies')} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" viewBox="0 0 16 16" class="hold-up-icon" style="display: inline-block; vertical-align: middle; margin-left: 5px; cursor: pointer;">
+                          <title>Dependencies: {log.dependencies}</title>
+                          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM8 4a.905.905 0 0 1 .9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6.022a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                         </svg>
                       {/if}
                     </div>
@@ -477,15 +554,37 @@
                     {/if}
                 </td>
                 {#each weeks as weekDate (format(weekDate, 'yyyy-MM-dd'))}
-                  <td class="data-cell week-col">
+                  <td class="data-cell week-col surveyor-cell-clickable" 
+                      on:click={() => handleSurveyorCellClick(quote.id, weekDate, `${quote.discipline} - ${quote.organisation}`)}
+                      title="Click to add date for this week">
                       <div class="cell-content">
                         <!-- Iterate through items relevant to this quote -->
                         {#each relevantLogItems as item (item.id)}
                             {#if isDateInWeek(item.date, weekDate)}
                                 <div 
-                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}" 
+                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date clickable-custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}" 
                                     style="background-color: {item.color}1A; border-left: 3px solid {item.color}; color: {item.color};" 
-                                    title="{item.title} ({format(parseISO(item.date), 'd MMM')})"
+                                    title="{item.type === 'log-custom' ? 'Click to edit: ' : ''}{item.title} ({format(parseISO(item.date), 'd MMM')})"
+                                    on:click={item.type === 'log-custom' ? (e) => {
+                                      e.stopPropagation();
+                                      const log = $currentInstructionLogs.find(l => l.quoteId === item.quoteId);
+                                      const customDate = log?.customDates?.find(cd => cd.id === item.customDateId);
+                                      if (customDate && item.quoteId) {
+                                        handleEditCustomDate(customDate, item.quoteId, `${quote.discipline} - ${quote.organisation}`);
+                                      }
+                                    } : undefined}
+                                    role={item.type === 'log-custom' ? 'button' : undefined}
+                                    tabindex={item.type === 'log-custom' ? 0 : undefined}
+                                    on:keydown={item.type === 'log-custom' ? (e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.stopPropagation();
+                                        const log = $currentInstructionLogs.find(l => l.quoteId === item.quoteId);
+                                        const customDate = log?.customDates?.find(cd => cd.id === item.customDateId);
+                                        if (customDate && item.quoteId) {
+                                          handleEditCustomDate(customDate, item.quoteId, `${quote.discipline} - ${quote.organisation}`);
+                                        }
+                                      }
+                                    } : undefined}
                                 >
                                     {item.title}
                                     </div>
@@ -523,27 +622,30 @@
     />
   {/if}
 
-  {#if showHoldUpNotesDisplayModal}
-    <NotesDisplayModal 
-      notes={notesToDisplay}
-      organisationName={orgNameToDisplay}
-      on:close={() => showHoldUpNotesDisplayModal = false}
-      modalType="holdUp"
-      quoteId={currentQuoteId}
-      editable={true}
-      on:save={handleNoteSave}
+  <!-- Render Surveyor Date Modal -->
+  {#if showSurveyorDateModal}
+    <SurveyorDateModal
+      bind:showModal={showSurveyorDateModal}
+      initialDate={selectedSurveyorWeekDate}
+      quoteId={selectedSurveyorQuoteId}
+      surveyorName={selectedSurveyorName}
+      customDateToEdit={customDateBeingEdited}
+      on:save={handleSurveyorDateSave}
+      on:cancel={handleSurveyorDateCancel}
+      on:delete={handleSurveyorDateDelete}
     />
   {/if}
 
-  {#if showSurveyorNotesDisplayModal}
-    <NotesDisplayModal 
-      notes={notesToDisplay}
-      organisationName={orgNameToDisplay}
-      on:close={() => showSurveyorNotesDisplayModal = false}
-      modalType="surveyor"
-      quoteId={currentQuoteId}
-      editable={true}
-      on:save={handleNoteSave}
+  <!-- Display/Edit Modal for Notes -->
+  {#if showNotesDisplayModal}
+    <NotesDisplayModal
+        modalTitle="{currentNotesType === 'dependencies' ? 'Dependencies' : 'Surveyor Notes'} for {currentNotesOrgName}"
+        notesPrefix="{currentNotesType === 'dependencies' ? 'Dependencies:' : 'Notes:'}"
+        notes={currentNotesContent}
+        organisationName={currentNotesOrgName}
+        quoteId={currentNotesQuoteId}
+        on:close={() => showNotesDisplayModal = false}
+        on:save={handleSaveFromDisplay}
     />
   {/if}
 </div>
@@ -553,32 +655,12 @@
 
   /* Styles adjusted for better height without calendar */
    .programme-container {
-    padding: 2rem 1rem;
+    padding: 1rem 2rem; /* Consistent padding */
     display: flex;
     flex-direction: column;
     flex-grow: 1; 
     height: calc(100vh - 150px); /* Adjust as needed */
     overflow: hidden; 
-  }
-  
-  h1 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 1.5rem;
-    flex-shrink: 0; 
-  }
-  
-  .programme-header {
-    margin-bottom: 1rem;
-    flex-shrink: 0; 
-  }
-  
-  h2 {
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: #2d3748;
-    margin: 0;
   }
   
   .programme-content {
@@ -605,6 +687,11 @@
     border: 1px solid #dee2e6;
     border-radius: 4px;
     min-height: 300px; /* Ensure container has minimum height */
+    /* Windows performance optimizations */
+    contain: layout style paint;
+    will-change: scroll-position;
+    transform: translateZ(0); /* Force GPU acceleration */
+    overflow-anchor: auto; /* Prevent scroll jumping */
   }
 
   .timeline-table {
@@ -613,6 +700,9 @@
     margin-bottom: 0; /* Remove margin since container handles spacing */
     min-width: 800px; /* Ensure table has minimum width for columns to be visible */
     width: max-content; /* Let table size to its content */
+    /* Windows performance optimizations */
+    transform: translateZ(0); /* Force GPU layer */
+    backface-visibility: hidden; /* Prevent flicker */
   }
 
   .timeline-table th, .timeline-table td {
@@ -642,11 +732,14 @@
   .sticky-col {
     position: sticky;
     left: 0;
-    background-color: #f8f9fa; 
-    z-index: 1; 
-    width: 200px; 
+    background-color: #f8f9fa;
+    z-index: 1;
+    width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Windows sticky performance */
+    will-change: transform;
+    transform: translateZ(0);
   }
   
   /* Ensure sticky headers are above sticky column body */
@@ -663,14 +756,18 @@
 
   .header-cell {
      text-align: center;
-     vertical-align: middle; 
-     font-weight: bold;
+     vertical-align: middle;
+     font-size: 0.75rem;
+     font-weight: 600;
+     color: #4a5568;
   }
   .surveyor-header {
      /* specific styles if needed */
   }
   .key-dates-header {
-     font-size: 0.9em;
+     font-size: 0.75rem;
+     font-weight: 600;
+     color: #4a5568;
      /* Ensure it aligns vertically with button if needed */
      vertical-align: bottom;
      padding-bottom: 0.5rem; /* Add space below text */
@@ -812,16 +909,15 @@
 
   /* Base style for timeline items in surveyor rows */
   .timeline-item {
-      display: block; /* Ensure it takes full width for truncation */
+      display: block; /* Ensure it takes full width */
       padding: 2px 5px; /* Reduced padding */
       margin-bottom: 3px; /* Space between items */
       border-radius: 4px; 
       font-size: 0.8rem; /* Slightly smaller font */
       line-height: 1.3; 
       border: 1px solid transparent; /* Base border */
-      white-space: nowrap; /* Prevent wrapping */
-      overflow: hidden; /* Hide overflow */
-      text-overflow: ellipsis; /* Show ellipsis */
+      white-space: normal; /* Allow text wrapping */
+      word-wrap: break-word; /* Break long words if needed */
       cursor: default; /* Indicate non-interactive unless specifically made so */
   }
 
@@ -885,5 +981,37 @@
   .add-event-btn {
     background-color: #dbeafe;
     color: #2563eb;
+  }
+
+  /* Clickable surveyor cells */
+  .surveyor-cell-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .surveyor-cell-clickable:hover {
+    background-color: #f8f9fa !important; /* Light grey hover effect */
+  }
+
+  /* Ensure completed rows still show hover effect but maintain their green background */
+  tbody tr.row-completed .surveyor-cell-clickable:hover {
+    background-color: #d4edda !important; /* Slightly darker green on hover for completed rows */
+  }
+
+  /* Clickable custom date styling */
+  .clickable-custom-date {
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  .clickable-custom-date:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    opacity: 0.9;
+  }
+
+  .clickable-custom-date:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
   }
 </style> 

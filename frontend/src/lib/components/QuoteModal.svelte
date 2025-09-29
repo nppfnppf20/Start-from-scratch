@@ -7,11 +7,10 @@
     type InstructionStatus,
     type Quote,
     type LineItem,
-    uniqueDisciplines,
-    uniqueSurveyTypes,
     uniqueOrganisations,
     uniqueLineItemItems
   } from "$lib/stores/projectStore"; // Import only necessary store functions
+  import QuoteSubmittedModal from './QuoteSubmittedModal.svelte';
 
   // --- Props ---
   export let isOpen: boolean = false;
@@ -24,14 +23,24 @@
   // --- Internal State ---
   let isEditing = false;
   let quoteToEditId: string | null = null;
+  let showConfirmation = false;
 
-  // --- Autocomplete State for Discipline ---
-  let disciplineSuggestions: string[] = [];
-  let showDisciplineSuggestions: boolean = false;
-
-  // --- Autocomplete State for Survey Type ---
-  let surveyTypeSuggestions: string[] = [];
-  let showSurveyTypeSuggestions: boolean = false;
+  const disciplines = [
+    'Agricultural Land and Soil',
+    'Arboriculture',
+    'Contaminated Land',
+    'Ecology',
+    'Fire Safety',
+    'Flood and Drainage',
+    'Geophys',
+    'Glint & Glare',
+    'Heritage',
+    'Landscape and Visual',
+    'PR/Communications and Consultation',
+    'Topographical',
+    'Transport'
+  ];
+  const disciplineOptions = [...disciplines.sort(), 'Other'];
 
   // --- New State for Organisation Autocomplete ---
   let organisationSuggestions: string[] = [];
@@ -50,7 +59,6 @@
   function createInitialFormState() {
     return {
       discipline: '',
-      surveyType: '',
       organisation: '',
       contactName: '',
       email: '',
@@ -77,7 +85,6 @@
           quoteForm = {
               ...createInitialFormState(), // Start fresh but override
               discipline: quoteToEdit.discipline,
-              surveyType: quoteToEdit.surveyType || '',
               organisation: quoteToEdit.organisation,
               contactName: quoteToEdit.contactName,
               email: quoteToEdit.email || '',
@@ -99,84 +106,6 @@
   }
 
   // --- Autocomplete Functions ---
-  function handleDisciplineInput(event: Event) {
-    const input = (event.target as HTMLInputElement).value;
-    quoteForm.discipline = input;
-    
-    if (input.length > 0) {
-      const filtered = $uniqueDisciplines.filter(discipline => 
-        discipline.toLowerCase().includes(input.toLowerCase())
-      );
-      
-      // Add "Add new" option if input doesn't match existing options
-      const isExisting = $uniqueDisciplines.some(discipline => 
-        discipline.toLowerCase() === input.toLowerCase()
-      );
-      
-      if (!isExisting && input.trim() !== '') {
-        disciplineSuggestions = [...filtered, `Add "${input}"`];
-      } else {
-        disciplineSuggestions = filtered;
-      }
-      
-      showDisciplineSuggestions = disciplineSuggestions.length > 0;
-    } else {
-      // Show all options when input is empty
-      disciplineSuggestions = ['n/a', ...$uniqueDisciplines];
-      showDisciplineSuggestions = true;
-    }
-  }
-
-  function selectDiscipline(value: string) {
-    if (value.startsWith('Add "')) {
-      // Extract the custom value from 'Add "custom value"'
-      const customValue = value.slice(5, -1);
-      quoteForm.discipline = customValue;
-    } else {
-      quoteForm.discipline = value;
-    }
-    showDisciplineSuggestions = false;
-  }
-
-  function handleSurveyTypeInput(event: Event) {
-    const input = (event.target as HTMLInputElement).value;
-    quoteForm.surveyType = input;
-    
-    if (input.length > 0) {
-      const filtered = $uniqueSurveyTypes.filter(surveyType => 
-        surveyType.toLowerCase().includes(input.toLowerCase())
-      );
-      
-      // Add "Add new" option if input doesn't match existing options
-      const isExisting = $uniqueSurveyTypes.some(surveyType => 
-        surveyType.toLowerCase() === input.toLowerCase()
-      );
-      
-      if (!isExisting && input.trim() !== '') {
-        surveyTypeSuggestions = [...filtered, `Add "${input}"`];
-      } else {
-        surveyTypeSuggestions = filtered;
-      }
-      
-      showSurveyTypeSuggestions = surveyTypeSuggestions.length > 0;
-    } else {
-      // Show all options when input is empty
-      surveyTypeSuggestions = ['n/a', ...$uniqueSurveyTypes];
-      showSurveyTypeSuggestions = true;
-    }
-  }
-
-  function selectSurveyType(value: string) {
-    if (value.startsWith('Add "')) {
-      // Extract the custom value from 'Add "custom value"'
-      const customValue = value.slice(5, -1);
-      quoteForm.surveyType = customValue;
-    } else {
-      quoteForm.surveyType = value;
-    }
-    showSurveyTypeSuggestions = false;
-  }
-
   function handleOrganisationInput(event: Event) {
     const input = (event.target as HTMLInputElement).value;
     if (input.length > 0) {
@@ -236,6 +165,54 @@
     quoteForm.lineItems = [...quoteForm.lineItems];
   }
 
+  // --- Price input restrictions ---
+  function handleCostKeyDown(event: KeyboardEvent, index: number) {
+    const allowedControlKeys = [
+      'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'
+    ];
+    const key = event.key;
+    const input = event.currentTarget as HTMLInputElement;
+
+    // Block non-numeric characters including exponent and signs
+    if (key === 'e' || key === 'E' || key === '+' || key === '-') {
+      event.preventDefault();
+      return;
+    }
+
+    if (allowedControlKeys.includes(key)) {
+      return; // allow navigation/editing keys
+    }
+
+    if (key === '.') {
+      // Allow only a single decimal point
+      if (input.value.includes('.')) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    // Allow digits only
+    if (!/^[0-9]$/.test(key)) {
+      event.preventDefault();
+    }
+  }
+
+  function handleCostInput(event: Event, index: number) {
+    const input = event.currentTarget as HTMLInputElement;
+    // Keep only digits and at most one dot
+    let sanitized = input.value.replace(/[^0-9.]/g, '');
+    sanitized = sanitized.replace(/\.(?=.*\.)/g, '');
+
+    if (input.value !== sanitized) {
+      input.value = sanitized;
+    }
+
+    const numericValue = sanitized === '' ? 0 : Number(sanitized);
+    quoteForm.lineItems[index].cost = isNaN(numericValue) ? 0 : numericValue;
+    // Trigger reactivity
+    quoteForm.lineItems = [...quoteForm.lineItems];
+  }
+
   // --- Modal Functions ---
   function closeModal() {
     isOpen = false; // Update prop locally (binding handles parent)
@@ -269,8 +246,8 @@
   // --- Form Submission ---
   async function submitQuote() {
     // Validate required fields
-    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName) {
-      alert('Please fill in all required fields (Discipline, Organisation, Contact Name).');
+    if (!quoteForm.discipline || !quoteForm.organisation || !quoteForm.contactName || !quoteForm.email) {
+      alert('Please fill in all required fields (Discipline, Organisation, Contact Name, Email).');
       return;
     }
 
@@ -297,7 +274,6 @@
     // Prepare data for the store/API call
     const quoteDataForStore: Partial<Omit<Quote, 'id' | 'total'>> = {
       discipline: quoteForm.discipline,
-      surveyType: quoteForm.surveyType || undefined,
       organisation: quoteForm.organisation,
       contactName: quoteForm.contactName,
       email: quoteForm.email || undefined,
@@ -323,6 +299,10 @@
         }
 
         if (success) {
+            if (!isEditing) {
+                // Show confirmation modal for new quotes
+                showConfirmation = true;
+            }
             closeModal(); // Close modal on success
             // Parent page reactivity should update the table via store subscription
         } else {
@@ -347,58 +327,14 @@
       <form on:submit|preventDefault={submitQuote}>
           <!-- Form Fields -->
           <div class="form-grid-modal"> <!-- Use grid for better layout -->
-              <div class="form-row" style="position: relative;">
+              <div class="form-row">
                 <label for="discipline">Discipline*</label>
-                <input 
-                  type="text" 
-                  id="discipline" 
-                  bind:value={quoteForm.discipline} 
-                  required 
-                  on:input={handleDisciplineInput}
-                  on:focus={handleDisciplineInput}
-                  on:blur={() => setTimeout(() => showDisciplineSuggestions = false, 150)}
-                  autocomplete="off"
-                  placeholder="Enter or select discipline..."
-                >
-                {#if showDisciplineSuggestions}
-                  <div class="suggestions-list">
-                    {#each disciplineSuggestions as suggestion}
-                      <div 
-                        class="suggestion-item" 
-                        class:add-new={suggestion.startsWith('Add "')}
-                        on:mousedown={() => selectDiscipline(suggestion)}
-                      >
-                        {suggestion}
-                      </div>
+                <select id="discipline" bind:value={quoteForm.discipline} required>
+                  <option value="" disabled>Select a discipline...</option>
+                  {#each disciplineOptions as option}
+                    <option value={option}>{option}</option>
                     {/each}
-                  </div>
-                {/if}
-              </div>
-              <div class="form-row" style="position: relative;">
-                 <label for="surveyType">Survey Type</label>
-                 <input 
-                   type="text" 
-                   id="surveyType" 
-                   bind:value={quoteForm.surveyType} 
-                   on:input={handleSurveyTypeInput}
-                   on:focus={handleSurveyTypeInput}
-                   on:blur={() => setTimeout(() => showSurveyTypeSuggestions = false, 150)}
-                   autocomplete="off"
-                   placeholder="Enter or select survey type..."
-                 >
-                 {#if showSurveyTypeSuggestions}
-                   <div class="suggestions-list">
-                     {#each surveyTypeSuggestions as suggestion}
-                       <div 
-                         class="suggestion-item" 
-                         class:add-new={suggestion.startsWith('Add "')}
-                         on:mousedown={() => selectSurveyType(suggestion)}
-                       >
-                         {suggestion}
-                       </div>
-                     {/each}
-                   </div>
-                 {/if}
+                </select>
               </div>
                <div class="form-row" style="position: relative;">
                  <label for="organisation">Organisation*</label>
@@ -427,8 +363,8 @@
                  <input type="text" id="contactName" bind:value={quoteForm.contactName} required>
                </div>
                <div class="form-row">
-                 <label for="email">Email</label>
-                 <input type="email" id="email" bind:value={quoteForm.email}>
+                 <label for="email">Email*</label>
+                 <input type="email" id="email" bind:value={quoteForm.email} required>
                </div>
                <div class="form-row">
                  <label for="phoneNumber">Phone Number</label>
@@ -472,34 +408,21 @@
                   {/if}
                 </div>
                 <input class="line-item-description" type="text" bind:value={item.description} required={index === 0 || quoteForm.lineItems.length > 1}>
-                <input type="number" placeholder="0.00" step="0.01" min="0" bind:value={item.cost} required={index === 0 || quoteForm.lineItems.length > 1}>
+                <input 
+                  type="text" 
+                  inputmode="decimal" 
+                  placeholder="0.00" 
+                  on:keydown={(e) => handleCostKeyDown(e, index)} 
+                  on:input={(e) => handleCostInput(e, index)} 
+                  required={index === 0 || quoteForm.lineItems.length > 1}
+                >
                 <button type="button" on:click={() => removeLineItem(index)} disabled={quoteForm.lineItems.length <= 1} title="Remove Line Item">-</button>
              </div>
           {/each}
           <button type="button" on:click={addLineItem} class="add-line-item-btn" title="Add Line Item">+ Add Line Item</button>
           <p class="modal-total">Calculated Total: £{quoteTotal.toFixed(2)}</p>
 
-          <!-- SharePoint Upload Section -->
-          <div class="form-row sharepoint-row">
-             <label>Upload quote files via SharePoint:</label>
-             {#if $selectedProject?.sharepointLink}
-               <div class="sharepoint-link-container">
-                 <span 
-                   class="sharepoint-link-text"
-                   on:click={() => window.open($selectedProject.sharepointLink, '_blank')}
-                   title="Click to open SharePoint link"
-                 >
-                   {$selectedProject.sharepointLink}
-                 </span>
-               </div>
-               <div class="sharepoint-spacing"></div>
-             {:else}
-               <div class="sharepoint-link-container">
-                 <span class="no-link-text">No upload link configured</span>
-               </div>
-               <div class="sharepoint-spacing"></div>
-             {/if}
-          </div>
+
 
           <!-- Notes Section -->
           <div class="form-row notes-row">
@@ -525,11 +448,13 @@
   </div>
 {/if}
 
+<QuoteSubmittedModal bind:showModal={showConfirmation} on:close={() => showConfirmation = false} />
+
 <style>
   .modal-backdrop {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0,0,0,0.6);
-    display: flex; justify-content: center; align-items: center; z-index: 100;
+    display: flex; justify-content: center; align-items: center; z-index: 9999;
   }
   .quote-modal-content { /* Use specific class */
     background-color: white; padding: 25px; border-radius: 8px;
@@ -558,6 +483,7 @@
   .modal form textarea {
     width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
     font-size: 0.95em;
+    font-family: inherit;
   }
    .modal form input:focus, .modal form select:focus, .modal form textarea:focus {
        border-color: #007bff;
@@ -709,78 +635,6 @@
     background-color: #e3f2fd;
   }
 
-  .sharepoint-row {
-    grid-column: 1 / -1; /* Span full width */
-    margin-top: 15px;
-    margin-bottom: 25px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
-  }
 
-  .sharepoint-link {
-    color: #007bff; /* Link color */
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .sharepoint-link:hover {
-    text-decoration: underline;
-  }
-
-  .no-link-message {
-    color: #6c757d;
-    font-style: italic;
-  }
-
-  .sharepoint-input {
-    width: 100%;
-    padding: 9px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 0.95em;
-    background-color: #f8f9fa; /* Light background for readability */
-    color: #333;
-  }
-
-  .sharepoint-input:read-only {
-    background-color: #e9ecef; /* Slightly darker background for read-only */
-    cursor: not-allowed;
-  }
-
-  .sharepoint-input.clickable {
-    cursor: pointer;
-    background-color: #f8f9fa; /* Keep lighter background for clickable */
-  }
-
-  .sharepoint-input.clickable:hover {
-    background-color: #e2e6ea; /* Hover effect */
-    border-color: #007bff; /* Blue border on hover */
-  }
-
-  .sharepoint-spacing {
-    height: 10px; /* Space between input and label */
-  }
-
-  .sharepoint-link-container {
-    position: relative;
-    display: inline-block; /* Allow text to be clickable */
-  }
-
-  .sharepoint-link-text {
-    color: #007bff; /* Blue color for the text */
-    text-decoration: none;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .sharepoint-link-text:hover {
-    text-decoration: underline;
-  }
-
-  .no-link-text {
-    color: #6c757d;
-    font-style: italic;
-  }
 
 </style> 

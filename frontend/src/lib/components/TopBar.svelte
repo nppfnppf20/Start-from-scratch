@@ -1,8 +1,14 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/authStore';
+  import { auth0Store } from '$lib/stores/auth0Store';
+  import { getUserRole, userRole } from '$lib/utils/auth';
 
   function handleLogout() {
-    authStore.logout();
+    auth0Store.logout();
+  }
+
+  // Trigger role fetch when user is authenticated
+  $: if ($auth0Store.user) {
+    getUserRole($auth0Store.user);
   }
 </script>
 
@@ -13,11 +19,11 @@
   </div>
   
   <div class="user-section">
-    {#if $authStore.user}
+    {#if $auth0Store.isAuthenticated && $auth0Store.user}
       <div class="user-info">
-        <span class="user-email">{$authStore.user.email}</span>
-        <span class="role-badge" class:admin={$authStore.user.role === 'admin'} class:surveyor={$authStore.user.role === 'surveyor'}>
-          {$authStore.user.role}
+        <span class="user-email">{$auth0Store.user.email}</span>
+        <span class="role-badge" class:admin={$userRole === 'admin'} class:surveyor={$userRole === 'surveyor'} class:client={$userRole === 'client'}>
+          {$userRole}
         </span>
       </div>
       <button class="logout-btn" on:click={handleLogout}>
@@ -93,6 +99,12 @@
     background-color: #ebf4ff;
     color: #2c5282;
     border: 1px solid #90cdf4;
+  }
+
+  .role-badge.client {
+    background-color: #f0fff4;
+    color: #2f855a;
+    border: 1px solid #9ae6b4;
   }
 
   .logout-btn {

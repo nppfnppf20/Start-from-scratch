@@ -24,7 +24,6 @@ build
 .env
 .env.*
 !.env.example
-.env.local
 
 # Optional Log files
 logs

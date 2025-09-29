@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+// We'll dynamically import 'jose' inside the handler to avoid ESM/CJS interop issues
 
 // Helper function to determine role based on email
 function determineRole(email) {
@@ -9,14 +11,25 @@ function determineRole(email) {
     return adminEmails.includes(email.toLowerCase()) ? 'admin' : 'surveyor';
 }
 
-// Helper function to validate password for role
 function validateRolePassword(role, password) {
-    if (role === 'admin') {
-        return password === process.env.ADMIN_PASSWORD;
-    } else if (role === 'surveyor') {
-        return password === process.env.SURVEYOR_PASSWORD;
+    // NOTE: Ensure these env vars are set in Render!
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+    const SURVEYOR_PASSWORD = process.env.SURVEYOR_PASSWORD;
+    // Support legacy/alternate env var name for client password
+    const CLIENT_PASSWORD = process.env.CLIENT_PASSWORD || process.env.CLIENT_DEFAULT_PASSWORD; // Assuming clients also have a shared password
+
+    if (!password) return false;
+
+    switch (role) {
+        case 'admin':
+            return password === ADMIN_PASSWORD;
+        case 'surveyor':
+            return password === SURVEYOR_PASSWORD;
+        case 'client':
+            return password === CLIENT_PASSWORD;
+        default:
+            return false; // Deny by default
     }
-    return false;
 }
 
 // @route   POST /api/auth/register
@@ -56,12 +69,12 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         // Find user by email
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        // Validate password against role-based shared password
+        // Use role-based password validation instead of individual passwords
         if (!validateRolePassword(user.role, password)) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
@@ -79,7 +92,7 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET,
             (err, token) => {
                 if (err) throw err;
-                res.json({ token });
+                res.json({ token, user: { email: user.email, role: user.role } });
             }
         );
     } catch (err) {
@@ -88,4 +101,4 @@ router.post('/login', async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;

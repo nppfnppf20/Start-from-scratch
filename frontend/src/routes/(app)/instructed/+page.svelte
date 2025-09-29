@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import {
     selectedProject, 
     currentProjectQuotes,
@@ -13,37 +14,71 @@
   import NotesModal from "$lib/components/NotesModal.svelte";
   import InstructedDocumentUploadModal from "$lib/components/InstructedDocumentUploadModal.svelte";
   import { browser } from '$app/environment'; // Ensure browser check is available
-  
-  // --- New: Reference to the scrollable table container ---
-  let tableContainerElement: HTMLDivElement; // UNCOMMENTED
+  import LineItemsModal from '$lib/components/LineItemsModal.svelte';
+  import DataTable, { type TableColumn } from '$lib/components/DataTable.svelte';
 
-  // --- New: Scroll functions ---
-  function scrollLeft() { // UNCOMMENTED
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: -150, behavior: 'smooth' });
-    }
+  // DataTable event handlers
+  function handleAction(event: CustomEvent) {
+    // The instructed table doesn't have Edit/Delete actions currently
+    // This is kept for potential future actions
+    const { action, item } = event.detail;
+    console.log('Action triggered:', action, item);
   }
-
-  function scrollRight() { // UNCOMMENTED
-    if (tableContainerElement) {
-      tableContainerElement.scrollBy({ left: 150, behavior: 'smooth' });
-    }
-  }
-  // ---------
 
   // Modal state for Notes
   let showNotesModal = false;
   let currentQuoteForNotes: Quote | null = null;
   let currentOperationalNotes: string | undefined = ''; // Renamed for clarity
 
-  // Modal state for Hold Ups Notes
-  let showHoldUpNotesModal = false;
-  let currentQuoteForHoldUpNotes: Quote | null = null;
-  let currentHoldUpNotes: string | undefined = '';
+  // Modal state for Dependencies Notes
+  let showDependenciesNotesModal = false;
+  let currentQuoteForDependenciesNotes: Quote | null = null;
+  let currentDependenciesNotes: string | undefined = '';
 
   // Modal state for Document Upload
   let showDocumentUploadModal = false;
   let currentQuoteForUpload: Quote | null = null;
+
+  // --- NEW: Line Items Modal State ---
+  let showLineItemsModal = false;
+  let selectedQuoteForLineItems: Quote | null = null;
+
+  // Define table columns for DataTable
+  const columns: TableColumn[] = [
+    {
+      key: 'organisation',
+      label: 'Organisation',
+      sortable: true
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      sortable: true
+    },
+    {
+      key: 'lineItems',
+      label: 'Line Items',
+      align: 'center' as const
+    },
+    {
+      key: 'quote',
+      label: 'Quote Amt.',
+      align: 'right' as const,
+      sortable: true
+    },
+    {
+      key: 'workStatus',
+      label: 'Work Status'
+    },
+    {
+      key: 'dependencies',
+      label: 'Dependencies'
+    },
+    {
+      key: 'notes',
+      label: 'Notes'
+    }
+  ];
 
   // Filter for instructed quotes based on selected project
   $: instructedQuotes = $currentProjectQuotes.filter(quote =>
@@ -80,7 +115,7 @@
   }
   
   // Work status options for dropdown
-  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'completed', 'TRP Reviewing', 'Client reviewing'];
+  const workStatuses: WorkStatus[] = ['not started', 'in progress', 'TRP Reviewing', 'Client reviewing', 'Back with author', 'completed'];
 
   // --- Notes Modal Functions ---
   function openNotesModal(quote: Quote) {
@@ -105,27 +140,27 @@
     closeNotesModal();
   }
 
-  // --- Hold Up Notes Modal Functions ---
-  function openHoldUpNotesModal(quote: Quote) {
+  // --- Dependencies Notes Modal Functions ---
+  function openDependenciesNotesModal(quote: Quote) {
     const log = findLog(quote.id);
-    currentQuoteForHoldUpNotes = quote;
-    currentHoldUpNotes = log?.holdUpNotes;
-    showHoldUpNotesModal = true;
+    currentQuoteForDependenciesNotes = quote;
+    currentDependenciesNotes = log?.dependencies;
+    showDependenciesNotesModal = true;
   }
 
-  function closeHoldUpNotesModal() {
-    showHoldUpNotesModal = false;
-    currentQuoteForHoldUpNotes = null;
-    currentHoldUpNotes = '';
+  function closeDependenciesNotesModal() {
+    showDependenciesNotesModal = false;
+    currentQuoteForDependenciesNotes = null;
+    currentDependenciesNotes = '';
   }
 
-  async function handleSaveHoldUpNotes(event: CustomEvent<{ notes: string }>) {
-    if (!$selectedProject || !currentQuoteForHoldUpNotes || !browser) return;
+  async function handleSaveDependenciesNotes(event: CustomEvent<{ notes: string }>) {
+    if (!$selectedProject || !currentQuoteForDependenciesNotes || !browser) return;
     
     const newNotes = event.detail.notes;
-    console.log(`Saving hold up notes for quote ${currentQuoteForHoldUpNotes.id}`);
-    await upsertInstructionLog(currentQuoteForHoldUpNotes.id, { holdUpNotes: newNotes });
-    closeHoldUpNotesModal();
+    console.log(`Saving dependencies notes for quote ${currentQuoteForDependenciesNotes.id}`);
+    await upsertInstructionLog(currentQuoteForDependenciesNotes.id, { dependencies: newNotes });
+    closeDependenciesNotesModal();
   }
 
   // --- Document Upload Modal Functions ---
@@ -164,6 +199,16 @@
     await upsertInstructionLog(quoteId, { uploadedWorks: updatedWorksArray });
 
     closeDocumentUploadModal(); // Close modal on successful upload
+  }
+
+  // --- Line Items Modal Functions ---
+  function openLineItemsModal(quote: Quote) {
+    selectedQuoteForLineItems = quote;
+    showLineItemsModal = true;
+  }
+  function closeLineItemsModal() {
+    showLineItemsModal = false;
+    selectedQuoteForLineItems = null;
   }
 
   // Helper function to get notes preview
@@ -259,152 +304,84 @@
 </script>
 
 <div class="instructed-container">
-  <h1>Instructed Surveyors</h1>
+  <PageHeader
+    title="Instructed Surveyors"
+    subtitle={$selectedProject ? `Surveyors for ${$selectedProject.name}` : 'Please select a project'}
+  />
   
   {#if $selectedProject}
-    <div class="instructed-header">
-      <h2>Surveyors for {$selectedProject.name}</h2>
-      <p>Tracking operational progress for instructed quotes.</p>
-    </div>
     
     {#if instructedQuotes.length > 0}
-      <div class="table-scroll-wrapper">
-          <button class="scroll-btn scroll-btn-left" on:click={scrollLeft} aria-label="Scroll table left">←</button>
-          <div class="table-container" bind:this={tableContainerElement}>
-        <table>
-          <thead>
-            <tr>
-              <th>Organisation</th>
-              <th>Contact</th>
-              <th>Email</th>
-              <th>Survey Type</th>
-              <th>Quote Amt.</th>
-              <th>Work Status</th>
-              <th>Dates</th>
-              <th>Hold Ups</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each instructedQuotes as quote (quote.id)}
-              {@const log = findLog(quote.id)} 
-              {@const currentWorkStatus = log?.workStatus || 'not started'}
-              <tr class:row-completed={currentWorkStatus === 'completed'}>
-                <td>{quote.organisation}</td>
-                <td>{quote.contactName}</td>
-                <td>
-                  {#if quote.email}
-                    <a href="mailto:{quote.email}">{quote.email}</a>
-                  {:else}
-                    N/A
-                  {/if}
-                </td>
-                <td>{quote.surveyType || 'N/A'}</td>
-                <td>
-                  {#if quote.instructionStatus === 'partially instructed' && quote.partiallyInstructedTotal !== undefined}
-                    £{quote.partiallyInstructedTotal.toFixed(2)} (Partial)
-                  {:else}
-                    £{quote.total.toFixed(2)}
-                  {/if}
-                </td>
-                <td>
-                  <div class="status-dropdown-container">
-                     <select
-                        class="work-status-dropdown {currentWorkStatus.toLowerCase().replace(/\s+/g, '-')}"
-                        value={currentWorkStatus}
-                        on:change={(e) => handleWorkStatusChange(quote.id, e.currentTarget.value as WorkStatus)}
-                        title="Set work status"
-                      >
-                        {#each workStatuses as status}
-                          <option value={status}>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </option>
-                        {/each}
-                     </select>
-                  </div>
-                </td>
-                <td>
-                  <div class="date-cell-group">
-                    <label for="site-visit-{quote.id}" class="date-label standard-date-label">Site Visit</label>
-                    <input
-                        id="site-visit-{quote.id}"
-                        type="date"
-                        class="date-input"
-                        value={formatDateForInput(log?.siteVisitDate)}
-                        on:change={(e: Event & { currentTarget: HTMLInputElement }) => handleDateUpdate(quote.id, 'siteVisitDate', e.currentTarget.value)}
-                        title="Set site visit date"
-                    />
-                  </div>
-                  <div class="date-cell-group">
-                    <label for="report-draft-{quote.id}" class="date-label standard-date-label">Draft Report Expected</label>
-                    <input
-                        id="report-draft-{quote.id}"
-                        type="date"
-                        class="date-input"
-                        value={formatDateForInput(log?.reportDraftDate)}
-                        on:change={(e: Event & { currentTarget: HTMLInputElement }) => handleDateUpdate(quote.id, 'reportDraftDate', e.currentTarget.value)}
-                        title="Set report draft date"
-                    />
-                  </div>
-                  <!-- Show new custom date inputs when adding -->
-                  {#if log?.customDates && log.customDates.length > 0}
-                    {#each log.customDates as customDate (customDate.id)}
-                                             <div class="date-cell-group custom-date-group">
-                         <div class="custom-date-title-row">
-                           <input
-                             type="text"
-                             placeholder="Date Title"
-                             class="custom-date-title-input"
-                             value={customDate.title}
-                             on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'title', e.currentTarget.value)}
-                             title="Edit custom date title"
-                           />
-                         </div>
-                         <div class="custom-date-input-row">
-                           <input
-                             type="date"
-                             class="date-input"
-                             value={formatDateForInput(customDate.date)}
-                             on:change={(e) => handleCustomDateChange(quote.id, customDate.id, 'date', e.currentTarget.value)}
-                             title="Edit custom date"
-                           />
-                           <button
-                             class="delete-custom-date-button"
-                             title="Delete custom date"
-                             on:click={() => handleDeleteCustomDate(quote.id, customDate.id)}
-                           >
-                             &times;
-                           </button>
-                         </div>
-                       </div>
-                    {/each}
-                  {/if}
-                  
-                  <button 
-                      class="add-custom-date-button"
-                      on:click={() => handleAddCustomDate(quote.id)}
-                      title="Add a new custom date entry"
-                   >
-                     + Add Date
-                  </button>
-                </td>
-                <td>
-                  <button class="notes-button" on:click={() => openHoldUpNotesModal(quote)} title="Edit hold up notes">
-                    {getNotesPreview(log?.holdUpNotes)}
-                  </button>
-                </td>
-                <td>
-                   <button class="notes-button" on:click={() => openNotesModal(quote)} title="Edit operational notes">
-                        {getNotesPreview(log?.operationalNotes)}
-                   </button>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-          </div>
-          <button class="scroll-btn scroll-btn-right" on:click={scrollRight} aria-label="Scroll table right">→</button>
-      </div>
+      <DataTable
+        data={instructedQuotes}
+        {columns}
+        searchPlaceholder="Search by organisation, contact, or notes..."
+        emptyMessage="No instructed surveyors found for this project."
+        showSearch={true}
+        showActions={false}
+        minWidth="1000px"
+        on:action={handleAction}
+      >
+        <svelte:fragment slot="cell" let:column let:item let:index>
+          {@const log = findLog(item.id)}
+          {@const currentWorkStatus = log?.workStatus || 'not started'}
+
+          {#if column.key === 'contact'}
+            <div class="contact-name">{item.contactName}</div>
+            {#if item.email}
+              <a href="mailto:{item.email}" class="contact-email">{item.email}</a>
+            {/if}
+          {:else if column.key === 'lineItems'}
+            <button
+              type="button"
+              class="line-items-button"
+              title="View Line Items"
+              on:click|stopPropagation={() => openLineItemsModal(item)}
+              aria-label={`View ${item.lineItems.length} line items`}
+            >
+              {item.lineItems.length}
+              <span class="plus-sign">+</span>
+            </button>
+          {:else if column.key === 'quote'}
+            {#if item.instructionStatus === 'partially instructed' && item.partiallyInstructedTotal !== undefined}
+              £{item.partiallyInstructedTotal.toFixed(2)} (Partial)
+            {:else}
+              £{item.total.toFixed(2)}
+            {/if}
+          {:else if column.key === 'workStatus'}
+            <select
+              class="work-status-dropdown {currentWorkStatus.toLowerCase().replace(/\s+/g, '-')}"
+              value={currentWorkStatus}
+              on:change|stopPropagation={(e) => handleWorkStatusChange(item.id, e.currentTarget.value as WorkStatus)}
+              title="Set work status"
+            >
+              {#each workStatuses as status}
+                <option value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              {/each}
+            </select>
+          {:else if column.key === 'dependencies'}
+            <button
+              class="notes-button"
+              on:click|stopPropagation={() => openDependenciesNotesModal(item)}
+              title="Edit dependencies notes"
+            >
+              {getNotesPreview(log?.dependencies)}
+            </button>
+          {:else if column.key === 'notes'}
+            <button
+              class="notes-button"
+              on:click|stopPropagation={() => openNotesModal(item)}
+              title="Edit operational notes"
+            >
+              {getNotesPreview(log?.operationalNotes)}
+            </button>
+          {:else}
+            {item[column.key] ?? '-'}
+          {/if}
+        </svelte:fragment>
+      </DataTable>
     {:else}
       <p>No instructed surveyors found for this project.</p>
     {/if}
@@ -424,17 +401,23 @@
   />
 {/if}
 
-{#if showHoldUpNotesModal && currentQuoteForHoldUpNotes}
+{#if showDependenciesNotesModal && currentQuoteForDependenciesNotes}
   <NotesModal
-    initialNotes={currentHoldUpNotes}
-    organisationName={currentQuoteForHoldUpNotes.organisation}
-    on:save={handleSaveHoldUpNotes}
-    on:cancel={closeHoldUpNotesModal}
+    initialNotes={currentDependenciesNotes}
+    organisationName={currentQuoteForDependenciesNotes.organisation}
+    on:save={handleSaveDependenciesNotes}
+    on:cancel={closeDependenciesNotesModal}
   />
 {/if}
 
-<!-- Add log before the check -->
-{console.log("Rendering check for Document Upload Modal:", showDocumentUploadModal, currentQuoteForUpload)} 
+{#if showLineItemsModal && selectedQuoteForLineItems}
+  <LineItemsModal 
+    items={selectedQuoteForLineItems.lineItems} 
+    organisationName={selectedQuoteForLineItems.organisation} 
+    on:close={closeLineItemsModal} 
+  />
+{/if}
+
 {#if showDocumentUploadModal && currentQuoteForUpload}
   {@const logForModal = findLog(currentQuoteForUpload.id)}
   <InstructedDocumentUploadModal
@@ -461,12 +444,14 @@
     --status-trp-reviewing-color: #004085;
     --status-client-reviewing-bg: #e2d9f3;
     --status-client-reviewing-color: #493267;
+    --status-back-with-author-bg: #fff0e6;
+    --status-back-with-author-color: #a75d00;
   }
 
   /* General page styling (assumed globally applied) */
 
   .instructed-container {
-    padding: 2rem 1rem; /* Match general-info padding */
+    padding: 1rem 2rem;
   }
   
   /* Headings */
@@ -495,72 +480,19 @@
       font-size: 0.95rem;
   }
   
-  /* Table Styling */
-  .table-container { /* Renamed from quotes-table-container */
-    overflow-x: auto; 
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e2e8f0;
-    margin-bottom: 2rem; 
-  }
-  
-  .table-container table { /* Target table within container */
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem; /* MATCHING QUOTES */
-    white-space: nowrap; 
-  }
-  
-  .table-container th,
-  .table-container td {
-    padding: 0.9rem 1.2rem; /* MATCHING QUOTES */
-    text-align: left;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: middle;
-    white-space: nowrap; 
+  /* Contact styling for DataTable */
+  .contact-name {
+    font-weight: 500;
+    color: #1a202c;
   }
 
-  .table-container td {
-    color: #4a5568; 
-  }
-  
-  .table-container th {
-    background-color: #f7fafc; 
-    font-weight: 600;
-    color: #4a5568;
-    text-transform: uppercase;
-    font-size: 0.8rem; /* MATCHING QUOTES */
-    letter-spacing: 0.05em;
-  }
-
-  .table-container tbody tr:last-child td {
-    border-bottom: none; 
-  }
-
-  .table-container tbody tr:hover {
-    background-color: #f7fafc; 
-  }
-
-  /* Completed Row Styling */
-.row-completed {
-    background-color: #f0fff4; /* Light green background */
-  }
-  .row-completed td {
-    color: #38a169; /* Darker green text */
-}
-.row-completed:hover {
-      background-color: #e6fffa; /* Slightly different green on hover */
-  }
-
-  /* Email Link */
-  td a[href^="mailto:"] {
-      color: #3182ce;
+  .contact-email {
+    font-size: 0.9em;
+    color: #718096;
     text-decoration: none;
-      transition: color 0.2s ease-in-out;
   }
-  td a[href^="mailto:"]:hover {
-      color: #2b6cb0;
+
+  .contact-email:hover {
     text-decoration: underline;
   }
 
@@ -570,25 +502,21 @@
   }
 
   .work-status-dropdown {
-    padding: 8px 12px;
+    padding: 0.3rem 0.5rem; /* SMALLER PADDING */
+    border-radius: 5px;
     border: 1px solid #cbd5e0;
-    border-radius: 15px; /* Pill shape */
-    font-size: 0.85rem; /* MATCHING QUOTES (like instruction-status-select) */
-    background-color: #fff;
+    font-size: 0.85rem; /* SMALLER FONT */
+    background-color: white;
     cursor: pointer;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
-    min-width: 120px; 
+    min-width: 120px;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E"); 
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 1em 1em;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
   }
   .work-status-dropdown:focus {
       border-color: #4299e1; 
@@ -622,6 +550,11 @@
   color: var(--status-client-reviewing-color);
   border-color: var(--status-client-reviewing-bg);
 }
+.work-status-dropdown.back-with-author {
+  background-color: var(--status-back-with-author-bg);
+  color: var(--status-back-with-author-color);
+  border-color: var(--status-back-with-author-bg);
+}
 
   /* Date Inputs Styling */
   td > .date-cell-group { /* Targeting the div directly inside td for dates */
@@ -632,20 +565,20 @@
 }
   .date-label { /* Styling for labels like 'Site Visit' */
     display: block;
-    font-size: 0.8rem;
-    color: #718096;
-    margin-bottom: 0.25rem;
+    font-size: 0.75rem; /* SMALLER LABEL */
+    color: #4a5568;
+    margin-bottom: 2px;
     font-weight: 500;
 }
   /* .standard-date-label can inherit from .date-label or have specific styles */
 
   input.date-input { /* Styling for the date input fields */
-    padding: 0.4rem 0.6rem;
+    padding: 0.25rem 0.4rem; /* SMALLER PADDING */
     border: 1px solid #cbd5e0;
     border-radius: 4px;
-    font-size: 0.85rem; /* MATCHING QUOTES (input-like elements) */
+    font-size: 0.85rem; /* SMALLER FONT */
     background-color: #fff;
-    width: auto; /* Don't force full width */
+    width: 150px;
     min-width: 130px; /* Ensure a reasonable minimum width */
   }
   input.date-input:focus {
@@ -664,10 +597,10 @@
   .notes-button {
     width: 100%;
     max-width: 200px; /* Limit maximum width */
-    padding: 10px;
-    background-color: #f1f1f1;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.3rem 0.6rem; /* SMALLER PADDING */
+    font-size: 0.8rem; /* SMALLER FONT */
+    border-radius: 5px;
+    border: 1px solid #cbd5e0;
     text-align: left;
     cursor: pointer;
     font-style: italic;
@@ -1157,45 +1090,54 @@
     color: var(--status-client-reviewing-color);
   }
 
-  /* --- Table Scroll Wrapper and Buttons --- */
-  .table-scroll-wrapper {
-    position: relative; /* Context for absolute positioning of buttons */
-    margin-bottom: 2rem; /* Keep space below */
-  }
 
-  .scroll-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%); /* Center vertically */
-    z-index: 10;
-    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
-    border: 1px solid #cbd5e0;
-    border-radius: 50%; /* Circle */
-    width: 36px;
-    height: 36px;
-    font-size: 1.2rem; /* Slightly adjusted arrow size for better fit */
-    cursor: pointer;
+  .page-description {
+    margin-bottom: 1.5rem;
     color: #4a5568;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    display: inline-flex; /* Use inline-flex */
-    align-items: center;    /* Flexbox: Vertically center content */
-    justify-content: center; /* Flexbox: Horizontally center content */
-    padding: 0; /* Remove padding if flex is centering */
   }
 
-  .scroll-btn:hover {
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  .line-items-button {
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 9999px; /* Pill shape */
+    padding: 0.2rem 0.6rem; /* Adjusted padding */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: background-color 0.2s, border-color 0.2s;
+    font-size: 0.75rem; /* Smaller font */
+  }
+  
+  .line-items-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
   }
 
-  .scroll-btn-left {
-    left: -18px; /* Position halfway outside the container */
+  .plus-sign {
+    font-weight: bold;
+  }
+  
+  .contact-name {
+    font-weight: 500;
+    color: #1a202c;
   }
 
-  .scroll-btn-right {
-    right: -18px; /* Position halfway outside the container */
+  .contact-email {
+    font-size: 0.9em;
+    color: #718096;
+    text-decoration: none;
   }
-  /* ------------------------------------------- */
 
+  .contact-email:hover {
+    text-decoration: underline;
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .text-center {
+    text-align: center;
+  }
 </style> 

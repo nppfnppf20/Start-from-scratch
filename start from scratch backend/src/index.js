@@ -4,6 +4,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const cors = require('cors'); // Import the cors package
+const helmet = require('helmet');
 
 // +++ Correct dotenv path +++
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -12,14 +13,20 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const projectRoutes = require('./routes/projects');
 const quoteRoutes = require('./routes/quotes'); // Import quote routes
 const instructionLogRoutes = require('./routes/instructionLogs'); // Import new routes
-const surveyorFeedbackRoutes = require('./routes/surveyorFeedback'); // *** ADD THIS LINE ***
+const { router: surveyorFeedbackRoutes } = require('./routes/surveyorFeedback'); // *** Destructure router from export ***
+const surveyorOrganisationsRoutes = require('./routes/surveyorOrganisations');
 const uploadRoutes = require('./routes/uploads');
 const documentRoutes = require('./routes/documents');
 const programmeEventRoutes = require('./routes/programmeEvents.js'); // Adjust path if needed
 const authRoutes = require('./routes/auth');
+const pendingSurveyorRoutes = require('./routes/pendingSurveyors');
 const { protect, authorize } = require('./middleware/authMiddleware'); // Import new middleware
 const User = require('./models/User'); // Import User model for seeding
-console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
+const userRoutes = require('./routes/users');
+const clientOrganisationsRoutes = require('./routes/clientOrganisations');
+const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
+const officeRoutes = require('./routes/office');
+// console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -70,20 +77,63 @@ const seedAdminUsers = async () => {
 connectDB();
 
 // --- CORS Configuration ---
-// If RENDER_FRONTEND_URLS has a value, use it. Otherwise, allow all for local dev.
+const RENDER_FRONTEND_URLS = process.env.RENDER_FRONTEND_URLS; // You'll set this in Render's env vars for the backend
+
 const corsOptions = {
-  origin: process.env.RENDER_FRONTEND_URLS || "*",
-  optionsSuccessStatus: 200,
-  credentials: true, // This is important for sending cookies or authorization headers.
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: 'Content-Type, Authorization'
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://trpdashboard.co.uk',
+      'https://www.trpdashboard.co.uk'
+    ];
+    
+    if (RENDER_FRONTEND_URLS) {
+      // Split the comma-separated string into an array of origins
+      allowedOrigins.push(...RENDER_FRONTEND_URLS.split(',').map(url => url.trim()));
+    }
+    // Allow local development origins if not in a 'production' environment
+    // You might set NODE_ENV=production in Render's environment variables
+    if (process.env.NODE_ENV !== 'production') {
+      allowedOrigins.push("http://localhost:5173"); // SvelteKit's default dev port
+      allowedOrigins.push("http://127.0.0.1:5173"); // Another common localhost variant
+      allowedOrigins.push("https://localhost:3000"); // Office plugins often run on localhost:3000
+      allowedOrigins.push("http://localhost:3000"); // Office plugins (non-SSL)
+      // Add any other local frontend ports you might use
+    }
+    
+    // Allow Office 365 and related Microsoft domains for Office plugins (always allowed)
+    allowedOrigins.push("https://localhost"); // Office plugins on localhost
+    allowedOrigins.push("http://localhost:3000"); // Office plugins (non-SSL)
+    allowedOrigins.push("https://localhost:3000"); // Office plugins (SSL)
+    allowedOrigins.push("https://word-edit.officeapps.live.com"); // Word Online
+    allowedOrigins.push("https://excel-edit.officeapps.live.com"); // Excel Online
+    allowedOrigins.push("https://powerpoint-edit.officeapps.live.com"); // PowerPoint Online
+    allowedOrigins.push("https://outlook-sdf.officeapps.live.com"); // Outlook
+    allowedOrigins.push("https://teams.microsoft.com"); // Teams
+    // Add pattern for any *.officeapps.live.com subdomain if needed
+
+    // Allow requests with no origin (like Postman, server-to-server) or from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Request from origin '${origin}' blocked.`); // Optional: Log blocked origins
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
 app.use(cors(corsOptions));
-
-// This is also important to handle preflight requests
-app.options('*', cors(corsOptions));
-
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -105,12 +155,19 @@ app.use('/api/instruction-logs', protect, instructionLogRoutes);
 app.use('/api/surveyor-feedback', protect, surveyorFeedbackRoutes);
 app.use('/api/documents', protect, documentRoutes);
 app.use('/api/programme-events', protect, programmeEventRoutes);
+app.use('/api/surveyor-organisations', protect, surveyorOrganisationsRoutes);
+app.use('/api/pending-surveyors', protect, pendingSurveyorRoutes);
+app.use('/api/fee-quote-logs', protect, feeQuoteLogRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/client-organisations', clientOrganisationsRoutes);
 
 // Public routes
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
 
+// Office plugin routes (internal use only - no JWT protection)
+app.use('/api/office', officeRoutes);
 
-// --- Start Server ---\n
+
+// --- Start Server ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-

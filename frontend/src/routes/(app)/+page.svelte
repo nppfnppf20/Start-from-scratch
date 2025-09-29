@@ -1,10 +1,15 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/PageHeader.svelte";
   import { selectedProject, updateProject } from "$lib/stores/projectStore";
-  import { authStore } from "$lib/stores/authStore";
+  import { auth0Store } from "$lib/stores/auth0Store";
+  import { getUserRole, userRole } from "$lib/utils/auth";
   import { get } from 'svelte/store';
 
   // Check if user is a surveyor (read-only access)
-  $: isSurveyor = $authStore.user?.role === 'surveyor';
+  $: if ($auth0Store.user) {
+    getUserRole($auth0Store.user);
+  }
+  $: isSurveyor = $userRole === 'surveyor';
 
   // Save state management
   let saving = false;
@@ -113,37 +118,34 @@
 </script>
 
 <div class="page-container">
-  <!-- Header with title and save button -->
-  <div class="page-header">
-    <h1>General Project Information</h1>
-    {#if $selectedProject}
-      <h2>Project information for {$selectedProject.name}</h2>
-    {/if}
-  </div>
+  <PageHeader
+    title="General Project Information"
+    subtitle={$selectedProject ? `Project information for ${$selectedProject.name}` : undefined}
+  >
+    <div slot="actions" class="header-actions-wrapper">
+      {#if $selectedProject?.updatedAt}
+        <div class="last-saved-info">
+          {formatLastSaved($selectedProject.updatedAt)}
+        </div>
+      {/if}
+
+      {#if $selectedProject && !isSurveyor}
+        <button
+          type="button"
+          class="save-button-header"
+          class:saving={saving}
+          class:saved={justSaved}
+          on:click={handleSubmit}
+          disabled={saving}
+        >
+          {buttonText}
+        </button>
+      {/if}
+    </div>
+  </PageHeader>
 
   {#if $selectedProject}
     <div class="general-info">
-      <div class="info-header">
-        {#if $selectedProject.updatedAt}
-          <div class="last-saved-info">
-            {formatLastSaved($selectedProject.updatedAt)}
-          </div>
-        {/if}
-
-        {#if !isSurveyor}
-          <button
-            type="button"
-            class="save-button-header"
-            class:saving={saving}
-            class:saved={justSaved}
-            on:click={handleSubmit}
-            disabled={saving}
-          >
-            {buttonText}
-          </button>
-        {/if}
-      </div>
-
       {#if isSurveyor}
         <div class="read-only-notice">
           <p>Read only</p>
@@ -355,30 +357,19 @@
               </div>
               
               <div class="form-group">
-                  <label for="accessContact">Access Contact</label>
-                <input type="text" id="accessContact" name="accessContact" bind:value={$selectedProject.accessContact} readonly={isSurveyor} />
+                  <label for="accessContact">Access Contact Details</label>
+                <textarea id="accessContact" name="accessContact" rows="3" bind:value={$selectedProject.accessContact} readonly={isSurveyor}></textarea>
               </div>
               
               <div class="form-group">
                   <label for="parkingDetails">Parking Details</label>
-                <textarea id="parkingDetails" name="parkingDetails" rows="2" bind:value={$selectedProject.parkingDetails} readonly={isSurveyor}></textarea>
+                <textarea id="parkingDetails" name="parkingDetails" rows="3" bind:value={$selectedProject.parkingDetails} readonly={isSurveyor}></textarea>
               </div>
               
-              <div class="form-group">
-                  <label>ATV Use?</label>
-                <div class="radio-group">
-                  <label class="radio-label">
-                    <input type="radio" name="atvUse" value="yes" bind:group={$selectedProject.atvUse} disabled={isSurveyor} /> Yes
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" name="atvUse" value="no" bind:group={$selectedProject.atvUse} disabled={isSurveyor} /> No
-                  </label>
-                </div>
-              </div>
               
               <div class="form-group">
                   <label for="additionalNotes">Additional Notes</label>
-                <textarea id="additionalNotes" name="additionalNotes" rows="3" bind:value={$selectedProject.additionalNotes} readonly={isSurveyor}></textarea>
+                <textarea id="additionalNotes" name="additionalNotes" rows="4" bind:value={$selectedProject.additionalNotes} readonly={isSurveyor}></textarea>
               </div>
               
               <div class="form-group">
@@ -388,20 +379,20 @@
             </div>
           </section>
           
-          <!-- Bottom Save Button -->
           {#if !isSurveyor}
-            <div class="bottom-save-container">
-              <button 
-                type="button" 
-                class="save-button" 
-                class:saving={saving}
-                class:saved={justSaved}
-                on:click={handleSubmit}
-                disabled={saving}
-              >
-                {buttonText}
-              </button>
-            </div>
+          <!-- Save Button at the bottom -->
+          <div class="bottom-save-container">
+            <button 
+              type="button" 
+              class="save-button" 
+              class:saving={saving}
+              class:saved={justSaved}
+              on:click={handleSubmit}
+              disabled={saving}
+            >
+              {buttonText}
+            </button>
+          </div>
           {/if}
         </form>
       </div>
@@ -415,50 +406,19 @@
 
 <style>
   .page-container {
-    padding: 2rem 1rem;
+    padding: 1rem 2rem;
+  }
+
+  .header-actions-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
   }
 
   /* General page styling */
   :global(body) { /* Apply to body for overall background */
     background-color: #f8f9fa; /* Light grey background like the dashboard */
     font-family: 'Inter', sans-serif; /* Common modern sans-serif font */
-  }
-
-  /* Page Header Layout */
-  .page-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-  }
-
-  .info-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .title-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .page-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #1a202c;
-  }
-
-  .page-header h2 {
-    margin: 1.75rem 0 0 0;
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: #2d3748;
-    border-bottom: none;
   }
 
   .last-saved-info {
@@ -505,10 +465,10 @@
 
   /* General Info Container */
   .general-info {
-    padding: 1.5rem;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
   }
   
   h1 {
@@ -573,6 +533,19 @@
     font-family: inherit;
     background-color: #fff; /* Ensure white background */
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
+    height: 3rem; /* Fixed height for consistency */
+    box-sizing: border-box;
+    appearance: none; /* Remove default styling */
+  }
+
+  /* Specific styling for select dropdowns */
+  select {
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="5" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4L2 0zM2 5L0 3h4L2 5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+    cursor: pointer;
   }
 
   input[type="text"]:focus,
@@ -639,8 +612,25 @@
   textarea {
     resize: vertical;
     min-height: 80px; /* Taller default height */
+    height: auto; /* Override fixed height for textareas */
   }
   
+  .read-only-notice {
+    display: inline-block;
+    background-color: #f7fafc; /* Light, neutral grey */
+    color: #4a5568;            /* Darker grey for text, matches labels */
+    border: 1px solid #e2e8f0; /* Subtle grey border, matches other elements */
+    padding: 0.5rem 1rem;      /* More fitting padding for a smaller element */
+    border-radius: 6px;        /* Consistent with buttons */
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+
+  .read-only-notice p {
+    margin: 0; /* Remove default paragraph margin */
+  }
+
+  /* Form Section and Grid Layout */
   .no-project-selected {
     text-align: center;
     margin: 3rem auto; /* More margin */
@@ -728,20 +718,6 @@
   }
   .save-button.saved {
     background-color: #38a169; /* Brighter green when saved */
-  }
-
-  .read-only-notice {
-    background-color: #fed7d7;
-    color: #c53030;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-bottom: 1.5rem;
-  }
-
-  .read-only-notice p {
-    margin: 0;
   }
 
   /* SharePoint Link Styles */
