@@ -46,6 +46,13 @@
             width: '150px'
         },
         {
+            key: 'location',
+            label: 'Location',
+            sortable: true,
+            className: 'location-cell',
+            width: '120px'
+        },
+        {
             key: 'contacts',
             label: 'Contacts',
             className: 'contacts-cell',

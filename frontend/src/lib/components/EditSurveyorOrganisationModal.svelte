@@ -8,6 +8,7 @@
   let name: string;
   let contacts: SurveyorOrganisation['contacts'];
   let disciplines: string[];
+  let location: string;
 
   // Initialize form fields when the organisation prop is set
   $: {
@@ -15,6 +16,7 @@
       name = organisation.organisation;
       contacts = JSON.parse(JSON.stringify(organisation.contacts || []));
       disciplines = [organisation.discipline];
+      location = organisation.location || '';
     }
   }
 
@@ -44,7 +46,8 @@
       const success = await updateSurveyorOrganisation(organisation.id, {
         organisation: name,
         contacts: contacts,
-        discipline: disciplines[0]
+        discipline: disciplines[0],
+        location: location
       });
 
       if (success) {
@@ -82,6 +85,11 @@
             <div class="form-row">
                 <label>Discipline*</label>
                 <input type="text" bind:value={disciplines[0]} required disabled={isSaving}/>
+            </div>
+
+            <div class="form-row">
+                <label for="location">Location</label>
+                <input id="location" type="text" bind:value={location} disabled={isSaving}/>
             </div>
         </div>
 

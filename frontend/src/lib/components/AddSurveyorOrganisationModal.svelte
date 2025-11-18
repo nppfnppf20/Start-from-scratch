@@ -12,6 +12,7 @@
     let organisationForm = {
       organisation: '',
       discipline: '',
+      location: '',
       contacts: [
         { contactName: '', email: '', phoneNumber: '' }
       ]
@@ -43,6 +44,7 @@
       organisationForm = {
         organisation: '',
         discipline: '',
+        location: '',
         contacts: [createNewContact()]
       };
       submitError = '';
@@ -72,6 +74,7 @@
         const payload = {
           organisation: organisationForm.organisation.trim(),
           discipline: organisationForm.discipline.trim(),
+          location: organisationForm.location?.trim() || '',
           contacts: validContacts
         };
 
@@ -135,6 +138,17 @@
                 id="discipline" 
                 bind:value={organisationForm.discipline} 
                 required 
+                disabled={isSubmitting}
+                autocomplete="off"
+              >
+            </div>
+            
+            <div class="form-row">
+              <label for="location">Location</label>
+              <input 
+                type="text" 
+                id="location" 
+                bind:value={organisationForm.location} 
                 disabled={isSubmitting}
                 autocomplete="off"
               >

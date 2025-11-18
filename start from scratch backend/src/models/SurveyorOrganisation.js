@@ -20,6 +20,11 @@ const SurveyorOrganisationSchema = new mongoose.Schema({
     required: [true, 'Discipline is required'],
     trim: true,
   },
+  location: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   contacts: [ContactSchema],
   
   // --- Aggregate Data Fields ---

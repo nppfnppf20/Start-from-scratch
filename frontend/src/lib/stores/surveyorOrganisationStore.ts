@@ -50,6 +50,7 @@ export interface SurveyorOrganisation {
   id: string; // Mapped from _id
   organisation: string;
   discipline: string;
+  location?: string;
   contacts: Contact[];
   projectCount: number;
   reviewCount: number;

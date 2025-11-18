@@ -52,7 +52,7 @@
     }
 
     // --- Sorting State ---
-    type SortKey = 'organisation' | 'discipline' | 'averageQuality' | 'averageResponsiveness' | 'averageDeliveredOnTime' | 'averageOverallReview';
+    type SortKey = 'organisation' | 'discipline' | 'location' | 'averageQuality' | 'averageResponsiveness' | 'averageDeliveredOnTime' | 'averageOverallReview';
     let sortKey: SortKey = 'organisation';
     let sortDirection: 'asc' | 'desc' = 'asc';
 
@@ -142,7 +142,8 @@
             result = result.filter(
                 (item) =>
                     item.organisation.toLowerCase().includes(lowercasedFilter) ||
-                    item.discipline.toLowerCase().includes(lowercasedFilter)
+                    item.discipline.toLowerCase().includes(lowercasedFilter) ||
+                    (item.location && item.location.toLowerCase().includes(lowercasedFilter))
             );
         }
 
@@ -222,6 +223,11 @@
                                     Discipline {#if sortKey === 'discipline'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
                                 </button>
                             </th>
+                            <th rowspan="2">
+                                <button on:click={() => setSortKey('location')}>
+                                    Location {#if sortKey === 'location'}{sortDirection === 'asc' ? '▲' : '▼'}{/if}
+                                </button>
+                            </th>
                             <th rowspan="2">Contacts</th>
                             <th colspan="4" class="text-center divider-left divider-right">Feedback (Average /5)</th>
                             {#if showActions}
@@ -259,6 +265,7 @@
                             <tr>
                                 <td class="organisation-cell">{surveyor.organisation}</td>
                                 <td class="discipline-cell">{surveyor.discipline}</td>
+                                <td class="location-cell">{surveyor.location || '-'}</td>
                                 <td class="contacts-cell">
                                     {#if surveyor.contacts && surveyor.contacts.length > 0}
                                         <ul>
