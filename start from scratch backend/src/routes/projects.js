@@ -360,11 +360,11 @@ router.post('/:id/authorize-surveyors', protect, async (req, res) => {
             let user = await User.findOne({ email: email.toLowerCase() });
 
             if (!user) {
-                // If user doesn't exist, create a new one
+                // If user doesn't exist, create a new one (without password - using Auth0)
+                // auth0Sub will be set when they first log in with Auth0
                 user = new User({
                     email: email.toLowerCase(),
-                    role: 'surveyor',
-                    password: process.env.SURVEYOR_PASSWORD 
+                    role: 'surveyor'
                 });
                 await user.save();
             }
@@ -454,10 +454,11 @@ router.post('/:id/authorize-clients', protect, authorize('admin'), async (req, r
             const email = String(rawEmail).toLowerCase();
             let user = await User.findOne({ email });
             if (!user) {
+                // Create user without password - using Auth0
+                // auth0Sub will be set when they first log in with Auth0
                 user = new User({
                     email,
-                    role: 'client',
-                    password: process.env.CLIENT_PASSWORD || process.env.CLIENT_DEFAULT_PASSWORD
+                    role: 'client'
                 });
                 await user.save();
             }
