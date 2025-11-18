@@ -26,6 +26,7 @@ const userRoutes = require('./routes/users');
 const clientOrganisationsRoutes = require('./routes/clientOrganisations');
 const feeQuoteLogRoutes = require('./routes/feeQuoteLogs');
 const officeRoutes = require('./routes/office');
+const importSurveyorsRoutes = require('./routes/importSurveyors');
 // console.log('Imported projectRoutes:', typeof projectRoutes, projectRoutes);
 
 const app = express();
@@ -164,6 +165,9 @@ app.use('/api/client-organisations', clientOrganisationsRoutes);
 // Public routes
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
+
+// Import routes (one-time use, protected by API key)
+app.use('/api/import-surveyors', importSurveyorsRoutes);
 
 // Office plugin routes (internal use only - no JWT protection)
 app.use('/api/office', officeRoutes);
