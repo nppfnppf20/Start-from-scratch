@@ -218,9 +218,9 @@
             class="add-contact-btn" 
             on:click={addContact}
             disabled={isSubmitting}
-            title="Add Contact"
+            title="Add Additional Contact"
           >
-            + Add Contact
+            + Add Additional Contact
           </button>
   
           <!-- Modal Actions -->
