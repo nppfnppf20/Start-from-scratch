@@ -319,7 +319,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: white;
-    max-width: 1400px;
+    max-width: 1800px;
     margin: 0 auto;
     /* Windows performance optimizations */
     contain: layout style paint;
