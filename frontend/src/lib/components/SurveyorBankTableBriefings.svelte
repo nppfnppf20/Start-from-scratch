@@ -192,7 +192,7 @@
             <input
                 type="text"
                 bind:value={searchText}
-                placeholder="Filter by Organisation or Discipline..."
+                placeholder="Filter by Organisation, Discipline, or Location..."
                 class="filter-input"
             />
         </div>

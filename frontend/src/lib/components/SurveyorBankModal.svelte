@@ -155,7 +155,7 @@
         {columns}
         {isLoading}
         {error}
-        searchPlaceholder="Filter by Organisation or Discipline..."
+        searchPlaceholder="Filter by Organisation, Discipline, or Location..."
         emptyMessage="No surveyor organisations in your bank yet."
         {showActions}
         on:action={handleAction}
