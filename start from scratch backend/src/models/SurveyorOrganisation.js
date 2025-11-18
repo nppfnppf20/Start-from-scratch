@@ -25,6 +25,11 @@ const SurveyorOrganisationSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  notes: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   contacts: [ContactSchema],
   
   // --- Aggregate Data Fields ---

@@ -4,10 +4,12 @@
         loadSurveyorOrganisations,
         surveyorOrganisations,
         deleteSurveyorOrganisation,
+        updateSurveyorOrganisation,
         type SurveyorOrganisation,
         type Contact
     } from '$lib/stores/surveyorOrganisationStore';
     import EditSurveyorOrganisationModal from './EditSurveyorOrganisationModal.svelte';
+    import NotesModal from './NotesModal.svelte';
     import DataTable, { type TableColumn } from './DataTable.svelte';
     
     // Props
@@ -19,6 +21,11 @@
     let error: string | null = null;
     let showEditModal = false;
     let selectedOrganisation: SurveyorOrganisation | null = null;
+    
+    // Notes modal state
+    let showNotesModal = false;
+    let currentOrgForNotes: SurveyorOrganisation | null = null;
+    let currentNotes: string = '';
 
     const dispatch = createEventDispatcher();
 
@@ -57,6 +64,12 @@
             label: 'Contacts',
             className: 'contacts-cell',
             width: '250px'
+        },
+        {
+            key: 'notes',
+            label: 'Notes',
+            className: 'notes-cell',
+            width: '150px'
         },
         {
             key: 'feedback',
@@ -127,6 +140,36 @@
         }
     }
 
+    // Notes modal functions
+    function getNotesPreview(notes: string | undefined): string {
+        if (!notes || notes.trim() === '') return 'Add notes...';
+        return notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
+    }
+
+    function openNotesModal(org: SurveyorOrganisation) {
+        currentOrgForNotes = org;
+        currentNotes = org.notes || '';
+        showNotesModal = true;
+    }
+
+    function closeNotesModal() {
+        showNotesModal = false;
+        currentOrgForNotes = null;
+        currentNotes = '';
+    }
+
+    async function handleSaveNotes(event: CustomEvent<{ notes: string }>) {
+        if (!currentOrgForNotes) return;
+        
+        const success = await updateSurveyorOrganisation(currentOrgForNotes.id, {
+            notes: event.detail.notes
+        });
+        
+        if (success) {
+            closeNotesModal();
+        }
+    }
+
     // Load data when component mounts
     async function loadData() {
         isLoading = true;
@@ -188,6 +231,14 @@
                 {:else}
                     <span>-</span>
                 {/if}
+            {:else if column.key === 'notes'}
+                <button
+                    class="notes-button"
+                    on:click|stopPropagation={() => openNotesModal(item)}
+                    title="View/Edit notes"
+                >
+                    {getNotesPreview(item.notes)}
+                </button>
             {:else if column.key === 'averageQuality' || column.key === 'averageResponsiveness' || column.key === 'averageDeliveredOnTime' || column.key === 'averageOverallReview'}
                 {formatValue(item[column.key])}
             {:else}
@@ -205,6 +256,15 @@
             showEditModal = false;
             loadData(); // Refresh data after save
         }}
+    />
+{/if}
+
+{#if showNotesModal && currentOrgForNotes}
+    <NotesModal
+        initialNotes={currentNotes}
+        organisationName={currentOrgForNotes.organisation}
+        on:save={handleSaveNotes}
+        on:cancel={closeNotesModal}
     />
 {/if}
 
@@ -272,6 +332,30 @@
         color: #28a745;
         cursor: pointer;
         transition: all 0.2s ease;
+    }
+
+    /* Notes button styling */
+    .notes-button {
+        width: 100%;
+        max-width: 150px;
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        border: 1px solid #cbd5e0;
+        text-align: left;
+        cursor: pointer;
+        font-style: italic;
+        color: #555;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        background-color: white;
+        transition: all 0.2s ease;
+    }
+
+    .notes-button:hover {
+        background-color: #e9ecef;
+        border-color: #999;
     }
 
     .select-btn:hover {

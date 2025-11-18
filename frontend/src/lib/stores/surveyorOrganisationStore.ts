@@ -51,6 +51,7 @@ export interface SurveyorOrganisation {
   organisation: string;
   discipline: string;
   location?: string;
+  notes?: string;
   contacts: Contact[];
   projectCount: number;
   reviewCount: number;
@@ -109,6 +110,7 @@ export async function addSurveyorOrganisation(orgData: {
   organisation: string;
   discipline: string;
   location?: string;
+  notes?: string;
   contacts?: SurveyorOrganisation['contacts'];
 }): Promise<SurveyorOrganisation | null> {
   if (!browser) return null;
@@ -154,7 +156,7 @@ export async function addSurveyorOrganisation(orgData: {
 // Function to update a surveyor organisation
 export async function updateSurveyorOrganisation(
   orgId: string,
-  updateData: Partial<Pick<SurveyorOrganisation, 'organisation' | 'discipline' | 'location' | 'contacts'>>
+  updateData: Partial<Pick<SurveyorOrganisation, 'organisation' | 'discipline' | 'location' | 'notes' | 'contacts'>>
 ): Promise<boolean> {
   if (!browser) return false;
 

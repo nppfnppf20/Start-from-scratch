@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 // Creates a new surveyor organisation for a specific discipline
 router.post('/', async (req, res) => {
   // Now requires 'discipline' in the request body
-  const { organisation, discipline, location, contacts } = req.body;
+  const { organisation, discipline, location, notes, contacts } = req.body;
 
   try {
     // The check for an existing org is now based on BOTH name and discipline
@@ -41,6 +41,7 @@ router.post('/', async (req, res) => {
       organisation,
       discipline,
       location: location || '',
+      notes: notes || '',
       contacts: contacts || [],
     });
 
@@ -102,14 +103,15 @@ router.post('/', async (req, res) => {
 // Updates an organisation's details
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  // Now allows updating 'discipline' and 'location'
-  const { organisation, discipline, location, contacts } = req.body;
+  // Now allows updating 'discipline', 'location', and 'notes'
+  const { organisation, discipline, location, notes, contacts } = req.body;
 
   try {
     const updateFields = {};
     if (organisation !== undefined) updateFields.organisation = organisation;
     if (discipline !== undefined) updateFields.discipline = discipline;
     if (location !== undefined) updateFields.location = location;
+    if (notes !== undefined) updateFields.notes = notes;
     if (contacts !== undefined) updateFields.contacts = contacts;
 
     const updatedOrg = await SurveyorOrganisation.findByIdAndUpdate(
