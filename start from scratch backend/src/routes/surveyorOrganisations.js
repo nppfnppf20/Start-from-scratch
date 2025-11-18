@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 // Creates a new surveyor organisation for a specific discipline
 router.post('/', async (req, res) => {
   // Now requires 'discipline' in the request body
-  const { organisation, discipline, contacts } = req.body;
+  const { organisation, discipline, location, contacts } = req.body;
 
   try {
     // The check for an existing org is now based on BOTH name and discipline
@@ -40,6 +40,7 @@ router.post('/', async (req, res) => {
     const newOrganisation = new SurveyorOrganisation({
       organisation,
       discipline,
+      location: location || '',
       contacts: contacts || [],
     });
 
@@ -49,24 +50,30 @@ router.post('/', async (req, res) => {
     if (contacts && contacts.length > 0) {
       const password = process.env.SURVEYOR_PASSWORD;
       if (!password) {
-        console.error('SURVEYOR_PASSWORD not set in .env file');
-        return res.status(500).send('Server configuration error.');
-      }
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
+        console.warn('SURVEYOR_PASSWORD not set in .env file - skipping user account creation');
+        // Don't fail the request - just skip user creation
+      } else {
+        try {
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash(password, salt);
 
-      for (const contact of contacts) {
-        if (contact.email) {
-          const userExists = await User.findOne({ email: contact.email });
-          if (!userExists) {
-            const newUser = new User({
-              email: contact.email,
-              password: hashedPassword,
-              name: contact.contactName || organisation,
-              role: 'surveyor' // Assign a default role
-            });
-            await newUser.save();
+          for (const contact of contacts) {
+            if (contact.email) {
+              const userExists = await User.findOne({ email: contact.email });
+              if (!userExists) {
+                const newUser = new User({
+                  email: contact.email,
+                  password: hashedPassword,
+                  name: contact.contactName || organisation,
+                  role: 'surveyor' // Assign a default role
+                });
+                await newUser.save();
+              }
+            }
           }
+        } catch (userErr) {
+          // Log the error but don't fail the request
+          console.error('Error creating user accounts:', userErr.message);
         }
       }
     }
@@ -80,8 +87,14 @@ router.post('/', async (req, res) => {
     if (err.code === 11000) {
       return res.status(400).json({ msg: 'An organisation with this name and discipline already exists.' });
     }
-    console.error('Error creating surveyor organisation:', err.message);
-    res.status(500).send('Server Error');
+    console.error('Error creating surveyor organisation:', err);
+    console.error('Error details:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+      code: err.code
+    });
+    res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
@@ -89,13 +102,14 @@ router.post('/', async (req, res) => {
 // Updates an organisation's details
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  // Now allows updating 'discipline'
-  const { organisation, discipline, contacts } = req.body;
+  // Now allows updating 'discipline' and 'location'
+  const { organisation, discipline, location, contacts } = req.body;
 
   try {
     const updateFields = {};
     if (organisation !== undefined) updateFields.organisation = organisation;
     if (discipline !== undefined) updateFields.discipline = discipline;
+    if (location !== undefined) updateFields.location = location;
     if (contacts !== undefined) updateFields.contacts = contacts;
 
     const updatedOrg = await SurveyorOrganisation.findByIdAndUpdate(

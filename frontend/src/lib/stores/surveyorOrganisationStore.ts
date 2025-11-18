@@ -108,6 +108,7 @@ export async function loadSurveyorOrganisations(): Promise<SurveyorOrganisation[
 export async function addSurveyorOrganisation(orgData: {
   organisation: string;
   discipline: string;
+  location?: string;
   contacts?: SurveyorOrganisation['contacts'];
 }): Promise<SurveyorOrganisation | null> {
   if (!browser) return null;
@@ -153,7 +154,7 @@ export async function addSurveyorOrganisation(orgData: {
 // Function to update a surveyor organisation
 export async function updateSurveyorOrganisation(
   orgId: string,
-  updateData: Partial<Pick<SurveyorOrganisation, 'organisation' | 'discipline' | 'contacts'>>
+  updateData: Partial<Pick<SurveyorOrganisation, 'organisation' | 'discipline' | 'location' | 'contacts'>>
 ): Promise<boolean> {
   if (!browser) return false;
 
