@@ -50,7 +50,7 @@
         </header>
 
         <main>
-            {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission')}
+            {#if $selectedProject || $page.url.pathname.startsWith('/fee-quote-submission') || $page.url.pathname.startsWith('/admin-console')}
                 <slot />
             {:else}
                 <div class="no-project-selected">
