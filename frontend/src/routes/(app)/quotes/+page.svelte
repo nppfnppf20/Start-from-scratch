@@ -1,16 +1,19 @@
 <script lang="ts">
   import PageHeader from '$lib/components/PageHeader.svelte';
   import {
-    selectedProject, 
-    currentProjectQuotes, 
-    updateQuoteInstructionStatus, 
+    selectedProject,
+    currentProjectQuotes,
+    updateQuoteInstructionStatus,
     deleteQuote,
     revokeSurveyorAuthorization,
-    type InstructionStatus, 
-    type Quote, 
+    authorizeSurveyors,
+    type InstructionStatus,
+    type Quote,
     type LineItem
   } from "$lib/stores/projectStore";
   import { get } from 'svelte/store';
+  import { onMount } from 'svelte';
+  import { getAuth0Headers } from '$lib/stores/auth0Store';
   import QuoteModal from '$lib/components/QuoteModal.svelte';
   import LineItemsModal from '$lib/components/LineItemsModal.svelte';
   import PartiallyInstructedModal from '$lib/components/PartiallyInstructedModal.svelte';
@@ -18,6 +21,8 @@
   import InstructionEmailModal from '$lib/components/InstructionEmailModal.svelte';
   import NotInstructedModal from '$lib/components/NotInstructedModal.svelte';
   import DataTable, { type TableColumn } from '$lib/components/DataTable.svelte';
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   
   const instructionStatuses: InstructionStatus[] = [
     'pending', 
@@ -47,6 +52,19 @@
   // Not Instructed Modal state
   let showNotInstructedModal = false;
   let quoteForNotInstructed: Quote | null = null;
+
+  // Authorization state
+  let allSurveyors: { _id: string; email: string }[] = [];
+
+  // Reactive list of authorized surveyor emails
+  $: authorizedSurveyorEmails = (() => {
+    if (!$selectedProject || !$selectedProject.authorizedSurveyors) return [];
+
+    // Map authorized surveyor IDs to their email addresses
+    return $selectedProject.authorizedSurveyors
+      .map(userId => allSurveyors.find(s => s._id === userId)?.email)
+      .filter((email): email is string => Boolean(email));
+  })();
 
   // Define table columns for DataTable
   const columns: TableColumn[] = [
@@ -91,6 +109,11 @@
       key: 'instructionStatus',
       label: 'Instruction Status',
       width: '140px'
+    },
+    {
+      key: 'authorisation',
+      label: 'Authorisation',
+      width: '130px'
     }
   ];
 
@@ -113,6 +136,61 @@
     });
   })();
 
+
+  // Function to fetch surveyors
+  async function fetchSurveyors() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/surveyors`, {
+        headers: await getAuth0Headers()
+      });
+
+      if (response.ok) {
+        allSurveyors = await response.json();
+        console.log('Fetched surveyors for authorization:', allSurveyors);
+      } else {
+        console.error('Failed to fetch surveyors:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching surveyors:', error);
+    }
+  }
+
+  // Fetch surveyors on mount
+  onMount(() => {
+    fetchSurveyors();
+  });
+
+  // Re-fetch surveyors when the project's authorized surveyors change
+  $: if ($selectedProject?.authorizedSurveyors) {
+    fetchSurveyors();
+  }
+
+  // Helper function to check if a surveyor is authorized
+  function isAuthorised(email: string | undefined): boolean {
+    if (!email) return false;
+    return authorizedSurveyorEmails.includes(email.toLowerCase());
+  }
+
+  // Handle authorization change
+  async function handleAuthorisationChange(quote: Quote, newValue: string) {
+    if (!$selectedProject || !quote.email) {
+      alert('Cannot update authorization: missing project or email.');
+      return;
+    }
+
+    try {
+      if (newValue === 'authorised') {
+        console.log(`Authorizing surveyor: ${quote.email}`);
+        await authorizeSurveyors($selectedProject.id, [quote.email]);
+      } else {
+        console.log(`Revoking authorization for surveyor: ${quote.email}`);
+        await revokeSurveyorAuthorization($selectedProject.id, quote.email);
+      }
+    } catch (error) {
+      console.error('Error updating authorization:', error);
+      alert('Failed to update authorization. Please try again.');
+    }
+  }
 
   function openNewQuoteModal() {
     currentQuoteToEdit = null;
@@ -385,6 +463,18 @@
               <option value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
             {/each}
           </select>
+        {:else if column.key === 'authorisation'}
+          <select
+            class="authorisation-select"
+            class:auth-authorised={isAuthorised(item.email)}
+            class:auth-not-authorised={!isAuthorised(item.email)}
+            value={isAuthorised(item.email) ? 'authorised' : 'not-authorised'}
+            id={`auth-select-${item.id}`}
+            on:change|stopPropagation={(e) => handleAuthorisationChange(item, e.currentTarget.value)}
+          >
+            <option value="authorised">Authorised</option>
+            <option value="not-authorised">Not Authorised</option>
+          </select>
         {:else}
           {item[column.key] ?? '-'}
         {/if}
@@ -574,6 +664,47 @@
     background-color: var(--status-not-started-bg);
     color: var(--status-not-started-color);
     border-color: var(--status-not-started-bg);
+    font-weight: 500;
+  }
+
+  /* Authorisation Select - matches instruction-status-select styling */
+  .authorisation-select {
+    padding: 0.3rem 0.5rem !important;
+    border-radius: 5px !important;
+    border: 1px solid #cbd5e0 !important;
+    font-size: 0.85rem !important;
+    background-color: white !important;
+    cursor: pointer !important;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out !important;
+    min-width: 120px !important;
+    width: auto !important;
+    display: inline-block !important;
+    text-align: left !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 1em 1em !important;
+  }
+  .authorisation-select:focus {
+    border-color: #4299e1 !important;
+    box-shadow: 0 0 0 1px #4299e1 !important;
+    outline: none !important;
+  }
+
+  /* Authorisation-specific Select Styling */
+  .auth-authorised {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-color);
+    border-color: var(--status-completed-bg);
+    font-weight: 500;
+  }
+  .auth-not-authorised {
+    background-color: #f7fafc;
+    color: #718096;
+    border-color: #e2e8f0;
     font-weight: 500;
   }
 </style> 
