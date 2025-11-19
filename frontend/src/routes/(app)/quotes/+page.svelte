@@ -647,51 +647,56 @@
     color: var(--status-completed-color);
     border-color: var(--status-completed-bg);
     font-weight: 500;
+    padding: 0.3rem 2rem 0.3rem 0.5rem;
   }
   .status-partially-instructed {
     background-color: var(--status-completed-bg);
     color: var(--status-completed-color);
     border-color: var(--status-completed-bg);
     font-weight: 500;
+    padding: 0.3rem 2rem 0.3rem 0.5rem;
   }
   .status-pending {
     background-color: #e2e8f0;
     color: #4a5568;
     border-color: #e2e8f0;
     font-weight: 500;
+    padding: 0.3rem 2rem 0.3rem 0.5rem !important;
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+    display: inline-block !important;
   }
   .status-will-not-be-instructed {
     background-color: var(--status-not-started-bg);
     color: var(--status-not-started-color);
     border-color: var(--status-not-started-bg);
     font-weight: 500;
+    padding: 0.3rem 2rem 0.3rem 0.5rem;
   }
 
-  /* Authorisation Select - matches instruction-status-select styling */
+  /* Authorisation Select */
   .authorisation-select {
-    padding: 0.3rem 0.5rem !important;
-    border-radius: 5px !important;
-    border: 1px solid #cbd5e0 !important;
-    font-size: 0.85rem !important;
-    background-color: white !important;
-    cursor: pointer !important;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out !important;
-    min-width: 120px !important;
-    width: auto !important;
-    display: inline-block !important;
-    text-align: left !important;
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 0.75rem center !important;
-    background-size: 1em 1em !important;
+    padding: 0.3rem 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #cbd5e0;
+    font-size: 0.85rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    min-width: 120px;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23718096'%3E%3Cpath fill-rule='evenodd' d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em 1em;
   }
   .authorisation-select:focus {
-    border-color: #4299e1 !important;
-    box-shadow: 0 0 0 1px #4299e1 !important;
-    outline: none !important;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 1px #4299e1;
+    outline: none;
   }
 
   /* Authorisation-specific Select Styling */
@@ -700,11 +705,13 @@
     color: var(--status-completed-color);
     border-color: var(--status-completed-bg);
     font-weight: 500;
+    padding-right: 2rem;
   }
   .auth-not-authorised {
-    background-color: #f7fafc;
-    color: #718096;
+    background-color: #e2e8f0;
+    color: #4a5568;
     border-color: #e2e8f0;
     font-weight: 500;
+    padding-right: 2rem;
   }
 </style> 
