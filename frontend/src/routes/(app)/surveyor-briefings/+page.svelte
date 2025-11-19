@@ -176,14 +176,23 @@
   }
 
   async function handleConfirmation() {
+    console.log('handleConfirmation called');
     if ($selectedProject && emailTo) {
       const emails = emailTo.split(',').map(e => e.trim()).filter(e => e);
+      console.log('Emails to authorize:', emails);
       if (emails.length > 0) {
-        // 1. CREATE FEE QUOTE LOG (NEW)
-        await createFeeQuoteLog($selectedProject.id, emails);
-        
-        // 2. AUTHORIZE SURVEYORS (EXISTING)
-        await authorizeSurveyors($selectedProject.id, emails);
+        try {
+          // 1. CREATE FEE QUOTE LOG (NEW)
+          console.log('About to create fee quote log...');
+          await createFeeQuoteLog($selectedProject.id, emails);
+          console.log('Fee quote log created, now authorizing surveyors...');
+
+          // 2. AUTHORIZE SURVEYORS (EXISTING)
+          await authorizeSurveyors($selectedProject.id, emails);
+          console.log('Surveyors authorized successfully');
+        } catch (error) {
+          console.error('Error in handleConfirmation:', error);
+        }
       }
     }
     emailTo = '';

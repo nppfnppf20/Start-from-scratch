@@ -60,10 +60,27 @@
   $: authorizedSurveyorEmails = (() => {
     if (!$selectedProject || !$selectedProject.authorizedSurveyors) return [];
 
-    // Map authorized surveyor IDs to their email addresses
-    return $selectedProject.authorizedSurveyors
-      .map(userId => allSurveyors.find(s => s._id === userId)?.email)
+    console.log('Project authorized surveyor IDs/Objects:', $selectedProject.authorizedSurveyors);
+    console.log('All surveyors:', allSurveyors);
+
+    // Handle both populated objects and IDs
+    const emails = $selectedProject.authorizedSurveyors
+      .map(userIdOrObj => {
+        // If it's already a populated object with email, use it directly
+        if (typeof userIdOrObj === 'object' && userIdOrObj !== null && 'email' in userIdOrObj) {
+          console.log('Found populated user object:', userIdOrObj);
+          return userIdOrObj.email.toLowerCase();
+        }
+        // Otherwise it's an ID, look it up in allSurveyors
+        const userId = typeof userIdOrObj === 'string' ? userIdOrObj : userIdOrObj._id;
+        const surveyor = allSurveyors.find(s => s._id === userId);
+        console.log(`Looking for user ${userId}, found:`, surveyor);
+        return surveyor?.email?.toLowerCase();
+      })
       .filter((email): email is string => Boolean(email));
+
+    console.log('Authorized surveyor emails:', emails);
+    return emails;
   })();
 
   // Define table columns for DataTable
@@ -168,7 +185,9 @@
   // Helper function to check if a surveyor is authorized
   function isAuthorised(email: string | undefined): boolean {
     if (!email) return false;
-    return authorizedSurveyorEmails.includes(email.toLowerCase());
+    const isAuth = authorizedSurveyorEmails.includes(email.toLowerCase());
+    console.log(`Checking if ${email} is authorized:`, isAuth, 'Authorized emails:', authorizedSurveyorEmails);
+    return isAuth;
   }
 
   // Handle authorization change
