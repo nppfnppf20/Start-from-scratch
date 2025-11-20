@@ -18,6 +18,11 @@
   // Dynamic button text
   $: buttonText = saving ? "Saving..." : justSaved ? "Saved ✓" : "Save Project Information";
 
+  // Reactive logic for showing/hiding sections based on project type
+  $: showSolarSection = $selectedProject?.projectType === 'solar' || $selectedProject?.projectType === 'solarBess';
+  $: showBessSection = $selectedProject?.projectType === 'bess' || $selectedProject?.projectType === 'solarBess';
+  $: showProjectMetrics = $selectedProject?.projectType === 'solar' || $selectedProject?.projectType === 'bess' || $selectedProject?.projectType === 'solarBess';
+
   // Format last saved date
   function formatLastSaved(updatedAt: string | undefined): string {
     if (!updatedAt) return "";
@@ -153,6 +158,22 @@
       {/if}
       
       <form class="project-form" on:submit={handleSubmit}>
+          <!-- Section: Project Type -->
+          <section class="form-section">
+            <h2>Project Type</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <select id="projectType" name="projectType" bind:value={$selectedProject.projectType} disabled={isSurveyor}>
+                  <option value="">Please select</option>
+                  <option value="solar">Solar</option>
+                  <option value="bess">BESS</option>
+                  <option value="solarBess">Solar & BESS</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
           <!-- Section: Basic Information -->
           <section class="form-section">
             <h2>Basic Information</h2>
@@ -161,35 +182,17 @@
                   <label for="clientOrSpvName">Client (or SPV) Name</label>
                 <input type="text" id="clientOrSpvName" name="clientOrSpvName" bind:value={$selectedProject.clientOrSpvName} readonly={isSurveyor} />
               </div>
-              
+
               <div class="form-group">
                   <label for="detailedDescription">Detailed Description of Development</label>
                 <textarea id="detailedDescription" name="detailedDescription" rows="4" bind:value={$selectedProject.detailedDescription} readonly={isSurveyor}></textarea>
               </div>
-              
+
               <div class="form-group">
                   <label for="proposedUseDuration">Proposed Use Duration (years)</label>
                 <input type="number" id="proposedUseDuration" name="proposedUseDuration" min="0" bind:value={$selectedProject.proposedUseDuration} use:numbersOnly readonly={isSurveyor} />
               </div>
-              
-              <div class="form-group">
-                  <label>Project Type</label>
-                <div class="radio-group">
-                  <label class="radio-label">
-                    <input type="radio" name="projectType" value="solar" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> Solar
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" name="projectType" value="bess" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> BESS
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" name="projectType" value="solarBess" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> Solar & BESS
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" name="projectType" value="other" bind:group={$selectedProject.projectType} disabled={isSurveyor} /> Other
-                  </label>
-                </div>
-              </div>
-              
+
               <div class="form-group">
                   <label for="address">Address</label>
                 <textarea id="address" name="address" rows="3" bind:value={$selectedProject.address} readonly={isSurveyor}></textarea>
@@ -255,6 +258,7 @@
           </section>
           
           <!-- Section: Equipment Specification (Solar) -->
+          {#if showSolarSection}
           <section class="form-section">
             <h2>Equipment Specification (Solar)</h2>
             <div class="form-grid">
@@ -304,8 +308,10 @@
               </div>
             </div>
           </section>
-          
+          {/if}
+
           <!-- Section: Equipment Specification (BESS) -->
+          {#if showBessSection}
           <section class="form-section">
             <h2>Equipment Specification (BESS)</h2>
             <div class="form-grid">
@@ -320,8 +326,10 @@
               </div>
             </div>
           </section>
-          
+          {/if}
+
           <!-- Section: Project Metrics -->
+          {#if showProjectMetrics}
           <section class="form-section">
             <h2>Project Metrics</h2>
             <div class="form-grid">
@@ -346,7 +354,8 @@
               </div>
             </div>
           </section>
-          
+          {/if}
+
           <!-- Section: Information for Surveyors -->
           <section class="form-section">
             <h2>Information for Surveyors</h2>
