@@ -39,17 +39,15 @@
 
     emailBody = `${quote.contactName} <mark>[please edit as needed]</mark><br/><br/>
 
-Please take this email as ${instructionText} for the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
+Please take this email as instruction for the following works on the <strong>${$selectedProject?.name || '<mark>[Project Name]</mark>'}</strong> scheme at <strong>${$selectedProject?.address || '<mark>[Site Address]</mark>'}</strong>.<br/><br/>
 
-The instruction is for the following works:<br/>
+The instruction is for the below items:<br/>
 
 ${formattedLineItems}
 
 <mark>[Please add any other specific instructions if relevant]</mark><br/><br/>
 
-Please visit trpprojectdashboard.onrender.com and select your project from the drop-down at the top of the page for the most up-to-date project information. The dashboard will be updated as the scheme progresses; please ensure final reports are consistent with the information shown there. Invoicing and access details are also available on the dashboard.<br/><br/>
-
-Please upload all reports to the relevant TRP Sharepoint folder. A link to the sharepoint can be found on the dashboard.<br/><br/>
+Please visit trpprojectdashboard.co.uk and select your project from the drop-down at the top of the page for the most up-to-date project information. The dashboard may be updated as the scheme progresses - please ensure final reports are consistent with the information shown there. Invoicing and access details are also available on the dashboard.<br/><br/>
 
 Can you please confirm receipt of this instruction as well as indicative timescales for reports and site visits <mark>[if site visit is required]</mark>.<br/><br/>
 
