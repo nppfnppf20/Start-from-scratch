@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const SurveyorOrganisation = require('../models/SurveyorOrganisation');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
 // Middleware to check import API key
 const checkImportKey = (req, res, next) => {
@@ -67,11 +69,35 @@ router.post('/', checkImportKey, async (req, res) => {
                 });
                 
                 await newOrganisation.save();
-
-                // Note: User accounts are NOT created during import.
-                // When contacts log in with Auth0, the authMiddleware will automatically
-                // create User records if their email is found in SurveyorOrganisation contacts.
-
+                
+                // Create user accounts for contacts (optional, based on SURVEYOR_PASSWORD)
+                if (org.contacts && org.contacts.length > 0) {
+                    const password = process.env.SURVEYOR_PASSWORD;
+                    if (password) {
+                        try {
+                            const salt = await bcrypt.genSalt(10);
+                            const hashedPassword = await bcrypt.hash(password, salt);
+                            
+                            for (const contact of org.contacts) {
+                                if (contact.email) {
+                                    const userExists = await User.findOne({ email: contact.email });
+                                    if (!userExists) {
+                                        const newUser = new User({
+                                            email: contact.email,
+                                            password: hashedPassword,
+                                            name: contact.contactName || org.organisation,
+                                            role: 'surveyor'
+                                        });
+                                        await newUser.save();
+                                    }
+                                }
+                            }
+                        } catch (userErr) {
+                            console.error('Error creating user accounts:', userErr.message);
+                        }
+                    }
+                }
+                
                 results.success.push(`${org.organisation} - ${org.discipline}`);
                 
             } catch (orgErr) {
