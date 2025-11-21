@@ -104,7 +104,13 @@
 
     if (currentProject) {
       console.log("Submitting updates for project:", currentProject.id, currentProject);
-      const success = await updateProject(currentProject.id, currentProject);
+
+      // Create a copy and remove fields that are managed by separate endpoints
+      // authorizedSurveyors and authorizedClients are populated objects from the API
+      // but the schema expects ObjectIds, so we exclude them from general updates
+      const { authorizedSurveyors, authorizedClients, ...projectData } = currentProject;
+
+      const success = await updateProject(currentProject.id, projectData);
 
       saving = false;
 

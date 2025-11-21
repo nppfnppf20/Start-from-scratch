@@ -283,6 +283,15 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
   if (!browser) return false; // Don't run on server
 
   try {
+    // DEBUG: Log what we're sending
+    console.log('=== UPDATE PROJECT DEBUG ===');
+    console.log('Project ID:', projectId);
+    console.log('Updated Data:', JSON.stringify(updatedData, null, 2));
+    console.log('Client field:', updatedData.client);
+    console.log('Authorized Surveyors:', updatedData.authorizedSurveyors);
+    console.log('Authorized Clients:', updatedData.authorizedClients);
+    console.log('===========================');
+
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
       method: 'PUT',
       headers: {
@@ -295,6 +304,10 @@ export async function updateProject(projectId: string, updatedData: Partial<Proj
     if (!response.ok) {
       // Try to get error message from backend response body
       const errorData = await response.json().catch(() => ({})); // Default if body isn't JSON
+      console.error('=== UPDATE FAILED ===');
+      console.error('Status:', response.status);
+      console.error('Error data:', errorData);
+      console.error('===================');
       throw new Error(`HTTP error! status: ${response.status} - ${errorData.msg || 'Failed to update project'}`);
     }
 

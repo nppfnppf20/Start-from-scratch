@@ -280,6 +280,11 @@ router.get('/:id', protect, checkProjectAccess, async (req, res) => {
 // @access  Admin only
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
     try {
+        console.log('=== UPDATE PROJECT DEBUG ===');
+        console.log('Project ID:', req.params.id);
+        console.log('Request body:', JSON.stringify(req.body, null, 2));
+        console.log('===========================');
+
         let project = await Project.findById(req.params.id);
         if (!project) {
             return res.status(404).json({ msg: 'Project not found' });
@@ -291,14 +296,19 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
         );
         res.json(project);
     } catch (err) {
-        console.error(err.message);
+        console.error('=== UPDATE PROJECT ERROR ===');
+        console.error('Error name:', err.name);
+        console.error('Error message:', err.message);
+        console.error('Full error:', err);
+        console.error('===========================');
+
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Project not found (invalid ID format)' });
         }
         if (err.name === 'ValidationError') {
              return res.status(400).json({ msg: err.message });
         }
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
 
