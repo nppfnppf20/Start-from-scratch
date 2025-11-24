@@ -164,11 +164,15 @@
 
     // Convert HTML body to plain text for mailto link
     const plainTextBody = emailBody
-      .replace(/<br\s*\/?>(?=\s*\n?)/gi, '\n')
-      .replace(/<li[^>]*>/gi, '\n• ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<ul[^>]*>/gi, '') // Remove opening <ul> tag
+      .replace(/<\/ul>/gi, '\n') // Convert closing </ul> to newline for spacing
+      .replace(/<li[^>]*>/gi, '\n• ') // Newline + bullet for each item
+      .replace(/<\/li>/gi, '') // Remove </li>
       .replace(/<mark[^>]*>/gi, '')
       .replace(/<\/mark>/gi, '')
       .replace(/<[^>]+>/g, '')
+      .replace(/\n\n\n+/g, '\n\n') // Replace 3+ consecutive newlines with just 2
       .trim();
 
     const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainTextBody)}`;
