@@ -277,8 +277,8 @@ router.get('/:id', protect, checkProjectAccess, async (req, res) => {
 
 // @route   PUT /api/projects/:id
 // @desc    Update a project by ID
-// @access  Admin only
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Admin and authorized clients
+router.put('/:id', protect, authorize('admin', 'client'), checkProjectAccess, async (req, res) => {
     try {
         console.log('=== UPDATE PROJECT DEBUG ===');
         console.log('Project ID:', req.params.id);
