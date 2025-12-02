@@ -1,21 +1,29 @@
 <script lang="ts">
   import PageHeader from '$lib/components/PageHeader.svelte';
   import {
-    selectedProject, 
+    selectedProject,
     currentProjectQuotes,
     currentInstructionLogs, // Use the new store
     upsertInstructionLog, // Use the new upsert function
-    type Quote, 
+    type Quote,
     type InstructionLog, // Import the new interface
     type WorkStatus,
     type UploadedWork,
     type CustomDate
   } from "$lib/stores/projectStore";
+  import { auth0Store } from "$lib/stores/auth0Store";
+  import { getUserRole, userRole } from "$lib/utils/auth";
   import NotesModal from "$lib/components/NotesModal.svelte";
   import InstructedDocumentUploadModal from "$lib/components/InstructedDocumentUploadModal.svelte";
   import { browser } from '$app/environment'; // Ensure browser check is available
   import LineItemsModal from '$lib/components/LineItemsModal.svelte';
   import DataTable, { type TableColumn } from '$lib/components/DataTable.svelte';
+
+  // Check if user is a client (read-only access)
+  $: if ($auth0Store.user) {
+    getUserRole($auth0Store.user);
+  }
+  $: isClient = $userRole === 'client';
 
   // DataTable event handlers
   function handleAction(event: CustomEvent) {
@@ -352,6 +360,7 @@
             <select
               class="work-status-dropdown {currentWorkStatus.toLowerCase().replace(/\s+/g, '-')}"
               value={currentWorkStatus}
+              disabled={isClient}
               on:change|stopPropagation={(e) => handleWorkStatusChange(item.id, e.currentTarget.value as WorkStatus)}
               title="Set work status"
             >
@@ -364,16 +373,18 @@
           {:else if column.key === 'dependencies'}
             <button
               class="notes-button"
+              disabled={isClient}
               on:click|stopPropagation={() => openDependenciesNotesModal(item)}
-              title="Edit dependencies notes"
+              title={isClient ? "View dependencies notes" : "Edit dependencies notes"}
             >
               {getNotesPreview(log?.dependencies)}
             </button>
           {:else if column.key === 'notes'}
             <button
               class="notes-button"
+              disabled={isClient}
               on:click|stopPropagation={() => openNotesModal(item)}
-              title="Edit operational notes"
+              title={isClient ? "View operational notes" : "Edit operational notes"}
             >
               {getNotesPreview(log?.operationalNotes)}
             </button>
@@ -519,9 +530,13 @@
     background-size: 1em 1em;
   }
   .work-status-dropdown:focus {
-      border-color: #4299e1; 
-      box-shadow: 0 0 0 1px #4299e1; 
+      border-color: #4299e1;
+      box-shadow: 0 0 0 1px #4299e1;
       outline: none;
+  }
+  .work-status-dropdown:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   /* Status-specific Select Styling */
@@ -611,9 +626,14 @@
     min-height: 40px; /* Ensure consistent button height */
   }
 
-  .notes-button:hover {
+  .notes-button:hover:not(:disabled) {
     background-color: #e9ecef;
     border-color: #adb5bd;
+  }
+  .notes-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: #f8f9fa;
   }
   /* Works Upload Button Styling (Button style) */
   .upload-button { /* Renamed from .works-upload-button for consistency? No, keep class, just change style */
