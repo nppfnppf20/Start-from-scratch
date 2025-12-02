@@ -1,16 +1,18 @@
 <script lang="ts">
   import PageHeader from '$lib/components/PageHeader.svelte';
   import {
-    selectedProject, 
-    currentProjectQuotes, 
-    updateQuoteInstructionStatus, 
+    selectedProject,
+    currentProjectQuotes,
+    updateQuoteInstructionStatus,
     deleteQuote,
     revokeSurveyorAuthorization,
-    type InstructionStatus, 
-    type Quote, 
+    type InstructionStatus,
+    type Quote,
     type LineItem
   } from "$lib/stores/projectStore";
   import { get } from 'svelte/store';
+  import { auth0Store } from "$lib/stores/auth0Store";
+  import { getUserRole, userRole } from "$lib/utils/auth";
   import QuoteModal from '$lib/components/QuoteModal.svelte';
   import LineItemsModal from '$lib/components/LineItemsModal.svelte';
   import PartiallyInstructedModal from '$lib/components/PartiallyInstructedModal.svelte';
@@ -18,6 +20,12 @@
   import InstructionEmailModal from '$lib/components/InstructionEmailModal.svelte';
   import NotInstructedModal from '$lib/components/NotInstructedModal.svelte';
   import DataTable, { type TableColumn } from '$lib/components/DataTable.svelte';
+
+  // Check if user is a client (read-only access)
+  $: if ($auth0Store.user) {
+    getUserRole($auth0Store.user);
+  }
+  $: isClient = $userRole === 'client';
   
   const instructionStatuses: InstructionStatus[] = [
     'pending', 
@@ -329,12 +337,12 @@
 </script>
 
 <div class="quotes-container">
-  <PageHeader 
-    title="Surveyor Quotes" 
+  <PageHeader
+    title="Surveyor Quotes"
     subtitle={$selectedProject ? `Quotes for ${$selectedProject.name}` : 'Please select a project to view quotes.'}
   >
     <div slot="actions">
-      {#if $selectedProject}
+      {#if $selectedProject && !isClient}
         <button class="add-quote-btn" on:click={openNewQuoteModal}>
           + Add New Quote
         </button>
@@ -349,7 +357,7 @@
       searchPlaceholder="Search quotes by discipline, organisation, or contact..."
       emptyMessage="No quotes found for this project."
       showSearch={true}
-      showActions={true}
+      showActions={!isClient}
       minWidth="900px"
       on:action={handleAction}
       on:rowClick={handleRowClick}
@@ -379,6 +387,7 @@
             class:status-will-not-be-instructed={item.instructionStatus === 'will not be instructed'}
             value={item.instructionStatus}
             id={`status-select-${item.id}`}
+            disabled={isClient}
             on:change|stopPropagation={(e) => handleStatusChange(item.id, e.currentTarget.value as InstructionStatus, item)}
           >
             {#each instructionStatuses as status}
@@ -549,6 +558,10 @@
     border-color: #4299e1;
     box-shadow: 0 0 0 1px #4299e1;
     outline: none;
+  }
+  .instruction-status-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   /* Status-specific Select Styling */
