@@ -2,10 +2,10 @@
   import { browser } from '$app/environment';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import {
-    selectedProject, 
+    selectedProject,
     currentProjectQuotes,
     currentInstructionLogs,
-    allProgrammeEvents, 
+    allProgrammeEvents,
     addProgrammeEvent,
     updateProgrammeEvent,
     deleteProgrammeEvent,
@@ -17,7 +17,15 @@
     type SurveyorReview,
     type CustomDate
   } from "$lib/stores/projectStore";
+  import { auth0Store } from "$lib/stores/auth0Store";
+  import { getUserRole, userRole } from "$lib/utils/auth";
   import { onMount } from 'svelte';
+
+  // Check if user is a client (read-only access)
+  $: if ($auth0Store.user) {
+    getUserRole($auth0Store.user);
+  }
+  $: isClient = $userRole === 'client';
   // import { Calendar } from '@fullcalendar/core'; // Removed
   // import dayGridPlugin from '@fullcalendar/daygrid'; // Removed
   // import interactionPlugin from '@fullcalendar/interaction'; // Removed
@@ -472,9 +480,11 @@
               {#each weeks as weekDate (format(weekDate, 'yyyy-MM-dd'))}
                 <th class="header-cell week-col">{formatWeekHeader(weekDate)}</th>
               {/each}
-              <th class="header-cell add-week-col">
-                  <button on:click={extendTimeline} title="Add one month">+</button>
-              </th>
+              {#if !isClient}
+                <th class="header-cell add-week-col">
+                    <button on:click={extendTimeline} title="Add one month">+</button>
+                </th>
+              {/if}
             </tr>
             <!-- Key Dates Header Row -->
             <tr>
@@ -485,14 +495,15 @@
                        <div class="key-dates-container">
                            {#each $currentProjectManualEvents as event (event.id)}
                                {#if isDateInWeek(event.date, weekDate)}
-                                   <div 
+                                   <div
                                        class="timeline-key-event"
-                                       style="background-color: {event.color}; border-left: 3px solid {event.color === '#ffffff' ? '#ccc' : event.color};" 
-                                       title="{event.title} ({format(parseISO(event.date), 'd MMM')}) - Click to edit" 
-                                       on:click={() => handleEditKeyDate(event)}
-                                       role="button"
-                                       tabindex="0"
-                                       on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleEditKeyDate(event); }}
+                                       class:clickable-event={!isClient}
+                                       style="background-color: {event.color}; border-left: 3px solid {event.color === '#ffffff' ? '#ccc' : event.color};"
+                                       title="{event.title} ({format(parseISO(event.date), 'd MMM')}){isClient ? '' : ' - Click to edit'}"
+                                       on:click={isClient ? undefined : () => handleEditKeyDate(event)}
+                                       role={isClient ? undefined : "button"}
+                                       tabindex={isClient ? undefined : 0}
+                                       on:keydown={isClient ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') handleEditKeyDate(event); }}
                                     >
                                        {event.title}
                                    </div>
@@ -500,16 +511,20 @@
                            {/each}
                        </div>
                        <!-- Add button -->
-                       <button 
-                           class="add-key-date-btn"
-                           title="Add key date for {formatWeekHeader(weekDate)}"
-                           on:click={() => handleOpenKeyDateModal(weekDate)}
-                        >
-                           +
-                       </button>
+                       {#if !isClient}
+                         <button
+                             class="add-key-date-btn"
+                             title="Add key date for {formatWeekHeader(weekDate)}"
+                             on:click={() => handleOpenKeyDateModal(weekDate)}
+                          >
+                             +
+                         </button>
+                       {/if}
                     </th>
                 {/each}
-                <th class="header-cell add-week-col"></th> 
+                {#if !isClient}
+                  <th class="header-cell add-week-col"></th>
+                {/if}
             </tr>
           </thead>
           <tbody>
@@ -554,18 +569,20 @@
                     {/if}
                 </td>
                 {#each weeks as weekDate (format(weekDate, 'yyyy-MM-dd'))}
-                  <td class="data-cell week-col surveyor-cell-clickable" 
-                      on:click={() => handleSurveyorCellClick(quote.id, weekDate, `${quote.discipline} - ${quote.organisation}`)}
-                      title="Click to add date for this week">
+                  <td class="data-cell week-col"
+                      class:surveyor-cell-clickable={!isClient}
+                      on:click={isClient ? undefined : () => handleSurveyorCellClick(quote.id, weekDate, `${quote.discipline} - ${quote.organisation}`)}
+                      title={isClient ? "" : "Click to add date for this week"}>
                       <div class="cell-content">
                         <!-- Iterate through items relevant to this quote -->
                         {#each relevantLogItems as item (item.id)}
                             {#if isDateInWeek(item.date, weekDate)}
-                                <div 
-                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date clickable-custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}" 
-                                    style="background-color: {item.color}1A; border-left: 3px solid {item.color}; color: {item.color};" 
-                                    title="{item.type === 'log-custom' ? 'Click to edit: ' : ''}{item.title} ({format(parseISO(item.date), 'd MMM')})"
-                                    on:click={item.type === 'log-custom' ? (e) => {
+                                <div
+                                    class="timeline-item {item.type === 'log-custom' ? 'custom-date' : (item.title.toLowerCase().includes('site visit') ? 'site-visit' : 'report-draft')}"
+                                    class:clickable-custom-date={item.type === 'log-custom' && !isClient}
+                                    style="background-color: {item.color}1A; border-left: 3px solid {item.color}; color: {item.color};"
+                                    title="{item.type === 'log-custom' && !isClient ? 'Click to edit: ' : ''}{item.title} ({format(parseISO(item.date), 'd MMM')})"
+                                    on:click={item.type === 'log-custom' && !isClient ? (e) => {
                                       e.stopPropagation();
                                       const log = $currentInstructionLogs.find(l => l.quoteId === item.quoteId);
                                       const customDate = log?.customDates?.find(cd => cd.id === item.customDateId);
@@ -573,9 +590,9 @@
                                         handleEditCustomDate(customDate, item.quoteId, `${quote.discipline} - ${quote.organisation}`);
                                       }
                                     } : undefined}
-                                    role={item.type === 'log-custom' ? 'button' : undefined}
-                                    tabindex={item.type === 'log-custom' ? 0 : undefined}
-                                    on:keydown={item.type === 'log-custom' ? (e) => {
+                                    role={item.type === 'log-custom' && !isClient ? 'button' : undefined}
+                                    tabindex={item.type === 'log-custom' && !isClient ? 0 : undefined}
+                                    on:keydown={item.type === 'log-custom' && !isClient ? (e) => {
                                       if (e.key === 'Enter' || e.key === ' ') {
                                         e.stopPropagation();
                                         const log = $currentInstructionLogs.find(l => l.quoteId === item.quoteId);
@@ -593,7 +610,9 @@
                       </div>
                   </td>
                 {/each}
-                <td class="data-cell add-week-col"></td>
+                {#if !isClient}
+                  <td class="data-cell add-week-col"></td>
+                {/if}
                </tr>
             {/each}
           </tbody>
@@ -802,15 +821,19 @@
       border-radius: 3px;
       margin-bottom: 2px;
       white-space: normal; /* Explicitly allow wrapping */
-      color: #333; 
+      color: #333;
       border: 1px solid rgba(0,0,0,0.1);
       line-height: 1.3;
       display: block; /* Ensure it takes block space for wrapping */
+      cursor: default;
+  }
+
+  .timeline-key-event.clickable-event {
       cursor: pointer;
   }
 
-  .timeline-key-event:hover,
-  .timeline-key-event:focus {
+  .timeline-key-event.clickable-event:hover,
+  .timeline-key-event.clickable-event:focus {
       border-color: #333;
       outline: 1px solid #333;
   }
