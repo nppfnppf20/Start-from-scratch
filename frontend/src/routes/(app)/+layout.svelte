@@ -3,6 +3,7 @@
     import TopBar from "$lib/components/TopBar.svelte";
     import ProjectSelector from "$lib/components/ProjectSelector.svelte";
     import TabNav from "$lib/components/TabNav.svelte";
+    import DesktopOnlyMessage from "$lib/components/DesktopOnlyMessage.svelte";
     import { selectedProject, loadProjects } from "$lib/stores/projectStore";
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
@@ -11,10 +12,29 @@
     import { browser } from '$app/environment';
     import { get } from 'svelte/store';
 
+    // Mobile detection
+    let isMobile = false;
+    const MOBILE_BREAKPOINT = 768;
+
+    function checkMobile() {
+        if (browser) {
+            isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+        }
+    }
+
+    onMount(() => {
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+        };
+    });
+
     // SPA mode - handle authentication client-side
     $: if (browser && !$auth0Store.isLoading) {
         const isAuthRoute = $page.url.pathname.startsWith('/auth/');
-        
+
         if (!$auth0Store.isAuthenticated && !isAuthRoute) {
             console.log('Not authenticated, redirecting to login');
             // Immediate redirect - no waiting
@@ -40,6 +60,9 @@
         <div class="loading-spinner"></div>
         <p>Loading...</p>
     </div>
+{:else if $auth0Store.isAuthenticated && isMobile}
+    <!-- Show desktop-only message on mobile devices -->
+    <DesktopOnlyMessage />
 {:else if $auth0Store.isAuthenticated}
     <!-- Show app when authenticated -->
     <div class="app">
